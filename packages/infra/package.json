@@ -1,0 +1,21 @@
+{
+  "name": "@interview-forge/infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "cdk": "cdk",
+    "cdk:deploy": "cdk deploy --require-approval never",
+    "cdk:destroy": "cdk destroy --all --force",
+    "precdk:synth": "npm run build",
+    "cdk:synth": "cdk synth",
+    "clean": "rimraf cdk.out coverage dist",
+    "test": "vitest run --silent passed-only",
+    "test:coverage": "vitest run --coverage --silent passed-only"
+  },
+  "dependencies": {
+    "dotenv": "17.4.2"
+  }
+}

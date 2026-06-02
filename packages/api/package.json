@@ -1,0 +1,22 @@
+{
+  "name": "@interview-forge/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "rimraf coverage dist",
+    "test": "vitest run --silent passed-only",
+    "test:coverage": "vitest run --coverage --silent passed-only"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.161"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1058.0",
+    "@aws-sdk/lib-dynamodb": "3.1058.0",
+    "pino": "10.3.1",
+    "pino-lambda": "4.4.1"
+  }
+}
