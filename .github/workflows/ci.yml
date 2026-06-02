@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Cancel in-progress runs when a new run is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Clean up sensitive files
+        if: always()
+        run: |
+          echo "🧹 Cleaning up sensitive files..."
+          rm -f ./packages/shared/.env
+          rm -rf ./packages/shared/dist
+          rm -f ./packages/api/.env
+          rm -rf ./packages/api/dist
+          rm -f ./packages/web/.env
+          rm -rf ./packages/web/dist
+          rm -f ./packages/infra/.env
+          rm -rf ./packages/infra/dist
+          rm -rf ./packages/infra/cdk.out
+          echo "✅ Sensitive files cleaned up"
