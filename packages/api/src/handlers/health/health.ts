@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 
-import { response } from '../utils/response';
-import { logger, withRequestTracking } from '../utils/logger';
+import { response } from '@/utils/response';
+import { logger, withRequestTracking } from '@/utils/logger';
 
 // TODO: remove after M1
 export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
