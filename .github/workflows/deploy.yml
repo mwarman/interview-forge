@@ -53,8 +53,8 @@ jobs:
       - name: Synthesize AWS CDK infrastructure
         run: npm run cdk:synth --workspace packages/infra
 
-      - name: Deploy infrastructure
-        run: npm run cdk:deploy --workspace packages/infra -- --all
+      - name: Deploy backend infrastructure
+        run: npm run cdk:deploy --workspace packages/infra -- BackendStack
 
       - name: Clean up sensitive files
         if: always()

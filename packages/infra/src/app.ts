@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 
 import { getConfig, getEnvironmentConfig, getTags } from './utils/config.js';
 import { DataStack } from './stacks/data-stack.js';
+import { BackendStack } from './stacks/backend-stack.js';
 
 /**
  * Main CDK application entry point
@@ -19,13 +20,25 @@ const env = getEnvironmentConfig(config);
 const tags = getTags(config);
 
 // Instantiate the data stack (DynamoDB, S3, etc.)
-new DataStack(app, 'DataStack', {
+const dataStack = new DataStack(app, 'DataStack', {
   stackName: `${config.CDK_APP_NAME}-data-stack-${config.CDK_ENV_NAME}`,
   description: `Data layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
   config,
   env,
   tags,
 });
+
+// Instantiate the backend stack (API Gateway, Lambda, etc.)
+const backendStack = new BackendStack(app, 'BackendStack', {
+  stackName: `${config.CDK_APP_NAME}-backend-stack-${config.CDK_ENV_NAME}`,
+  description: `Backend layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
+  config,
+  env,
+  tags,
+});
+
+// Set stack dependencies (backend depends on data)
+backendStack.addDependency(dataStack);
 
 // Synthesize the CloudFormation templates
 app.synth();

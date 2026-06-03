@@ -109,4 +109,77 @@ describe('DataStack', () => {
     expect(stack.table).toBeDefined();
     expect(stack.table.tableArn).toBeDefined();
   });
+
+  it('should define an S3 bucket with correct naming pattern', () => {
+    // Arrange
+    const app = new cdk.App();
+    process.env.CDK_APP_NAME = 'test-app';
+    process.env.CDK_ENV_NAME = 'qa';
+    const config = getConfig();
+
+    // Act
+    const stack = new DataStack(app, 'TestDataStack', { config });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      BucketName: 'test-app-jd-uploads-qa',
+    });
+  });
+
+  it('should have S3 bucket with lifecycle rule expiring objects after 72 hours', () => {
+    // Arrange
+    const app = new cdk.App();
+    const config = getConfig();
+
+    // Act
+    const stack = new DataStack(app, 'TestDataStack', { config });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      LifecycleConfiguration: {
+        Rules: [
+          {
+            Id: 'ExpireJdFilesAfter72Hours',
+            Status: 'Enabled',
+            ExpirationInDays: 3,
+          },
+        ],
+      },
+    });
+  });
+
+  it('should block all public access on S3 bucket', () => {
+    // Arrange
+    const app = new cdk.App();
+    const config = getConfig();
+
+    // Act
+    const stack = new DataStack(app, 'TestDataStack', { config });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
+    });
+  });
+
+  it('should export the bucket as a public property', () => {
+    // Arrange
+    const app = new cdk.App();
+    const config = getConfig();
+
+    // Act
+    const stack = new DataStack(app, 'TestDataStack', { config });
+
+    // Assert
+    expect(stack.bucket).toBeDefined();
+    expect(stack.bucket.bucketArn).toBeDefined();
+  });
 });
