@@ -142,6 +142,65 @@ describe('JobDescriptionService', () => {
       // Act & Assert
       await expect(jobDescriptionService.createFromUpload(title, s3Key)).rejects.toThrow('DynamoDB error');
     });
+
+    it('should use provided jdId when creating from upload (AC-03)', async () => {
+      // Arrange
+      const title = 'Senior Backend Engineer';
+      const s3Key = 'uploads/provided-uuid/job-description.pdf';
+      const providedJdId = '999e8400-e29b-41d4-a716-446655440999';
+      const extractedText = 'Extracted job description text.';
+
+      vi.mocked(pdfService.extractTextFromFile).mockResolvedValue(extractedText);
+      vi.mocked(jobDescriptionRepository.put).mockResolvedValue(undefined);
+
+      // Act
+      const result = await jobDescriptionService.createFromUpload(title, s3Key, providedJdId);
+
+      // Assert
+      expect(result.jdId).toBe(providedJdId);
+      // Verify that the provided jdId was used, not the mocked randomUUID
+      expect(result.jdId).not.toBe('550e8400-e29b-41d4-a716-446655440000');
+
+      // Verify repository was called with provided jdId
+      expect(jobDescriptionRepository.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jdId: providedJdId,
+          title,
+          rawText: extractedText,
+          s3Key,
+          PK: `JD#${providedJdId}`,
+          SK: 'METADATA',
+          GSI1PK: 'JDS',
+        }),
+      );
+    });
+
+    it('should generate new jdId when none is provided (AC-03)', async () => {
+      // Arrange
+      const title = 'Senior Backend Engineer';
+      const s3Key = 'jd-12345.pdf';
+      const extractedText = 'Extracted job description text.';
+
+      vi.mocked(pdfService.extractTextFromFile).mockResolvedValue(extractedText);
+      vi.mocked(jobDescriptionRepository.put).mockResolvedValue(undefined);
+
+      // Act
+      const result = await jobDescriptionService.createFromUpload(title, s3Key);
+
+      // Assert
+      // Should use the mocked randomUUID since no jdId was provided
+      expect(result.jdId).toBe('550e8400-e29b-41d4-a716-446655440000');
+
+      // Verify repository was called with generated jdId
+      expect(jobDescriptionRepository.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jdId: '550e8400-e29b-41d4-a716-446655440000',
+          title,
+          rawText: extractedText,
+          s3Key,
+        }),
+      );
+    });
   });
 
   describe('TTL calculation', () => {

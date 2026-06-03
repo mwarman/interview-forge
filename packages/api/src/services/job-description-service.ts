@@ -60,10 +60,11 @@ export class JobDescriptionService {
    * Create a job description from a file uploaded to S3
    * @param title - The job title
    * @param s3Key - The S3 key of the uploaded file
+   * @param jdId - Optional pre-generated jdId (from pre-signed URL creation); if not provided, generates a new UUID
    * @returns The created job description result with jdId, createdAt, and ttl
    */
-  async createFromUpload(title: string, s3Key: string): Promise<JobDescription> {
-    logger.info({ title, s3Key }, '[JobDescriptionService.createFromUpload] > createFromUpload');
+  async createFromUpload(title: string, s3Key: string, jdId?: string): Promise<JobDescription> {
+    logger.info({ title, s3Key, jdId }, '[JobDescriptionService.createFromUpload] > createFromUpload');
 
     try {
       logger.debug({ s3Key }, '[JobDescriptionService.createFromUpload] - Extracting text from file');
@@ -71,16 +72,23 @@ export class JobDescriptionService {
 
       logger.debug({ s3Key, textLength: rawText.length }, '[JobDescriptionService.createFromUpload] - Text extracted');
 
-      const jdId = randomUUID();
+      // Use provided jdId or generate a new one
+      const resolvedJdId = jdId || randomUUID();
+      if (!jdId) {
+        logger.debug({ resolvedJdId }, '[JobDescriptionService.createFromUpload] - Generated new jdId');
+      } else {
+        logger.debug({ resolvedJdId }, '[JobDescriptionService.createFromUpload] - Using provided jdId');
+      }
+
       const now = new Date().toISOString();
       const ttl = this.calculateTTL();
 
       const item: JobDescriptionItem = {
-        PK: `JD#${jdId}`,
+        PK: `JD#${resolvedJdId}`,
         SK: 'METADATA',
         GSI1PK: 'JDS',
         GSI1SK: now,
-        jdId,
+        jdId: resolvedJdId,
         title,
         rawText,
         s3Key,
@@ -88,17 +96,20 @@ export class JobDescriptionService {
         TTL: ttl,
       };
 
-      logger.debug({ jdId }, '[JobDescriptionService.createFromUpload] - Persisting job description');
+      logger.debug({ jdId: resolvedJdId }, '[JobDescriptionService.createFromUpload] - Persisting job description');
       await jobDescriptionRepository.put(item);
       logger.debug(
-        { jdId, title, s3Key },
+        { jdId: resolvedJdId, title, s3Key },
         '[JobDescriptionService.createFromUpload] - Job description created from upload',
       );
 
       logger.info('[JobDescriptionService.createFromUpload] < createFromUpload');
       return jobDescriptionRepository.toJobDescription(item);
     } catch (error) {
-      logger.error({ error, title, s3Key }, '[JobDescriptionService.createFromUpload] - Failed to create from upload');
+      logger.error(
+        { error, title, s3Key, jdId },
+        '[JobDescriptionService.createFromUpload] - Failed to create from upload',
+      );
       throw error;
     }
   }
