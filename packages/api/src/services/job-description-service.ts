@@ -7,15 +7,6 @@ import { pdfService } from '@/services/pdf-service';
 import { jobDescriptionRepository, JobDescriptionItem } from '@/repositories/job-description-repository';
 
 /**
- * Response from creating a job description
- */
-export interface CreateJobDescriptionResult {
-  jdId: string;
-  createdAt: string;
-  ttl: number;
-}
-
-/**
  * Service for Job Description business logic
  * Encapsulates the orchestration of creating and persisting job descriptions
  */
