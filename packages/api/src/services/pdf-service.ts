@@ -2,7 +2,7 @@ import { extractText } from 'unpdf';
 
 import { config } from '@/utils/config';
 import { logger } from '@/utils/logger';
-import { s3Service } from './s3-service';
+import { s3Service } from '@/services/s3-service';
 
 /**
  * Service for PDF and text file extraction operations
