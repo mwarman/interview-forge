@@ -42,8 +42,11 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
       logger.debug({ title: request.title }, '[CreateJdHandler] - Routing to paste mode');
       createdJobDescription = await jobDescriptionService.createFromPaste(request.title, request.rawText);
     } else {
-      logger.debug({ title: request.title, s3Key: request.s3Key }, '[CreateJdHandler] - Routing to upload mode');
-      createdJobDescription = await jobDescriptionService.createFromUpload(request.title, request.s3Key);
+      logger.debug(
+        { title: request.title, s3Key: request.s3Key, jdId: request.jdId },
+        '[CreateJdHandler] - Routing to upload mode',
+      );
+      createdJobDescription = await jobDescriptionService.createFromUpload(request.title, request.s3Key, request.jdId);
     }
 
     logger.info({ jdId: createdJobDescription.jdId }, '[CreateJdHandler] < handle');

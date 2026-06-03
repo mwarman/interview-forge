@@ -142,7 +142,11 @@ describe('create-jd-handler', () => {
       expect(result.statusCode).toBe(201);
       const body = JSON.parse(result.body || '{}');
       expect(body).toEqual(mockResult);
-      expect(jobDescriptionService.createFromUpload).toHaveBeenCalledWith(requestBody.title, requestBody.s3Key);
+      expect(jobDescriptionService.createFromUpload).toHaveBeenCalledWith(
+        requestBody.title,
+        requestBody.s3Key,
+        undefined,
+      );
     });
 
     it('should return 422 when PDF extraction fails (scanned/encrypted)', async () => {
@@ -215,6 +219,77 @@ describe('create-jd-handler', () => {
       expect(result.statusCode).toBe(400);
       const body = JSON.parse(result.body || '{}');
       expect(body.error).toBe('File Processing Error');
+    });
+
+    it('should accept optional jdId in upload mode request (AC-02)', async () => {
+      // Arrange
+      const providedJdId = '999e8400-e29b-41d4-a716-446655440999';
+      const requestBody = {
+        mode: 'upload',
+        title: 'Senior Backend Engineer',
+        s3Key: 'uploads/999e8400-e29b-41d4-a716-446655440999/job-description.pdf',
+        jdId: providedJdId,
+      };
+      const event = createMockEvent(requestBody);
+      const context = createMockContext();
+
+      const mockResult = {
+        jdId: providedJdId,
+        createdAt: '2026-06-03T12:00:00.000Z',
+        ttl: 1234567890,
+      };
+
+      vi.mocked(validateMod.parseBody).mockReturnValue(requestBody);
+      vi.mocked(jobDescriptionService.createFromUpload).mockResolvedValue(mockResult);
+
+      // Act
+      const result = (await handle(event, context, () => {})) as APIGatewayProxyStructuredResultV2;
+
+      // Assert
+      expect(result.statusCode).toBe(201);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.jdId).toBe(providedJdId);
+      expect(jobDescriptionService.createFromUpload).toHaveBeenCalledWith(
+        requestBody.title,
+        requestBody.s3Key,
+        providedJdId,
+      );
+    });
+
+    it('should use provided jdId and not generate a new one (AC-03)', async () => {
+      // Arrange
+      const providedJdId = '999e8400-e29b-41d4-a716-446655440999';
+      const requestBody = {
+        mode: 'upload',
+        title: 'Senior Backend Engineer',
+        s3Key: 'uploads/999e8400-e29b-41d4-a716-446655440999/job-description.pdf',
+        jdId: providedJdId,
+      };
+      const event = createMockEvent(requestBody);
+      const context = createMockContext();
+
+      const mockResult = {
+        jdId: providedJdId,
+        createdAt: '2026-06-03T12:00:00.000Z',
+        ttl: 1234567890,
+      };
+
+      vi.mocked(validateMod.parseBody).mockReturnValue(requestBody);
+      vi.mocked(jobDescriptionService.createFromUpload).mockResolvedValue(mockResult);
+
+      // Act
+      const result = (await handle(event, context, () => {})) as APIGatewayProxyStructuredResultV2;
+      const body = JSON.parse(result.body || '{}');
+
+      // Assert
+      // Verify the service was called with the provided jdId
+      expect(jobDescriptionService.createFromUpload).toHaveBeenCalledWith(
+        requestBody.title,
+        requestBody.s3Key,
+        providedJdId,
+      );
+      // Verify the response contains the provided jdId (not a newly generated one)
+      expect(body.jdId).toBe(providedJdId);
     });
   });
 

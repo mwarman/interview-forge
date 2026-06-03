@@ -1,9 +1,8 @@
-import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { extractText } from 'unpdf';
 
 import { config } from '@/utils/config';
 import { logger } from '@/utils/logger';
-import { s3Client } from '@/utils/s3-client';
+import { s3Service } from '@/services/s3-service';
 
 /**
  * Service for PDF and text file extraction operations
@@ -31,14 +30,8 @@ export class PdfService {
       }
 
       // Get the file from S3
-      const getObjectCommand = new GetObjectCommand({
-        Bucket: config.JD_BUCKET_NAME,
-        Key: s3Key,
-      });
-
       logger.debug({ s3Key }, '[PdfService.extractTextFromFile] - Fetching file from S3');
-      const s3Response = await s3Client.send(getObjectCommand);
-      const buffer = await s3Response.Body!.transformToByteArray();
+      const buffer = await s3Service.getObject(config.JD_BUCKET_NAME, s3Key);
 
       logger.debug({ s3Key, fileSize: buffer.length }, '[PdfService.extractTextFromFile] - File retrieved from S3');
 
