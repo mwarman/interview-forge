@@ -1,7 +1,7 @@
 # Project Overview: interview-forge
 
-**Version:** 1.0  
-**Date:** 2026-06-02  
+**Version:** 1.2  
+**Date:** 2026-06-03  
 **Project Type:** Portfolio  
 **Status:** Approved for Planning
 
@@ -310,6 +310,120 @@ erDiagram
 
 ---
 
+## API Design
+
+### API Architecture
+
+The `packages/api` workspace is organized into three cohesive layers enforcing Single Responsibility Principle (SRP) and Don't Repeat Yourself (DRY) across all Lambda handlers. Each layer has a well-defined contract with the layers adjacent to it; no layer reaches past its immediate neighbor.
+
+```
+API Gateway
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Handlers  (src/handlers/)                          │
+│  • Parse and validate the API Gateway event         │
+│  • Delegate to one or more Services                 │
+│  • Format and return the API Gateway response       │
+│  • No business logic; no direct DynamoDB calls      │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Services  (src/services/)                          │
+│  • Encapsulate all business logic for one domain    │
+│  • Orchestrate cross-entity operations              │
+│  • Call Repositories for persistence; call AWS      │
+│    SDK clients for Bedrock / S3 directly            │
+│  • No knowledge of HTTP or API Gateway shapes       │
+└─────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────┐
+│  Repositories  (src/repositories/)                  │
+│  • Encapsulate all DynamoDB operations for one      │
+│    entity (get, put, update, query, delete)         │
+│  • Return typed domain objects; no raw DynamoDB     │
+│    AttributeValue shapes leak above this layer      │
+│  • No business logic; no AWS SDK clients other      │
+│    than DynamoDB DocumentClient                     │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Layer Responsibilities
+
+**Handlers** (`src/handlers/`) are the Lambda entry points. Each handler is co-located in a domain subfolder (e.g., `src/handlers/job-description/`), validates the incoming event payload using a Zod schema, calls the appropriate Service method(s), and returns a structured API Gateway proxy response. Handlers contain no business logic and make no direct DynamoDB or AWS SDK calls.
+
+**Services** (`src/services/`) contain all domain business logic. Each service is scoped to a single domain entity or workflow (e.g., `job-description-service.ts`, `session-service.ts`, `plan-service.ts`). Services orchestrate Repository calls for persistence and call AWS SDK clients directly for Bedrock Agent invocations and S3 operations. Services are ignorant of HTTP — they accept typed inputs and return typed outputs.
+
+**Repositories** (`src/repositories/`) provide entity-scoped DynamoDB CRUD operations. Each repository wraps the DynamoDB `DocumentClient` and exposes typed methods (e.g., `JobDescriptionRepository.findById()`, `SessionRepository.updatePlan()`). All DynamoDB key construction, expression building, and `AttributeValue` marshalling is confined to this layer. No raw DynamoDB types leak above the repository boundary.
+
+#### Shared Utilities (`src/utils/`)
+
+Cross-cutting concerns that are not domain-specific live in `src/utils/`:
+
+- `logger.ts` — structured JSON logger factory (`createLogger(lambdaName)`)
+- `error-handler.ts` — `withErrorHandler` HOF wrapping handlers in standardized try/catch; `AppError` subclass hierarchy (400 / 404 / 422 / 500)
+- `response.ts` — API Gateway response builder (success and error shapes)
+- `aws-clients.ts` — singleton AWS SDK v3 client instances (DynamoDB, S3, BedrockAgentRuntime)
+
+---
+
+### API Endpoints
+
+All routes are exposed through a single API Gateway REST API. Lambda integrations use proxy integration. CORS is enabled for `*` origin (no auth at portfolio scope).
+
+#### Job Description Routes
+
+| Method | Route             | Handler                                                     | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------ | ----------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST` | `/jds`            | `src/handlers/job-description/create-jd-handler.ts`         | Creates a new JD record from pasted text or an S3-staged file upload. Extracts text via `unpdf` for PDF uploads. Writes JD to DynamoDB with 72-hour TTL.                                                                                                                                                                                                                                                                 |
+| `GET`  | `/jds`            | `src/handlers/job-description/list-jds-handler.ts`          | Returns all JD records sorted by `createdAt` descending (GSI1 query on `GSI1PK = "JDS"`).                                                                                                                                                                                                                                                                                                                                |
+| `GET`  | `/jds/{jdId}`     | `src/handlers/job-description/get-jd-handler.ts`            | Returns a single JD record by ID. Returns 404 if not found.                                                                                                                                                                                                                                                                                                                                                              |
+| `POST` | `/jds/upload-url` | `src/handlers/job-description/create-upload-url-handler.ts` | Generates a pre-assigned `jdId` (UUID), constructs an S3 key (`uploads/{jdId}/{filename}`), and returns a pre-signed S3 PUT URL along with the `jdId` and `s3Key`. The client uses the pre-signed URL to upload the file directly to S3, then passes `jdId` and `s3Key` to `POST /jds` to complete JD creation. API Gateway resolves `upload-url` as a static segment before `{jdId}`, so there is no routing ambiguity. |
+
+#### Session Routes
+
+| Method | Route                              | Handler                                          | Purpose                                                                                                                                                       |
+| ------ | ---------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/jds/{jdId}/sessions`             | `src/handlers/session/create-session-handler.ts` | Creates a new candidate session under a JD. Reads the parent JD's TTL and stamps it onto the new session record. Returns 404 if the parent JD does not exist. |
+| `GET`  | `/jds/{jdId}/sessions`             | `src/handlers/session/list-sessions-handler.ts`  | Returns all sessions for a JD sorted by `createdAt` ascending (GSI1 query).                                                                                   |
+| `GET`  | `/jds/{jdId}/sessions/{sessionId}` | `src/handlers/session/get-session-handler.ts`    | Returns a single session record including any attached plan, scorecard, and assessment. Returns 404 if not found.                                             |
+
+#### Plan Routes
+
+| Method | Route                                           | Handler                                      | Purpose                                                                                                                                                                                                                |
+| ------ | ----------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/jds/{jdId}/sessions/{sessionId}/plan`         | `src/handlers/plan/generate-plan-handler.ts` | Invokes the Bedrock Plan Generation Agent for the given session. The agent reads the JD, generates a structured interview plan, and writes it to the session record in DynamoDB. Returns the completed plan.           |
+| `PUT`  | `/jds/{jdId}/sessions/{sessionId}/plan/approve` | `src/handlers/plan/approve-plan-handler.ts`  | Accepts an optional recruiter-modified plan payload. Validates against `InterviewPlanSchema`, writes the final plan to DynamoDB, and transitions session `status` to `PLAN_APPROVED`. Returns 409 if already approved. |
+
+#### Scorecard Routes
+
+| Method | Route                                        | Handler                                              | Purpose                                                                                                                                                                                       |
+| ------ | -------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/jds/{jdId}/sessions/{sessionId}/scorecard` | `src/handlers/scorecard/submit-scorecard-handler.ts` | Accepts and validates a structured scorecard (per-question Likert ratings + per-competency free-text notes). Writes the scorecard to the session record and transitions `status` to `SCORED`. |
+
+#### Assessment Routes
+
+| Method | Route                                                 | Handler                                                  | Purpose                                                                                                                                                                                                                                                                   |
+| ------ | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/jds/{jdId}/sessions/{sessionId}/assessment`         | `src/handlers/assessment/generate-assessment-handler.ts` | Invokes the Bedrock Reconciliation Agent for the given session. The agent reads the plan and scorecard, reconciles structured ratings with free-text notes, and writes a final assessment with hire/no-hire recommendation to DynamoDB. Returns the completed assessment. |
+| `PUT`  | `/jds/{jdId}/sessions/{sessionId}/assessment/approve` | `src/handlers/assessment/approve-assessment-handler.ts`  | Accepts recruiter approval of the final assessment, with an optional override flag and required override reason. Transitions session `status` to `COMPLETE`. Returns 409 if already complete.                                                                             |
+
+#### Bedrock Agent Action Group Routes
+
+These Lambda functions are invoked directly by Bedrock Agents — not via API Gateway. They conform to the Bedrock Agents action group Lambda invocation contract and are not publicly accessible.
+
+| Invoker               | Handler                                                         | Purpose                                                                                                      |
+| --------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Plan Generation Agent | `src/handlers/agent-actions/read-jd-action-handler.ts`          | Reads JD `rawText` and `title` from DynamoDB for the agent's plan generation context.                        |
+| Plan Generation Agent | `src/handlers/agent-actions/write-plan-action-handler.ts`       | Validates and writes the agent-generated interview plan to the session record; sets `status = PLAN_PENDING`. |
+| Reconciliation Agent  | `src/handlers/agent-actions/read-plan-action-handler.ts`        | Reads the approved interview plan from the session record for reconciliation context.                        |
+| Reconciliation Agent  | `src/handlers/agent-actions/read-scorecard-action-handler.ts`   | Reads the submitted scorecard from the session record for reconciliation context.                            |
+| Reconciliation Agent  | `src/handlers/agent-actions/write-assessment-action-handler.ts` | Validates and writes the agent-generated assessment to the session record; sets `status = ASSESSED`.         |
+
+---
+
 ## Estimated Costs
 
 > All estimates assume **portfolio demo usage**: 10–20 full workflow executions per month (end-to-end: JD ingestion → plan generation → scorecard → assessment). Rates are US East (N. Virginia), on-demand pricing as of June 2026.
@@ -391,8 +505,10 @@ None. All blocking questions resolved.
 
 ## Revision History
 
-| Version | Date       | Changes                                                                                                                                                                                                                                         |
-| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Draft 1 | 2026-06-01 | Initial brainstorming draft                                                                                                                                                                                                                     |
-| Draft 2 | 2026-06-02 | Resolved all Draft 1 open questions; added DynamoDB data model, Estimated Costs section, GitHub Actions CI/CD definitions, `unpdf` and `pdfmake` decisions, multi-candidate JD → session navigation                                             |
-| 1.0     | 2026-06-02 | Finalized for planning; increased TTL from 24 to 72 hours; uniform TTL strategy formalized with trade-off table; TTL extension explicitly out of scope; JD list shows all available records with no status display; all open questions resolved |
+| Version | Date       | Changes                                                                                                                                                                                                                                                                                                             |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Draft 1 | 2026-06-01 | Initial brainstorming draft                                                                                                                                                                                                                                                                                         |
+| Draft 2 | 2026-06-02 | Resolved all Draft 1 open questions; added DynamoDB data model, Estimated Costs section, GitHub Actions CI/CD definitions, `unpdf` and `pdfmake` decisions, multi-candidate JD → session navigation                                                                                                                 |
+| 1.0     | 2026-06-02 | Finalized for planning; increased TTL from 24 to 72 hours; uniform TTL strategy formalized with trade-off table; TTL extension explicitly out of scope; JD list shows all available records with no status display; all open questions resolved                                                                     |
+| 1.1     | 2026-06-03 | Added API Design section: Handler → Service → Repository layered architecture with SRP/DRY principles; full API endpoint table across all domains (JD, Session, Plan, Scorecard, Assessment); Bedrock Agent action group handlers documented separately as internal-only invocations                                |
+| 1.2     | 2026-06-03 | Fixed upload-url endpoint: corrected sequencing flaw (jdId does not exist at upload time); route changed from `GET /jds/{jdId}/upload-url` to `POST /jds/upload-url`; handler renamed to `create-upload-url-handler.ts`; jdId is now pre-assigned by the upload-url handler and passed by the client to `POST /jds` |

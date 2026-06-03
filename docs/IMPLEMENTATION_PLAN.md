@@ -191,7 +191,7 @@ Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` t
 - AC-03: `POST /jds/{jdId}/sessions` creates a SESSION item; `TTL` is read from the parent JD record and copied to the new session; returns 404 if the parent JD does not exist
 - AC-04: `GET /jds/{jdId}/sessions` returns all sessions for the JD sorted by `createdAt` ascending (GSI1 query)
 - AC-05: `GET /jds/{jdId}/sessions/{sessionId}` returns a single session or 404
-- AC-06: `GET /jds/{jdId}/upload-url` returns a pre-signed S3 PUT URL valid for 5 minutes, with the `s3Key` value included in the response for use by the frontend
+- AC-06: `POST /jds/{jdId}/upload-url` creates and returns a pre-signed S3 PUT URL valid for 5 minutes, with the `s3Key` value included in the response for use by the frontend
 - AC-07: All DynamoDB operations use AWS SDK v3 (`@aws-sdk/client-dynamodb` + `@aws-sdk/util-dynamodb`); no full SDK import
 - AC-08: Unit tests cover each operation with mocked DynamoDB client; 404 paths are explicitly tested
 
@@ -209,7 +209,7 @@ Add CDK Lambda function constructs and API Gateway integrations for `ingest-hand
 
 - AC-01: `ingest-handler` Lambda is defined with the shared execution role and environment variables for `TABLE_NAME` and `BUCKET_NAME`
 - AC-02: `session-handler` Lambda is defined with the same role and environment variables
-- AC-03: API Gateway routes `POST /jds`, `GET /jds`, `GET /jds/{jdId}`, `POST /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions/{sessionId}`, `GET /jds/{jdId}/upload-url` are wired to Lambda integrations with proxy integration enabled
+- AC-03: API Gateway routes `POST /jds`, `GET /jds`, `GET /jds/{jdId}`, `POST /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions/{sessionId}`, `POST /jds/{jdId}/upload-url` are wired to Lambda integrations with proxy integration enabled
 - AC-04: `cdk synth` produces valid CloudFormation for all new resources
 - AC-05: All Lambda and API Gateway resources carry the four required organizational tags
 
