@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 
 import type { Config } from '../utils/config.js';
@@ -17,6 +18,7 @@ interface DataStackProps extends cdk.StackProps {
  */
 export class DataStack extends cdk.Stack {
   public readonly table: dynamodb.Table;
+  public readonly bucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -51,6 +53,21 @@ export class DataStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING,
       },
       projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // Create the S3 bucket for JD file upload staging
+    this.bucket = new s3.Bucket(this, 'JdUploadsBucket', {
+      bucketName: `${config.CDK_APP_NAME}-jd-uploads-${config.CDK_ENV_NAME}`,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Destroy on stack deletion (safe for dev/qa)
+      autoDeleteObjects: true, // Automatically delete objects when bucket is destroyed
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block all public access
+    });
+
+    // Add 72-hour lifecycle rule for automatic expiration of staged JD files
+    this.bucket.addLifecycleRule({
+      id: 'ExpireJdFilesAfter72Hours',
+      enabled: true,
+      expiration: cdk.Duration.hours(72),
     });
   }
 }
