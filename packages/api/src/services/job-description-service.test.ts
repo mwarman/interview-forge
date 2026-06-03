@@ -15,6 +15,7 @@ vi.mock('@/repositories/job-description-repository', () => ({
   jobDescriptionRepository: {
     put: vi.fn(),
     queryAll: vi.fn(),
+    getById: vi.fn(),
     toJobDescription: vi.fn((item) => {
       const { PK: _pk, SK: _sk, GSI1PK: _gsi1pk, GSI1SK: _gsi1sk, ...jobDescription } = item;
       return jobDescription;
@@ -211,6 +212,95 @@ describe('JobDescriptionService', () => {
       // Act & Assert
       await expect(jobDescriptionService.listAll()).rejects.toThrow('Query failed');
       expect(jobDescriptionRepository.queryAll).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('getById', () => {
+    it('should return job description when found', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const mockJobDescription = {
+        jdId,
+        title: 'Senior Backend Engineer',
+        rawText: 'Job description text',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      };
+
+      vi.mocked(jobDescriptionRepository.getById).mockResolvedValue(mockJobDescription);
+
+      // Act
+      const result = await jobDescriptionService.getById(jdId);
+
+      // Assert
+      expect(result).toEqual(mockJobDescription);
+      expect(jobDescriptionRepository.getById).toHaveBeenCalledWith(jdId);
+    });
+
+    it('should return job description with s3Key when present', async () => {
+      // Arrange
+      const jdId = 'test-id';
+      const mockJobDescription = {
+        jdId,
+        title: 'Test Job',
+        rawText: 'Test description',
+        s3Key: 'uploads/jd-12345.pdf',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      };
+
+      vi.mocked(jobDescriptionRepository.getById).mockResolvedValue(mockJobDescription);
+
+      // Act
+      const result = await jobDescriptionService.getById(jdId);
+
+      // Assert
+      expect(result).toEqual(mockJobDescription);
+      expect(result?.s3Key).toBe('uploads/jd-12345.pdf');
+    });
+
+    it('should return null when job description is not found', async () => {
+      // Arrange
+      const jdId = 'nonexistent-id';
+      vi.mocked(jobDescriptionRepository.getById).mockResolvedValue(null);
+
+      // Act
+      const result = await jobDescriptionService.getById(jdId);
+
+      // Assert
+      expect(result).toBeNull();
+      expect(jobDescriptionRepository.getById).toHaveBeenCalledWith(jdId);
+    });
+
+    it('should throw error when repository get fails', async () => {
+      // Arrange
+      const jdId = 'test-id';
+      const error = new Error('DynamoDB error');
+      vi.mocked(jobDescriptionRepository.getById).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(jobDescriptionService.getById(jdId)).rejects.toThrow('DynamoDB error');
+      expect(jobDescriptionRepository.getById).toHaveBeenCalledWith(jdId);
+    });
+
+    it('should call repository with correct jdId', async () => {
+      // Arrange
+      const jdId = 'specific-uuid';
+      const mockJobDescription = {
+        jdId,
+        title: 'Test',
+        rawText: 'Test',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      };
+
+      vi.mocked(jobDescriptionRepository.getById).mockResolvedValue(mockJobDescription);
+
+      // Act
+      await jobDescriptionService.getById(jdId);
+
+      // Assert
+      expect(jobDescriptionRepository.getById).toHaveBeenCalledWith(jdId);
     });
   });
 });
