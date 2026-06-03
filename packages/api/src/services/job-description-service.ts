@@ -124,6 +124,31 @@ export class JobDescriptionService {
       throw error;
     }
   }
+
+  /**
+   * Get a single Job Description by its ID
+   * @param jdId - The unique identifier of the job description
+   * @returns The JobDescription if found
+   * @throws Error if jdId is not found or repository get fails
+   */
+  async getById(jdId: string): Promise<JobDescription> {
+    logger.info({ jdId }, '[JobDescriptionService.getById] > getById');
+
+    try {
+      const jobDescription = await jobDescriptionRepository.getById(jdId);
+
+      if (!jobDescription) {
+        logger.info({ jdId }, '[JobDescriptionService.getById] - Job description not found');
+        throw new Error(`Job description with ID ${jdId} not found`);
+      }
+
+      logger.info({ jdId }, '[JobDescriptionService.getById] < getById');
+      return jobDescription;
+    } catch (error) {
+      logger.error({ error, jdId }, '[JobDescriptionService.getById] - Failed to get job description');
+      throw error;
+    }
+  }
 }
 
 /**

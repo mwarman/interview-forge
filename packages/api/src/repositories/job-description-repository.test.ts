@@ -357,4 +357,136 @@ describe('JobDescriptionRepository', () => {
       expect(jd.TTL).toBe(1234567890);
     });
   });
+
+  describe('getById', () => {
+    it('should retrieve a single job description by ID', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const mockItem: JobDescriptionItem = {
+        PK: `JD#${jdId}`,
+        SK: 'METADATA',
+        GSI1PK: 'JDS',
+        GSI1SK: '2026-06-03T12:00:00.000Z',
+        jdId,
+        title: 'Senior Backend Engineer',
+        rawText: 'Job description text',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      };
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Item: mockItem,
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.getById(jdId);
+
+      // Assert
+      expect(result).toEqual({
+        jdId,
+        title: 'Senior Backend Engineer',
+        rawText: 'Job description text',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      });
+      expect(result).not.toHaveProperty('PK');
+      expect(result).not.toHaveProperty('GSI1PK');
+      expect(dynamoClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Key: {
+              PK: `JD#${jdId}`,
+              SK: 'METADATA',
+            },
+          }),
+        }),
+      );
+    });
+
+    it('should retrieve a job description with s3Key', async () => {
+      // Arrange
+      const jdId = 'test-id';
+      const mockItem: JobDescriptionItem = {
+        PK: `JD#${jdId}`,
+        SK: 'METADATA',
+        GSI1PK: 'JDS',
+        GSI1SK: '2026-06-03T12:00:00.000Z',
+        jdId,
+        title: 'Test Job',
+        rawText: 'Test description',
+        s3Key: 'uploads/jd-12345.pdf',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      };
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Item: mockItem,
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.getById(jdId);
+
+      // Assert
+      expect(result).toEqual({
+        jdId,
+        title: 'Test Job',
+        rawText: 'Test description',
+        s3Key: 'uploads/jd-12345.pdf',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1234567890,
+      });
+      expect(result?.s3Key).toBe('uploads/jd-12345.pdf');
+    });
+
+    it('should return null when item is not found', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.getById(jdId);
+
+      // Assert
+      expect(result).toBeNull();
+      expect(dynamoClient.send).toHaveBeenCalledOnce();
+    });
+
+    it('should throw error when DynamoDB get fails', async () => {
+      // Arrange
+      const jdId = 'test-id';
+      const error = new Error('DynamoDB error');
+      vi.mocked(dynamoClient.send).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(jobDescriptionRepository.getById(jdId)).rejects.toThrow('DynamoDB error');
+    });
+
+    it('should call GetCommand with correct parameters', async () => {
+      // Arrange
+      const jdId = 'specific-id';
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Item: {
+          PK: `JD#${jdId}`,
+          SK: 'METADATA',
+          GSI1PK: 'JDS',
+          GSI1SK: '2026-06-03T12:00:00.000Z',
+          jdId,
+          title: 'Test',
+          rawText: 'Test',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        },
+      } as Record<string, unknown>);
+
+      // Act
+      await jobDescriptionRepository.getById(jdId);
+
+      // Assert
+      const callArgs = vi.mocked(dynamoClient.send).mock.calls[0][0];
+      expect(callArgs.input.Key).toEqual({
+        PK: `JD#${jdId}`,
+        SK: 'METADATA',
+      });
+    });
+  });
 });

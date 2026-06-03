@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 
 import { JobDescription } from '@interview-forge/shared';
 
@@ -91,6 +91,43 @@ export class JobDescriptionRepository {
       return jobDescriptions;
     } catch (error) {
       logger.error({ error }, '[JobDescriptionRepository.queryAll] - DynamoDB query failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch a single Job Description by its ID
+   * @param jdId - The unique identifier of the job description
+   * @returns The JobDescription if found, null if not found
+   * @throws Error if DynamoDB get fails
+   */
+  async getById(jdId: string): Promise<JobDescription | null> {
+    logger.debug({ jdId }, '[JobDescriptionRepository.getById] > getById');
+
+    try {
+      const result = await dynamoClient.send(
+        new GetCommand({
+          TableName: config.JD_TABLE_NAME,
+          Key: {
+            PK: `JD#${jdId}`,
+            SK: 'METADATA',
+          },
+        }),
+      );
+
+      if (!result.Item) {
+        logger.debug({ jdId }, '[JobDescriptionRepository.getById] - Item not found');
+        return null;
+      }
+
+      logger.debug({ jdId }, '[JobDescriptionRepository.getById] - Item retrieved from DynamoDB');
+
+      const jobDescription = this.toJobDescription(result.Item as JobDescriptionItem);
+
+      logger.debug({ jdId }, '[JobDescriptionRepository.getById] < getById');
+      return jobDescription;
+    } catch (error) {
+      logger.error({ error, jdId }, '[JobDescriptionRepository.getById] - DynamoDB get failed');
       throw error;
     }
   }
