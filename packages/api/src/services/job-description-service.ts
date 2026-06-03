@@ -128,10 +128,10 @@ export class JobDescriptionService {
   /**
    * Get a single Job Description by its ID
    * @param jdId - The unique identifier of the job description
-   * @returns The JobDescription if found
-   * @throws Error if jdId is not found or repository get fails
+   * @returns The JobDescription if found, or null if not found
+   * @throws Error if repository get fails
    */
-  async getById(jdId: string): Promise<JobDescription> {
+  async getById(jdId: string): Promise<JobDescription | null> {
     logger.info({ jdId }, '[JobDescriptionService.getById] > getById');
 
     try {
@@ -139,7 +139,7 @@ export class JobDescriptionService {
 
       if (!jobDescription) {
         logger.info({ jdId }, '[JobDescriptionService.getById] - Job description not found');
-        throw new Error(`Job description with ID ${jdId} not found`);
+        return null;
       }
 
       logger.info({ jdId }, '[JobDescriptionService.getById] < getById');

@@ -28,22 +28,15 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
       return response.badRequest('Invalid Request', 'jdId path parameter is required');
     }
 
-    try {
-      const jobDescription = await jobDescriptionService.getById(jdId);
-      logger.info({ jdId }, '[GetJdHandler] < handle');
-      return response.ok(jobDescription);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const jobDescription = await jobDescriptionService.getById(jdId);
 
-      // Check if this is a not found error
-      if (errorMessage.includes('not found')) {
-        logger.info({ jdId }, '[GetJdHandler] - Job description not found');
-        return response.notFound('Not Found', `Job description with ID ${jdId} not found`);
-      }
-
-      // Re-throw for unhandled errors
-      throw error;
+    if (!jobDescription) {
+      logger.info({ jdId }, '[GetJdHandler] - Job description not found');
+      return response.notFound('Not Found', `Job description with ID ${jdId} not found`);
     }
+
+    logger.info({ jdId }, '[GetJdHandler] < handle');
+    return response.ok(jobDescription);
   } catch (error) {
     logger.error({ error }, '[GetJdHandler] - Unhandled error');
     return response.internalServerError(

@@ -121,9 +121,7 @@ describe('get-jd-handler', () => {
       const event = createMockEvent(jdId);
       const context = createMockContext();
 
-      vi.mocked(jobDescriptionService.getById).mockRejectedValue(
-        new Error(`Job description with ID ${jdId} not found`),
-      );
+      vi.mocked(jobDescriptionService.getById).mockResolvedValue(null);
 
       // Act
       const result = (await handle(event, context, () => {})) as APIGatewayProxyStructuredResultV2;

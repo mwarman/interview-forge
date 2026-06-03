@@ -256,16 +256,19 @@ describe('JobDescriptionService', () => {
 
       // Assert
       expect(result).toEqual(mockJobDescription);
-      expect(result.s3Key).toBe('uploads/jd-12345.pdf');
+      expect(result?.s3Key).toBe('uploads/jd-12345.pdf');
     });
 
-    it('should throw error when job description is not found', async () => {
+    it('should return null when job description is not found', async () => {
       // Arrange
       const jdId = 'nonexistent-id';
       vi.mocked(jobDescriptionRepository.getById).mockResolvedValue(null);
 
-      // Act & Assert
-      await expect(jobDescriptionService.getById(jdId)).rejects.toThrow(`Job description with ID ${jdId} not found`);
+      // Act
+      const result = await jobDescriptionService.getById(jdId);
+
+      // Assert
+      expect(result).toBeNull();
       expect(jobDescriptionRepository.getById).toHaveBeenCalledWith(jdId);
     });
 
