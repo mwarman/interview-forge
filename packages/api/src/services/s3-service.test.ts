@@ -3,15 +3,52 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock dependencies BEFORE importing the service
 vi.mock('@aws-sdk/s3-request-presigner');
 vi.mock('@/utils/s3-client', () => ({
-  s3Client: {},
+  s3Client: {
+    send: vi.fn(),
+  },
 }));
 
 import { s3Service } from './s3-service';
 import * as presignerMod from '@aws-sdk/s3-request-presigner';
+import { s3Client } from '../utils/s3-client';
 
 describe('s3-service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getObject', () => {
+    it('should retrieve an object from S3 and return it as a byte array', async () => {
+      // Arrange
+      const bucket = 'test-jd-bucket';
+      const s3Key = 'uploads/550e8400-e29b-41d4-a716-446655440000/document.pdf';
+      const fileContent = Buffer.from('fake file content');
+
+      vi.mocked(s3Client.send).mockResolvedValue({
+        Body: {
+          transformToByteArray: async () => fileContent,
+        },
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await s3Service.getObject(bucket, s3Key);
+
+      // Assert
+      expect(result).toEqual(fileContent);
+      expect(s3Client.send).toHaveBeenCalled();
+    });
+
+    it('should throw an error if object retrieval fails', async () => {
+      // Arrange
+      const bucket = 'test-jd-bucket';
+      const s3Key = 'uploads/nonexistent/document.pdf';
+      const testError = new Error('NoSuchKey: The specified key does not exist.');
+
+      vi.mocked(s3Client.send).mockRejectedValue(testError);
+
+      // Act & Assert
+      await expect(s3Service.getObject(bucket, s3Key)).rejects.toThrow('NoSuchKey: The specified key does not exist.');
+    });
   });
 
   describe('getPresignedPutUrl', () => {
