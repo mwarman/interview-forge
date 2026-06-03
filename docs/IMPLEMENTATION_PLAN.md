@@ -182,7 +182,7 @@ Implement the `ingest-handler` Lambda in `packages/api/src/handlers/ingest/`. Th
 ### Issue M2-02: Implement Session & JD CRUD Lambda (`session-handler`)
 
 **Description:**  
-Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `GET /jds/{jdId}/upload-url` sub-route that generates a pre-signed S3 PUT URL for file uploads (used by the frontend before calling `ingest-handler`).
+Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `POST /jds/upload-url` sub-route that generates a pre-signed S3 PUT URL for file uploads (used by the frontend before calling `ingest-handler`).
 
 **Acceptance Criteria:**
 
@@ -191,7 +191,7 @@ Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` t
 - AC-03: `POST /jds/{jdId}/sessions` creates a SESSION item; `TTL` is read from the parent JD record and copied to the new session; returns 404 if the parent JD does not exist
 - AC-04: `GET /jds/{jdId}/sessions` returns all sessions for the JD sorted by `createdAt` ascending (GSI1 query)
 - AC-05: `GET /jds/{jdId}/sessions/{sessionId}` returns a single session or 404
-- AC-06: `GET /jds/{jdId}/upload-url` returns a pre-signed S3 PUT URL valid for 5 minutes, with the `s3Key` value included in the response for use by the frontend
+- AC-06: `POST /jds/upload-url` creates and returns a pre-signed S3 PUT URL valid for 5 minutes, with the `s3Key` value included in the response for use by the frontend
 - AC-07: All DynamoDB operations use AWS SDK v3 (`@aws-sdk/client-dynamodb` + `@aws-sdk/util-dynamodb`); no full SDK import
 - AC-08: Unit tests cover each operation with mocked DynamoDB client; 404 paths are explicitly tested
 
@@ -209,7 +209,7 @@ Add CDK Lambda function constructs and API Gateway integrations for `ingest-hand
 
 - AC-01: `ingest-handler` Lambda is defined with the shared execution role and environment variables for `TABLE_NAME` and `BUCKET_NAME`
 - AC-02: `session-handler` Lambda is defined with the same role and environment variables
-- AC-03: API Gateway routes `POST /jds`, `GET /jds`, `GET /jds/{jdId}`, `POST /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions/{sessionId}`, `GET /jds/{jdId}/upload-url` are wired to Lambda integrations with proxy integration enabled
+- AC-03: API Gateway routes `POST /jds`, `GET /jds`, `GET /jds/{jdId}`, `POST /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions`, `GET /jds/{jdId}/sessions/{sessionId}`, `POST /jds/upload-url` are wired to Lambda integrations with proxy integration enabled
 - AC-04: `cdk synth` produces valid CloudFormation for all new resources
 - AC-05: All Lambda and API Gateway resources carry the four required organizational tags
 
@@ -221,7 +221,7 @@ Add CDK Lambda function constructs and API Gateway integrations for `ingest-hand
 ### Issue M2-04: Implement JD Input Page (React)
 
 **Description:**  
-Implement the JD input page in `packages/web/src/pages/jd/create/`. The page provides two input modes selectable via tabs: (1) paste mode — a title field and a large textarea for raw JD text; (2) upload mode — a title field and a drag-and-drop file dropzone accepting `.pdf` and `.txt` files only. On submit, paste mode calls `POST /jds` directly; upload mode calls `GET /jds/{jdId}/upload-url`, uploads the file directly to S3 via the pre-signed URL, then calls `POST /jds` with the `s3Key`. On success, navigate to the JD list page.
+Implement the JD input page in `packages/web/src/pages/jd/create/`. The page provides two input modes selectable via tabs: (1) paste mode — a title field and a large textarea for raw JD text; (2) upload mode — a title field and a drag-and-drop file dropzone accepting `.pdf` and `.txt` files only. On submit, paste mode calls `POST /jds` directly; upload mode calls `POST /jds/upload-url`, uploads the file directly to S3 via the pre-signed URL, then calls `POST /jds` with the `s3Key`. On success, navigate to the JD list page.
 
 **Acceptance Criteria:**
 

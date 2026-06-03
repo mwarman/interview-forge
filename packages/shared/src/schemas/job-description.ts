@@ -17,3 +17,25 @@ export const JobDescriptionSchema = z.object({
  * JobDescription - TypeScript type inferred from JobDescriptionSchema
  */
 export type JobDescription = z.infer<typeof JobDescriptionSchema>;
+
+/**
+ * CreateJobDescriptionRequestSchema - Zod schema for JD ingest request
+ * Discriminated union for paste mode (rawText) vs. upload mode (s3Key)
+ */
+export const CreateJobDescriptionRequestSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('paste'),
+    title: z.string().min(1, 'title is required'),
+    rawText: z.string().min(1, 'rawText is required and must be non-empty'),
+  }),
+  z.object({
+    mode: z.literal('upload'),
+    title: z.string().min(1, 'title is required'),
+    s3Key: z.string().min(1, 's3Key is required and must be non-empty'),
+  }),
+]);
+
+/**
+ * CreateJobDescriptionRequest - TypeScript type inferred from CreateJobDescriptionRequestSchema
+ */
+export type CreateJobDescriptionRequest = z.infer<typeof CreateJobDescriptionRequestSchema>;

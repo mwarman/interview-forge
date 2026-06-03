@@ -42,6 +42,14 @@ export const response = {
     };
   },
 
+  created<T>(body: T): ApiResponse {
+    return {
+      statusCode: 201,
+      body: JSON.stringify(body),
+      headers: DEFAULT_HEADERS,
+    };
+  },
+
   accepted<T>(body: T): ApiResponse {
     return {
       statusCode: 202,
@@ -60,6 +68,17 @@ export const response = {
   badRequest(error: string, message: string = ''): ApiResponse {
     return {
       statusCode: 400,
+      body: JSON.stringify({
+        error,
+        message,
+      } as ApiErrorResponse),
+      headers: DEFAULT_HEADERS,
+    };
+  },
+
+  unprocessableEntity(error: string = 'Unprocessable Entity', message: string = ''): ApiResponse {
+    return {
+      statusCode: 422,
       body: JSON.stringify({
         error,
         message,

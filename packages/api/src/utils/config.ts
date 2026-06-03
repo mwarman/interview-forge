@@ -6,8 +6,9 @@ import { z } from 'zod';
  */
 const ConfigSchema = z.object({
   LOG_ENABLED: z
-    .stringbool()
-    .default(true)
+    .string()
+    .default('true')
+    .transform((val) => val.toLowerCase() === 'true')
     .describe('LOG_ENABLED - Enable or disable logging (optional, default: "true")'),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
@@ -17,6 +18,8 @@ const ConfigSchema = z.object({
     .enum(['json', 'text'])
     .default('json')
     .describe('LOG_FORMAT - Logging format (optional, default: "json")'),
+  JD_TABLE_NAME: z.string().min(1).describe('JD_TABLE_NAME - DynamoDB table for Job Descriptions (required)'),
+  JD_BUCKET_NAME: z.string().min(1).describe('JD_BUCKET_NAME - S3 bucket for Job Descriptions (required)'),
 });
 
 /**
