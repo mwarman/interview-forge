@@ -18,7 +18,7 @@ export class PdfService {
    * @throws Error if extraction fails
    */
   async extractTextFromFile(s3Key: string): Promise<string> {
-    logger.debug({ s3Key }, '[PdfService.extractTextFromFile] > extractTextFromFile');
+    logger.info({ s3Key }, '[PdfService.extractTextFromFile] > extractTextFromFile');
 
     try {
       // Determine file type from extension
@@ -45,7 +45,7 @@ export class PdfService {
       if (isTxt) {
         // For text files, just decode the bytes
         const text = Buffer.from(buffer).toString('utf-8');
-        logger.debug({ s3Key, textLength: text.length }, '[PdfService.extractTextFromFile] - Text file extracted');
+        logger.info({ s3Key, textLength: text.length }, '[PdfService.extractTextFromFile] < Text file extracted');
         return text;
       }
 
@@ -68,7 +68,7 @@ export class PdfService {
         throw new Error('PDF appears to be scanned or encrypted and could not be parsed');
       }
 
-      logger.debug({ s3Key, textLength: fullText.length }, '[PdfService.extractTextFromFile] - PDF text extracted');
+      logger.info({ s3Key, textLength: fullText.length }, '[PdfService.extractTextFromFile] < PDF text extracted');
       return fullText.trim();
     } catch (error) {
       if (error instanceof Error) {

@@ -25,7 +25,7 @@ export class JobDescriptionService {
    * @returns The created job description result with jdId, createdAt, and ttl
    */
   async createFromPaste(title: string, rawText: string): Promise<JobDescription> {
-    logger.debug({ title }, '[JobDescriptionService.createFromPaste] > createFromPaste');
+    logger.info({ title }, '[JobDescriptionService.createFromPaste] > createFromPaste');
 
     try {
       const jdId = randomUUID();
@@ -46,10 +46,9 @@ export class JobDescriptionService {
 
       logger.debug({ jdId }, '[JobDescriptionService.createFromPaste] - Persisting job description');
       await jobDescriptionRepository.put(item);
+      logger.debug({ jdId, title }, '[JobDescriptionService.createFromPaste] - Job description created from paste');
 
-      logger.info({ jdId, title }, '[JobDescriptionService.createFromPaste] - Job description created from paste');
-      logger.debug('[JobDescriptionService.createFromPaste] < createFromPaste');
-
+      logger.info('[JobDescriptionService.createFromPaste] < createFromPaste');
       return jobDescriptionRepository.toJobDescription(item);
     } catch (error) {
       logger.error({ error, title }, '[JobDescriptionService.createFromPaste] - Failed to create from paste');
@@ -64,7 +63,7 @@ export class JobDescriptionService {
    * @returns The created job description result with jdId, createdAt, and ttl
    */
   async createFromUpload(title: string, s3Key: string): Promise<JobDescription> {
-    logger.debug({ title, s3Key }, '[JobDescriptionService.createFromUpload] > createFromUpload');
+    logger.info({ title, s3Key }, '[JobDescriptionService.createFromUpload] > createFromUpload');
 
     try {
       logger.debug({ s3Key }, '[JobDescriptionService.createFromUpload] - Extracting text from file');
@@ -91,13 +90,12 @@ export class JobDescriptionService {
 
       logger.debug({ jdId }, '[JobDescriptionService.createFromUpload] - Persisting job description');
       await jobDescriptionRepository.put(item);
-
-      logger.info(
+      logger.debug(
         { jdId, title, s3Key },
         '[JobDescriptionService.createFromUpload] - Job description created from upload',
       );
-      logger.debug('[JobDescriptionService.createFromUpload] < createFromUpload');
 
+      logger.info('[JobDescriptionService.createFromUpload] < createFromUpload');
       return jobDescriptionRepository.toJobDescription(item);
     } catch (error) {
       logger.error({ error, title, s3Key }, '[JobDescriptionService.createFromUpload] - Failed to create from upload');
