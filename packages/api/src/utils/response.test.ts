@@ -32,6 +32,34 @@ describe('response helpers', () => {
     });
   });
 
+  describe('created', () => {
+    it('should return a 201 response with body', () => {
+      // Arrange
+      const testData = { id: 'resource-123', name: 'New Resource' };
+
+      // Act
+      const result = response.created(testData);
+
+      // Assert
+      expect(result.statusCode).toBe(201);
+      expect(result.body).toBe(JSON.stringify(testData));
+      expect(result.headers?.['Content-Type']).toBe('application/json');
+    });
+
+    it('should return a 201 response with various data types', () => {
+      // Arrange
+      const testData = { count: 42, active: true };
+
+      // Act
+      const result = response.created(testData);
+
+      // Assert
+      expect(result.statusCode).toBe(201);
+      expect(JSON.parse(result.body || '{}')).toEqual(testData);
+      expect(result.headers?.['Content-Type']).toBe('application/json');
+    });
+  });
+
   describe('noContent', () => {
     it('should return a 204 response with no body', () => {
       // Arrange & Act
@@ -76,6 +104,49 @@ describe('response helpers', () => {
     });
   });
 
+  describe('unprocessableEntity', () => {
+    it('should return a 422 response with default error', () => {
+      // Arrange & Act
+      const result = response.unprocessableEntity();
+
+      // Assert
+      expect(result.statusCode).toBe(422);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe('Unprocessable Entity');
+      expect(body.message).toBe('');
+      expect(result.headers?.['Content-Type']).toBe('application/json');
+    });
+
+    it('should return a 422 response with custom error', () => {
+      // Arrange
+      const error = 'Invalid Schema';
+
+      // Act
+      const result = response.unprocessableEntity(error);
+
+      // Assert
+      expect(result.statusCode).toBe(422);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe(error);
+      expect(body.message).toBe('');
+    });
+
+    it('should return a 422 response with custom error and message', () => {
+      // Arrange
+      const error = 'Validation Failed';
+      const message = 'Field validation failed: invalid email format';
+
+      // Act
+      const result = response.unprocessableEntity(error, message);
+
+      // Assert
+      expect(result.statusCode).toBe(422);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe(error);
+      expect(body.message).toBe(message);
+    });
+  });
+
   describe('notFound', () => {
     it('should return a 404 response with default error', () => {
       // Arrange & Act
@@ -98,6 +169,49 @@ describe('response helpers', () => {
 
       // Assert
       expect(result.statusCode).toBe(404);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe(error);
+      expect(body.message).toBe(message);
+    });
+  });
+
+  describe('conflict', () => {
+    it('should return a 409 response with default error', () => {
+      // Arrange & Act
+      const result = response.conflict();
+
+      // Assert
+      expect(result.statusCode).toBe(409);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe('Conflict');
+      expect(body.message).toBe('');
+      expect(result.headers?.['Content-Type']).toBe('application/json');
+    });
+
+    it('should return a 409 response with custom error', () => {
+      // Arrange
+      const error = 'Resource Already Exists';
+
+      // Act
+      const result = response.conflict(error);
+
+      // Assert
+      expect(result.statusCode).toBe(409);
+      const body = JSON.parse(result.body || '{}');
+      expect(body.error).toBe(error);
+      expect(body.message).toBe('');
+    });
+
+    it('should return a 409 response with custom error and message', () => {
+      // Arrange
+      const error = 'Duplicate Resource';
+      const message = 'A resource with this identifier already exists';
+
+      // Act
+      const result = response.conflict(error, message);
+
+      // Assert
+      expect(result.statusCode).toBe(409);
       const body = JSON.parse(result.body || '{}');
       expect(body.error).toBe(error);
       expect(body.message).toBe(message);
