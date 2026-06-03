@@ -1,8 +1,8 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 
-import { response } from '../../utils/response';
-import { logger, withRequestTracking } from '../../utils/logger';
-import { jobDescriptionService } from '../../services/job-description-service';
+import { response } from '@/utils/response';
+import { logger, withRequestTracking } from '@/utils/logger';
+import { jobDescriptionService } from '@/services/job-description-service';
 
 /**
  * List Job Description Handler - returns all job descriptions sorted by createdAt descending
