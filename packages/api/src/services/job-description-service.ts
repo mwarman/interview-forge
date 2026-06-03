@@ -102,6 +102,28 @@ export class JobDescriptionService {
       throw error;
     }
   }
+
+  /**
+   * List all Job Descriptions sorted by createdAt descending
+   * @returns Array of all job descriptions sorted by createdAt descending
+   * @throws Error if repository query fails
+   */
+  async listAll(): Promise<JobDescription[]> {
+    logger.info('[JobDescriptionService.listAll] > listAll');
+
+    try {
+      const jobDescriptions = await jobDescriptionRepository.queryAll();
+      logger.info(
+        { count: jobDescriptions.length },
+        '[JobDescriptionService.listAll] - Retrieved all job descriptions',
+      );
+      logger.info('[JobDescriptionService.listAll] < listAll');
+      return jobDescriptions;
+    } catch (error) {
+      logger.error({ error }, '[JobDescriptionService.listAll] - Failed to list all job descriptions');
+      throw error;
+    }
+  }
 }
 
 /**

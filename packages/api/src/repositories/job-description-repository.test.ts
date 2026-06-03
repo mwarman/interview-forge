@@ -234,4 +234,127 @@ describe('JobDescriptionRepository', () => {
       );
     });
   });
+
+  describe('queryAll', () => {
+    it('should query all job descriptions from GSI1 sorted by createdAt descending', async () => {
+      // Arrange
+      const mockItems: JobDescriptionItem[] = [
+        {
+          PK: 'JD#550e8400-e29b-41d4-a716-446655440001',
+          SK: 'METADATA',
+          GSI1PK: 'JDS',
+          GSI1SK: '2026-06-03T13:00:00.000Z',
+          jdId: '550e8400-e29b-41d4-a716-446655440001',
+          title: 'Senior Backend Engineer',
+          rawText: 'Job description 1',
+          createdAt: '2026-06-03T13:00:00.000Z',
+          TTL: 1234567890,
+        },
+        {
+          PK: 'JD#550e8400-e29b-41d4-a716-446655440002',
+          SK: 'METADATA',
+          GSI1PK: 'JDS',
+          GSI1SK: '2026-06-03T12:00:00.000Z',
+          jdId: '550e8400-e29b-41d4-a716-446655440002',
+          title: 'Frontend Engineer',
+          rawText: 'Job description 2',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        },
+      ];
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Items: mockItems,
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.queryAll();
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0].jdId).toBe('550e8400-e29b-41d4-a716-446655440001');
+      expect(result[1].jdId).toBe('550e8400-e29b-41d4-a716-446655440002');
+      expect(result[0]).not.toHaveProperty('PK');
+      expect(result[0]).not.toHaveProperty('GSI1PK');
+      expect(dynamoClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({
+            IndexName: 'GSI1',
+            KeyConditionExpression: 'GSI1PK = :gsi1pk',
+            ScanIndexForward: false,
+          }),
+        }),
+      );
+    });
+
+    it('should return empty array when no items exist', async () => {
+      // Arrange
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Items: [],
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.queryAll();
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(dynamoClient.send).toHaveBeenCalledOnce();
+    });
+
+    it('should return empty array when Items is undefined', async () => {
+      // Arrange
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.queryAll();
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(dynamoClient.send).toHaveBeenCalledOnce();
+    });
+
+    it('should throw error when DynamoDB query fails', async () => {
+      // Arrange
+      const error = new Error('Query failed');
+      vi.mocked(dynamoClient.send).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(jobDescriptionRepository.queryAll()).rejects.toThrow('Query failed');
+    });
+
+    it('should convert DynamoDB items to JobDescription objects', async () => {
+      // Arrange
+      const mockItems: JobDescriptionItem[] = [
+        {
+          PK: 'JD#test-id',
+          SK: 'METADATA',
+          GSI1PK: 'JDS',
+          GSI1SK: '2026-06-03T12:00:00.000Z',
+          jdId: 'test-id',
+          title: 'Test Job',
+          rawText: 'Test description',
+          s3Key: 'uploads/file.pdf',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        },
+      ];
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({
+        Items: mockItems,
+      } as Record<string, unknown>);
+
+      // Act
+      const result = await jobDescriptionRepository.queryAll();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      const jd = result[0];
+      expect(jd.jdId).toBe('test-id');
+      expect(jd.title).toBe('Test Job');
+      expect(jd.rawText).toBe('Test description');
+      expect(jd.s3Key).toBe('uploads/file.pdf');
+      expect(jd.createdAt).toBe('2026-06-03T12:00:00.000Z');
+      expect(jd.TTL).toBe(1234567890);
+    });
+  });
 });

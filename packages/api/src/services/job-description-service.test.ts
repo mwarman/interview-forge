@@ -14,6 +14,7 @@ vi.mock('@/services/pdf-service', () => ({
 vi.mock('@/repositories/job-description-repository', () => ({
   jobDescriptionRepository: {
     put: vi.fn(),
+    queryAll: vi.fn(),
     toJobDescription: vi.fn((item) => {
       const { PK: _pk, SK: _sk, GSI1PK: _gsi1pk, GSI1SK: _gsi1sk, ...jobDescription } = item;
       return jobDescription;
@@ -156,6 +157,60 @@ describe('JobDescriptionService', () => {
       // Assert
       expect(result.TTL).toBeGreaterThan(Math.floor(Date.now() / 1000));
       expect(result.TTL).toBeLessThan(Math.floor(Date.now() / 1000) + 72 * 3600 + 1000); // Allow 1 second buffer
+    });
+  });
+
+  describe('listAll', () => {
+    it('should return all job descriptions from repository', async () => {
+      // Arrange
+      const mockJobDescriptions = [
+        {
+          jdId: '550e8400-e29b-41d4-a716-446655440001',
+          title: 'Senior Backend Engineer',
+          rawText: 'Job description 1',
+          createdAt: '2026-06-03T13:00:00.000Z',
+          TTL: 1234567890,
+        },
+        {
+          jdId: '550e8400-e29b-41d4-a716-446655440002',
+          title: 'Frontend Engineer',
+          rawText: 'Job description 2',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        },
+      ];
+
+      vi.mocked(jobDescriptionRepository.queryAll).mockResolvedValue(mockJobDescriptions);
+
+      // Act
+      const result = await jobDescriptionService.listAll();
+
+      // Assert
+      expect(result).toEqual(mockJobDescriptions);
+      expect(result).toHaveLength(2);
+      expect(jobDescriptionRepository.queryAll).toHaveBeenCalledOnce();
+    });
+
+    it('should return empty array when no job descriptions exist', async () => {
+      // Arrange
+      vi.mocked(jobDescriptionRepository.queryAll).mockResolvedValue([]);
+
+      // Act
+      const result = await jobDescriptionService.listAll();
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(jobDescriptionRepository.queryAll).toHaveBeenCalledOnce();
+    });
+
+    it('should throw error when repository query fails', async () => {
+      // Arrange
+      const error = new Error('Query failed');
+      vi.mocked(jobDescriptionRepository.queryAll).mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(jobDescriptionService.listAll()).rejects.toThrow('Query failed');
+      expect(jobDescriptionRepository.queryAll).toHaveBeenCalledOnce();
     });
   });
 });
