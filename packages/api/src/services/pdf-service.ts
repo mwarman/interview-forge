@@ -1,9 +1,9 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { extractText } from 'unpdf';
 
-import { config } from '../utils/config';
-import { logger } from '../utils/logger';
-import { s3Client } from '../utils/s3-client';
+import { config } from '@/utils/config';
+import { logger } from '@/utils/logger';
+import { s3Client } from '@/utils/s3-client';
 
 /**
  * Service for PDF and text file extraction operations

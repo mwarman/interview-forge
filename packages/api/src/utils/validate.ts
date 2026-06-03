@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { ZodError, ZodType } from 'zod';
-import { logger } from './logger';
+
+import { logger } from '@/utils/logger';
 
 /**
  * Custom error class for validation errors, extending the built-in Error class

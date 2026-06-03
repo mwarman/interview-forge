@@ -6,7 +6,7 @@ import {
   StructuredLogFormatter,
 } from 'pino-lambda';
 
-import { config } from './config';
+import { config } from '@/utils/config';
 
 /**
  * Logger singleton instance configured with Pino and Lambda destination
