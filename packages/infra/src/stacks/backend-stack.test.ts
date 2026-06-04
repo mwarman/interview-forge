@@ -11,7 +11,9 @@ describe('BackendStack', () => {
   let dataStack: DataStack;
 
   beforeEach(() => {
-    app = new cdk.App();
+    app = new cdk.App({
+      context: { 'aws:cdk:bundling-stacks': [] },
+    });
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
   });
