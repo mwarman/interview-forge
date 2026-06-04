@@ -35,6 +35,8 @@ const backendStack = new BackendStack(app, 'BackendStack', {
   config,
   env,
   tags,
+  table: dataStack.table,
+  bucket: dataStack.bucket,
 });
 
 // Set stack dependencies (backend depends on data)
