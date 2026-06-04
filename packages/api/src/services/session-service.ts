@@ -42,6 +42,8 @@ export class SessionService {
       const item: SessionItem = {
         PK: `JD#${jdId}`,
         SK: `SESSION#${sessionId}`,
+        GSI1PK: `JD#${jdId}`,
+        GSI1SK: `SESSION#${now}#${sessionId}`,
         sessionId,
         jdId,
         candidateName,
@@ -58,6 +60,26 @@ export class SessionService {
       return sessionRepository.toSession(item);
     } catch (error) {
       logger.error({ error, jdId, candidateName }, '[SessionService.createSession] - Failed to create session');
+      throw error;
+    }
+  }
+
+  /**
+   * List all sessions for a given JD ID, sorted by createdAt ascending
+   * @param jdId - The unique identifier of the parent job description
+   * @returns Array of sessions sorted by createdAt ascending
+   * @throws Error if repository query fails
+   */
+  async listByJdId(jdId: string): Promise<Session[]> {
+    logger.info({ jdId }, '[SessionService.listByJdId] > listByJdId');
+
+    try {
+      const sessions = await sessionRepository.queryByJdId(jdId);
+      logger.info({ jdId, count: sessions.length }, '[SessionService.listByJdId] - Retrieved all sessions for JD');
+      logger.info('[SessionService.listByJdId] < listByJdId');
+      return sessions;
+    } catch (error) {
+      logger.error({ error, jdId }, '[SessionService.listByJdId] - Failed to list sessions for JD');
       throw error;
     }
   }

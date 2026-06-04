@@ -20,6 +20,8 @@ describe('SessionRepository', () => {
       const item: SessionItem = {
         PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
         SK: 'SESSION#660f9411-f30c-42e5-b827-557766551111',
+        GSI1PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
+        GSI1SK: 'SESSION#2026-06-03T12:00:00.000Z#660f9411-f30c-42e5-b827-557766551111',
         sessionId: '660f9411-f30c-42e5-b827-557766551111',
         jdId: '550e8400-e29b-41d4-a716-446655440000',
         candidateName: 'John Doe',
@@ -44,6 +46,8 @@ describe('SessionRepository', () => {
       // Verify DynamoDB fields are removed
       expect(result).not.toHaveProperty('PK');
       expect(result).not.toHaveProperty('SK');
+      expect(result).not.toHaveProperty('GSI1PK');
+      expect(result).not.toHaveProperty('GSI1SK');
     });
 
     it('should preserve optional fields when present', () => {
@@ -51,6 +55,8 @@ describe('SessionRepository', () => {
       const item: SessionItem = {
         PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
         SK: 'SESSION#660f9411-f30c-42e5-b827-557766551111',
+        GSI1PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
+        GSI1SK: 'SESSION#2026-06-03T12:00:00.000Z#660f9411-f30c-42e5-b827-557766551111',
         sessionId: '660f9411-f30c-42e5-b827-557766551111',
         jdId: '550e8400-e29b-41d4-a716-446655440000',
         candidateName: 'Jane Doe',
@@ -86,6 +92,8 @@ describe('SessionRepository', () => {
       const item: SessionItem = {
         PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
         SK: 'SESSION#660f9411-f30c-42e5-b827-557766551111',
+        GSI1PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
+        GSI1SK: 'SESSION#2026-06-03T12:00:00.000Z#660f9411-f30c-42e5-b827-557766551111',
         sessionId: '660f9411-f30c-42e5-b827-557766551111',
         jdId: '550e8400-e29b-41d4-a716-446655440000',
         candidateName: 'John Doe',
@@ -115,6 +123,8 @@ describe('SessionRepository', () => {
       const item: SessionItem = {
         PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
         SK: 'SESSION#660f9411-f30c-42e5-b827-557766551111',
+        GSI1PK: 'JD#550e8400-e29b-41d4-a716-446655440000',
+        GSI1SK: 'SESSION#2026-06-03T12:00:00.000Z#660f9411-f30c-42e5-b827-557766551111',
         sessionId: '660f9411-f30c-42e5-b827-557766551111',
         jdId: '550e8400-e29b-41d4-a716-446655440000',
         candidateName: 'John Doe',
@@ -138,6 +148,8 @@ describe('SessionRepository', () => {
       const item: SessionItem = {
         PK: `JD#${jdId}`,
         SK: `SESSION#${sessionId}`,
+        GSI1PK: `JD#${jdId}`,
+        GSI1SK: `SESSION#2026-06-03T12:00:00.000Z#${sessionId}`,
         sessionId,
         jdId,
         candidateName: 'John Doe',
@@ -197,6 +209,129 @@ describe('SessionRepository', () => {
 
       // Act & Assert
       await expect(sessionRepository.getById(jdId, sessionId)).rejects.toThrow('DynamoDB error');
+    });
+  });
+
+  describe('queryByJdId', () => {
+    it('should fetch all sessions for a JD sorted by createdAt ascending', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const items: SessionItem[] = [
+        {
+          PK: `JD#${jdId}`,
+          SK: 'SESSION#660f9411-f30c-42e5-b827-557766551111',
+          GSI1PK: `JD#${jdId}`,
+          GSI1SK: 'SESSION#2026-06-03T10:00:00.000Z#660f9411-f30c-42e5-b827-557766551111',
+          sessionId: '660f9411-f30c-42e5-b827-557766551111',
+          jdId,
+          candidateName: 'Alice',
+          status: 'PLAN_PENDING',
+          createdAt: '2026-06-03T10:00:00.000Z',
+          TTL: 1751590800,
+        },
+        {
+          PK: `JD#${jdId}`,
+          SK: 'SESSION#770g0522-g41d-53f6-c938-668877662222',
+          GSI1PK: `JD#${jdId}`,
+          GSI1SK: 'SESSION#2026-06-03T11:00:00.000Z#770g0522-g41d-53f6-c938-668877662222',
+          sessionId: '770g0522-g41d-53f6-c938-668877662222',
+          jdId,
+          candidateName: 'Bob',
+          status: 'PLAN_APPROVED',
+          createdAt: '2026-06-03T11:00:00.000Z',
+          TTL: 1751590800,
+        },
+      ];
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: items });
+
+      // Act
+      const result = await sessionRepository.queryByJdId(jdId);
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        sessionId: '660f9411-f30c-42e5-b827-557766551111',
+        jdId,
+        candidateName: 'Alice',
+        status: 'PLAN_PENDING',
+        createdAt: '2026-06-03T10:00:00.000Z',
+        TTL: 1751590800,
+      });
+      expect(result[1]).toEqual({
+        sessionId: '770g0522-g41d-53f6-c938-668877662222',
+        jdId,
+        candidateName: 'Bob',
+        status: 'PLAN_APPROVED',
+        createdAt: '2026-06-03T11:00:00.000Z',
+        TTL: 1751590800,
+      });
+
+      expect(dynamoClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            TableName: expect.any(String),
+            IndexName: 'GSI1',
+            KeyConditionExpression: 'GSI1PK = :gsi1pk AND begins_with(GSI1SK, :gsi1sk_prefix)',
+            ExpressionAttributeValues: {
+              ':gsi1pk': `JD#${jdId}`,
+              ':gsi1sk_prefix': 'SESSION#',
+            },
+            ScanIndexForward: true,
+          },
+        }),
+      );
+    });
+
+    it('should return empty array when no sessions exist for a JD', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: [] });
+
+      // Act
+      const result = await sessionRepository.queryByJdId(jdId);
+
+      // Assert
+      expect(result).toEqual([]);
+
+      expect(dynamoClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            TableName: expect.any(String),
+            IndexName: 'GSI1',
+            KeyConditionExpression: 'GSI1PK = :gsi1pk AND begins_with(GSI1SK, :gsi1sk_prefix)',
+            ExpressionAttributeValues: {
+              ':gsi1pk': `JD#${jdId}`,
+              ':gsi1sk_prefix': 'SESSION#',
+            },
+            ScanIndexForward: true,
+          },
+        }),
+      );
+    });
+
+    it('should return empty array when result has no Items', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({});
+
+      // Act
+      const result = await sessionRepository.queryByJdId(jdId);
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should throw error when DynamoDB query fails', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+
+      vi.mocked(dynamoClient.send).mockRejectedValue(new Error('DynamoDB error'));
+
+      // Act & Assert
+      await expect(sessionRepository.queryByJdId(jdId)).rejects.toThrow('DynamoDB error');
     });
   });
 });

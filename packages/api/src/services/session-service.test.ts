@@ -14,6 +14,7 @@ vi.mock('@/repositories/job-description-repository', () => ({
 vi.mock('@/repositories/session-repository', () => ({
   sessionRepository: {
     put: vi.fn(),
+    queryByJdId: vi.fn(),
     toSession: vi.fn((item) => {
       const { PK: _pk, SK: _sk, ...session } = item;
       return session;
@@ -115,6 +116,95 @@ describe('SessionService', () => {
 
       // Act & Assert
       await expect(sessionService.createSession(jdId, candidateName)).rejects.toThrow('DynamoDB query error');
+    });
+  });
+
+  describe('listByJdId', () => {
+    it('should return all sessions for a JD sorted by createdAt ascending', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessions = [
+        {
+          sessionId: '660f9411-f30c-42e5-b827-557766551111',
+          jdId,
+          candidateName: 'Alice',
+          status: 'PLAN_PENDING',
+          createdAt: '2026-06-03T10:00:00.000Z',
+          TTL: 1751590800,
+        },
+        {
+          sessionId: '770g0522-g41d-53f6-c938-668877662222',
+          jdId,
+          candidateName: 'Bob',
+          status: 'PLAN_APPROVED',
+          createdAt: '2026-06-03T11:00:00.000Z',
+          TTL: 1751590800,
+        },
+      ];
+
+      vi.mocked(sessionRepository.queryByJdId).mockResolvedValue(sessions);
+
+      // Act
+      const result = await sessionService.listByJdId(jdId);
+
+      // Assert
+      expect(result).toEqual(sessions);
+      expect(result).toHaveLength(2);
+      expect(result[0].candidateName).toBe('Alice');
+      expect(result[1].candidateName).toBe('Bob');
+      expect(sessionRepository.queryByJdId).toHaveBeenCalledWith(jdId);
+      expect(sessionRepository.queryByJdId).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return empty array when no sessions exist for a JD', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+
+      vi.mocked(sessionRepository.queryByJdId).mockResolvedValue([]);
+
+      // Act
+      const result = await sessionService.listByJdId(jdId);
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
+      expect(sessionRepository.queryByJdId).toHaveBeenCalledWith(jdId);
+    });
+
+    it('should throw error when repository query fails', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+
+      vi.mocked(sessionRepository.queryByJdId).mockRejectedValue(new Error('DynamoDB query error'));
+
+      // Act & Assert
+      await expect(sessionService.listByJdId(jdId)).rejects.toThrow('DynamoDB query error');
+      expect(sessionRepository.queryByJdId).toHaveBeenCalledWith(jdId);
+    });
+
+    it('should return single session when only one exists for a JD', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessions = [
+        {
+          sessionId: '660f9411-f30c-42e5-b827-557766551111',
+          jdId,
+          candidateName: 'Charlie',
+          status: 'PLAN_COMPLETED',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1751590800,
+        },
+      ];
+
+      vi.mocked(sessionRepository.queryByJdId).mockResolvedValue(sessions);
+
+      // Act
+      const result = await sessionService.listByJdId(jdId);
+
+      // Assert
+      expect(result).toEqual(sessions);
+      expect(result).toHaveLength(1);
+      expect(result[0].candidateName).toBe('Charlie');
     });
   });
 });

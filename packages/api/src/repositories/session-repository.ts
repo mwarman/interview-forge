@@ -1,4 +1,4 @@
-import { PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 import { Session } from '@interview-forge/shared';
 
@@ -12,12 +12,16 @@ import { dynamoClient } from '@/utils/dynamo-client';
 export interface SessionItem extends Session {
   PK: string;
   SK: string;
+  GSI1PK: string;
+  GSI1SK: string;
 }
 
 /**
  * Repository for Session persistence operations
  * Encapsulates all DynamoDB interactions for Session entities
- * Uses single table design with PK: JD#{jdId}, SK: SESSION#{sessionId}
+ * Uses single table design with:
+ * - PK: JD#{jdId}, SK: SESSION#{sessionId} (for direct session lookup)
+ * - GSI1PK: JD#{jdId}, GSI1SK: createdAt (for querying all sessions for a JD sorted by creation time)
  */
 export class SessionRepository {
   /**
@@ -26,7 +30,7 @@ export class SessionRepository {
    * @returns The Session entity
    */
   toSession(item: SessionItem): Session {
-    const { PK: _pk, SK: _sk, ...session } = item;
+    const { PK: _pk, SK: _sk, GSI1PK: _gsi1pk, GSI1SK: _gsi1sk, ...session } = item;
     return session;
   }
 
@@ -87,6 +91,51 @@ export class SessionRepository {
       return session;
     } catch (error) {
       logger.error({ error, jdId, sessionId }, '[SessionRepository.getById] - DynamoDB get failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Query all sessions for a given JD ID, sorted by createdAt ascending
+   * Uses GSI1 index: GSI1PK = JD#{jdId}, GSI1SK = SESSION#{createdAt}#{sessionId}
+   * Filters to only SESSION records (excludes JD METADATA if any were in the same partition)
+   * @param jdId - The unique identifier of the parent job description
+   * @returns Array of Session items sorted by createdAt ascending
+   * @throws Error if DynamoDB query fails
+   */
+  async queryByJdId(jdId: string): Promise<Session[]> {
+    logger.debug({ jdId }, '[SessionRepository.queryByJdId] > queryByJdId');
+
+    try {
+      const result = await dynamoClient.send(
+        new QueryCommand({
+          TableName: config.JD_TABLE_NAME,
+          IndexName: 'GSI1',
+          KeyConditionExpression: 'GSI1PK = :gsi1pk AND begins_with(GSI1SK, :gsi1sk_prefix)',
+          ExpressionAttributeValues: {
+            ':gsi1pk': `JD#${jdId}`,
+            ':gsi1sk_prefix': 'SESSION#',
+          },
+          ScanIndexForward: true, // Sort by GSI1SK ascending (chronologically by createdAt)
+        }),
+      );
+
+      logger.debug(
+        { jdId, itemCount: result.Items?.length || 0 },
+        '[SessionRepository.queryByJdId] - Items retrieved from DynamoDB',
+      );
+
+      if (!result.Items || result.Items.length === 0) {
+        logger.debug({ jdId }, '[SessionRepository.queryByJdId] - No items found');
+        return [];
+      }
+
+      const sessions = result.Items.map((item) => this.toSession(item as SessionItem));
+
+      logger.debug({ jdId }, '[SessionRepository.queryByJdId] < queryByJdId');
+      return sessions;
+    } catch (error) {
+      logger.error({ error, jdId }, '[SessionRepository.queryByJdId] - DynamoDB query failed');
       throw error;
     }
   }
