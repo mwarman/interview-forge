@@ -1,10 +1,10 @@
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 
 import { CreateSessionRequestSchema } from '@interview-forge/shared';
-import { response } from '../../utils/response';
-import { logger, withRequestTracking } from '../../utils/logger';
-import { parseBody, ValidationError } from '../../utils/validate';
-import { sessionService } from '../../services/session-service';
+import { response } from '@/utils/response';
+import { logger, withRequestTracking } from '@/utils/logger';
+import { parseBody, ValidationError } from '@/utils/validate';
+import { sessionService } from '@/services/session-service';
 
 /**
  * Create Session Handler - creates a new candidate session under a parent JD
