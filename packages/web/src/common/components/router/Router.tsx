@@ -2,7 +2,7 @@ import { JSX } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { Layout } from '@/common/layouts/Layout';
-import { JobListPage } from '@/pages/jobs/JobListPage';
+import { JobListPage } from '@/pages/jd/list/JobListPage';
 
 /**
  * The Router component defines the routing structure of the application using React Router.
