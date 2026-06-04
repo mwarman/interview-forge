@@ -5,7 +5,7 @@ export {
   CreatePresignedUrlRequestSchema,
   CreatePresignedUrlResponseSchema,
 } from './schemas/job-description';
-export { SessionSchema, SessionStatusSchema } from './schemas/session';
+export { SessionSchema, SessionStatusSchema, CreateSessionRequestSchema } from './schemas/session';
 
 // Export inferred types
 export type {
@@ -14,4 +14,4 @@ export type {
   CreatePresignedUrlRequest,
   CreatePresignedUrlResponse,
 } from './schemas/job-description';
-export type { Session, SessionStatus } from './schemas/session';
+export type { Session, SessionStatus, CreateSessionRequest } from './schemas/session';
