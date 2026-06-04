@@ -16,8 +16,8 @@ export const Router = (): JSX.Element => {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/jobs" replace />} />
-          <Route path="/jobs" element={<JDListPage />} />
+          <Route path="/" element={<Navigate to="/jds" replace />} />
+          <Route path="/jds" element={<JDListPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
