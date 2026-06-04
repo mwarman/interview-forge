@@ -15,6 +15,7 @@ vi.mock('@/repositories/session-repository', () => ({
   sessionRepository: {
     put: vi.fn(),
     queryByJdId: vi.fn(),
+    getById: vi.fn(),
     toSession: vi.fn((item) => {
       const { PK: _pk, SK: _sk, ...session } = item;
       return session;
@@ -205,6 +206,87 @@ describe('SessionService', () => {
       expect(result).toEqual(sessions);
       expect(result).toHaveLength(1);
       expect(result[0].candidateName).toBe('Charlie');
+    });
+  });
+
+  describe('getById', () => {
+    it('should return a session when found', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const mockSession = {
+        sessionId,
+        jdId,
+        candidateName: 'John Doe',
+        status: 'PLAN_PENDING',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(sessionRepository.getById).mockResolvedValue(mockSession);
+
+      // Act
+      const result = await sessionService.getById(jdId, sessionId);
+
+      // Assert
+      expect(result).toEqual(mockSession);
+      expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
+      expect(sessionRepository.getById).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return null when session is not found', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = 'nonexistent-session-id';
+
+      vi.mocked(sessionRepository.getById).mockResolvedValue(null);
+
+      // Act
+      const result = await sessionService.getById(jdId, sessionId);
+
+      // Assert
+      expect(result).toBeNull();
+      expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
+    });
+
+    it('should return session with all optional fields when present', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const mockSession = {
+        sessionId,
+        jdId,
+        candidateName: 'Jane Smith',
+        status: 'ASSESSED',
+        plan: { section1: 'content' },
+        scorecard: { score: 90 },
+        assessment: { passed: true },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(sessionRepository.getById).mockResolvedValue(mockSession);
+
+      // Act
+      const result = await sessionService.getById(jdId, sessionId);
+
+      // Assert
+      expect(result).toEqual(mockSession);
+      expect(result?.plan).toEqual({ section1: 'content' });
+      expect(result?.scorecard).toEqual({ score: 90 });
+      expect(result?.assessment).toEqual({ passed: true });
+    });
+
+    it('should throw error when repository get fails', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+
+      vi.mocked(sessionRepository.getById).mockRejectedValue(new Error('DynamoDB get error'));
+
+      // Act & Assert
+      await expect(sessionService.getById(jdId, sessionId)).rejects.toThrow('DynamoDB get error');
+      expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
     });
   });
 });

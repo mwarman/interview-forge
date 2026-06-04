@@ -83,6 +83,26 @@ export class SessionService {
       throw error;
     }
   }
+
+  /**
+   * Fetch a single session by its ID and parent JD ID
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @returns The session if found, null if not found
+   * @throws Error if repository get fails
+   */
+  async getById(jdId: string, sessionId: string): Promise<Session | null> {
+    logger.info({ jdId, sessionId }, '[SessionService.getById] > getById');
+
+    try {
+      const session = await sessionRepository.getById(jdId, sessionId);
+      logger.info({ jdId, sessionId }, '[SessionService.getById] < getById');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionService.getById] - Failed to get session');
+      throw error;
+    }
+  }
 }
 
 /**
