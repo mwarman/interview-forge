@@ -31,3 +31,17 @@ export const SessionSchema = z.object({
  * Session - TypeScript type inferred from SessionSchema
  */
 export type Session = z.infer<typeof SessionSchema>;
+
+/**
+ * CreateSessionRequestSchema - Zod schema for create session request
+ * Accepts jdId and candidateName to create a new session under a parent JD
+ */
+export const CreateSessionRequestSchema = z.object({
+  jdId: z.uuid('jdId must be a valid UUID'),
+  candidateName: z.string().min(1, 'candidateName is required'),
+});
+
+/**
+ * CreateSessionRequest - TypeScript type inferred from CreateSessionRequestSchema
+ */
+export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
