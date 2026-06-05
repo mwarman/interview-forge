@@ -61,6 +61,14 @@ export class DataStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Destroy on stack deletion (safe for dev/qa)
       autoDeleteObjects: true, // Automatically delete objects when bucket is destroyed
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block all public access
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: ['*'], // Allow from any origin (can be restricted in production)
+          allowedHeaders: ['*'], // Allow all headers
+          maxAge: 3000, // Cache preflight response for 50 minutes
+        },
+      ],
     });
 
     // Add 72-hour lifecycle rule for automatic expiration of staged JD files
