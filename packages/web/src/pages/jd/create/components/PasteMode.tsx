@@ -4,10 +4,6 @@ import { z } from 'zod';
 
 import { CreateJobDescriptionRequestSchema } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
-import { Input } from '@/common/components/shadcn/input';
-import { Textarea } from '@/common/components/shadcn/textarea';
-import { useCreateJobDescription } from '@/pages/jd/create/api/useCreateJobDescription';
-import { cn } from '@/common/utils/css';
 import {
   Field,
   FieldDescription,
@@ -16,6 +12,10 @@ import {
   FieldLabel,
   FieldSet,
 } from '@/common/components/shadcn/field';
+import { Input } from '@/common/components/shadcn/input';
+import { Textarea } from '@/common/components/shadcn/textarea';
+import { useCreateJobDescription } from '@/pages/jd/create/api/useCreateJobDescription';
+import { cn } from '@/common/utils/css';
 
 interface PasteModeProps {
   onSuccess?: () => void;

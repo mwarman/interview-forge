@@ -5,6 +5,14 @@ import { CloudUpload } from 'lucide-react';
 
 import { cn } from '@/common/utils/css';
 import { Button } from '@/common/components/shadcn/button';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from '@/common/components/shadcn/field';
 import { Input } from '@/common/components/shadcn/input';
 import { Progress } from '@/common/components/shadcn/progress';
 import { Alert, AlertDescription } from '@/common/components/shadcn/alert';
@@ -127,9 +135,12 @@ export const UploadMode = ({ onSuccess }: UploadModeProps): JSX.Element => {
           'Content-Type': selectedFile.type || 'application/octet-stream',
         },
         onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
+          if (progressEvent.lengthComputable) {
+            // if length is computable, both loaded and total are available to calculate progress
+            // however for type safety, we guard against total being zero or undefined
+            const total = progressEvent.total || 1; // prevent division by zero
+            const progress = Math.round((progressEvent.loaded / total) * 100);
+            setUploadProgress(progress);
           }
         },
       });
@@ -170,102 +181,113 @@ export const UploadMode = ({ onSuccess }: UploadModeProps): JSX.Element => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="upload-title" className="mb-1 block text-sm font-medium">
-          Title <span className="text-red-500">*</span>
-        </label>
-        <Input
-          id="upload-title"
-          type="text"
-          placeholder="e.g., Senior Software Engineer"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value.slice(0, 200));
-            setValidationErrors((prev) => ({ ...prev, title: '' }));
-          }}
-          maxLength={200}
-          disabled={isLoading}
-          data-testid="upload-title-input"
-          className={validationErrors.title ? 'border-red-500' : ''}
-        />
-        <div className="mt-1 flex items-start justify-between">
-          {validationErrors.title && <p className="text-sm text-red-500">{validationErrors.title}</p>}
-          <p className="ml-auto text-xs text-gray-500">{title.length}/200</p>
-        </div>
-      </div>
+      <FieldSet>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="upload-title">Title</FieldLabel>
+            <Input
+              id="upload-title"
+              type="text"
+              placeholder="e.g., Senior Software Engineer"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value.slice(0, 200));
+                setValidationErrors((prev) => ({ ...prev, title: '' }));
+              }}
+              maxLength={200}
+              disabled={isLoading}
+              data-testid="upload-title-input"
+              className={validationErrors.title ? 'border-red-500' : ''}
+            />
+            <FieldDescription className="flex items-center justify-between">
+              <div>The title of the job description (max 200 characters).</div>
+              <div className="text-xs">{title.length}/200</div>
+            </FieldDescription>
+            <FieldError>{validationErrors.title}</FieldError>
+          </Field>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium">
-          File Upload <span className="text-red-500">*</span>
-        </label>
+          <Field>
+            <FieldLabel htmlFor="file-upload">File Upload</FieldLabel>
 
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={cn(
-            'relative h-60 rounded-lg border-2 border-dashed p-8 text-center transition-colors',
-            { 'border-primary bg-primary/5': isDragging },
-            { 'border-muted-foreground/25 bg-muted/50': !isDragging },
-            { 'cursor-not-allowed opacity-50': isLoading },
-            { 'cursor-pointer hover:border-gray-400': !isLoading },
-          )}
-          data-testid="file-dropzone"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.txt"
-            onChange={handleFileInputChange}
-            disabled={isLoading}
-            data-testid="file-input"
-            className="hidden"
-          />
-
-          {!selectedFile && (
-            <div className="flex flex-col items-center gap-3">
-              <CloudUpload className="text-muted-foreground size-12" />
-              <div>
-                <h3 className="font-semibold">Drag and drop your file here</h3>
-                <p className="text-muted-foreground text-sm">or</p>
-              </div>
-              <Button
-                variant="default"
-                onClick={() => fileInputRef.current?.click()}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                'relative h-60 rounded-lg border-2 border-dashed p-8 text-center transition-colors',
+                { 'border-primary bg-primary/5': isDragging },
+                { 'border-muted-foreground/25 bg-muted/50': !isDragging },
+                { 'cursor-not-allowed opacity-50': isLoading },
+                { 'cursor-pointer hover:border-gray-400': !isLoading },
+              )}
+              data-testid="file-dropzone"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt"
+                onChange={handleFileInputChange}
                 disabled={isLoading}
-                data-testid={`file-browse-button`}
-              >
-                Browse Files
-              </Button>
-              <p className="text-muted-foreground text-xs">Supported formats: PDF, TXT • Maximum file size: 10MB</p>
-            </div>
-          )}
+                data-testid="file-input"
+                className="hidden"
+              />
 
-          {selectedFile && (
-            <div className="flex flex-col items-center gap-3">
-              <CloudUpload className="text-muted-foreground size-12" />
-              <div>
-                <h3 className="font-semibold">Selected file:</h3>
-                <p className="text-muted-foreground text-sm">{selectedFile.name}</p>
-              </div>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setSelectedFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = '';
-                }}
-                disabled={isLoading}
-                data-testid={`file-remove-button`}
-              >
-                Remove File
-              </Button>
-              <p className="text-muted-foreground text-xs">Supported formats: PDF, TXT • Maximum file size: 10MB</p>
-            </div>
-          )}
-        </div>
+              {!selectedFile && (
+                <div className="flex flex-col items-center gap-3">
+                  <CloudUpload className="text-muted-foreground size-12" />
+                  <div>
+                    <h3 className="font-semibold">Drag and drop your file here</h3>
+                    <p className="text-muted-foreground text-sm">or</p>
+                  </div>
+                  <Button
+                    variant="default"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    data-testid={`file-browse-button`}
+                  >
+                    Browse Files
+                  </Button>
+                  <p className="text-muted-foreground text-xs">Supported formats: PDF, TXT • Maximum file size: 10MB</p>
+                </div>
+              )}
 
-        {fileError && <p className="mt-2 text-sm text-red-500">{fileError}</p>}
-      </div>
+              {selectedFile && (
+                <div className="flex flex-col items-center gap-3">
+                  <CloudUpload className="text-muted-foreground size-12" />
+                  <div>
+                    <h3 className="font-semibold">Selected file:</h3>
+                    <p className="text-muted-foreground text-sm">{selectedFile.name}</p>
+                  </div>
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    disabled={isLoading}
+                    data-testid={`file-remove-button`}
+                  >
+                    Remove File
+                  </Button>
+                  <p className="text-muted-foreground text-xs">Supported formats: PDF, TXT • Maximum file size: 10MB</p>
+                </div>
+              )}
+            </div>
+            <FieldError>{fileError}</FieldError>
+          </Field>
+
+          <Field>
+            <Button
+              type="submit"
+              disabled={isLoading || !selectedFile}
+              data-testid="upload-submit-button"
+              className="w-full"
+            >
+              {isLoading ? 'Uploading...' : 'Create Job Description'}
+            </Button>
+          </Field>
+        </FieldGroup>
+      </FieldSet>
 
       {isUploading && uploadProgress > 0 && (
         <Alert data-testid="upload-progress-alert">
@@ -278,10 +300,6 @@ export const UploadMode = ({ onSuccess }: UploadModeProps): JSX.Element => {
           </AlertDescription>
         </Alert>
       )}
-
-      <Button type="submit" disabled={isLoading || !selectedFile} data-testid="upload-submit-button" className="w-full">
-        {isLoading ? 'Uploading...' : 'Create Job Description'}
-      </Button>
     </form>
   );
 };
