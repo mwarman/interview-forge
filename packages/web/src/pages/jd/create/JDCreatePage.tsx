@@ -1,8 +1,9 @@
 import { JSX, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/common/components/shadcn/tabs';
-import { PasteMode } from './components/PasteMode';
-import { UploadMode } from './components/UploadMode';
+import { PasteMode } from '@/pages/jd/create/components/PasteMode';
+import { UploadMode } from '@/pages/jd/create/components/UploadMode';
 
 /**
  * JDCreatePage component - Main page for creating job descriptions.
