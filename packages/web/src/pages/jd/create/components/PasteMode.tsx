@@ -8,6 +8,14 @@ import { Input } from '@/common/components/shadcn/input';
 import { Textarea } from '@/common/components/shadcn/textarea';
 import { useCreateJobDescription } from '@/pages/jd/create/api/useCreateJobDescription';
 import { cn } from '@/common/utils/css';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from '@/common/components/shadcn/field';
 
 interface PasteModeProps {
   onSuccess?: () => void;
@@ -71,56 +79,63 @@ export const PasteMode = ({ onSuccess }: PasteModeProps): JSX.Element => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="paste-title" className="mb-1 block text-sm font-medium">
-          Title <span className="text-red-500">*</span>
-        </label>
-        <Input
-          id="paste-title"
-          type="text"
-          placeholder="e.g., Senior Software Engineer"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value.slice(0, 200));
-            setValidationErrors((prev) => ({ ...prev, title: '' }));
-          }}
-          maxLength={200}
-          disabled={createJdMutation.isPending}
-          data-testid="paste-title-input"
-          className={validationErrors.title ? 'border-red-500' : ''}
-        />
-        <div className="mt-1 flex items-start justify-between">
-          {validationErrors.title && <p className="text-sm text-red-500">{validationErrors.title}</p>}
-          <p className="ml-auto text-xs text-gray-500">{title.length}/200</p>
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="paste-raw-text" className="mb-1 block text-sm font-medium">
-          Job Description <span className="text-red-500">*</span>
-        </label>
-        <Textarea
-          id="paste-raw-text"
-          placeholder="Paste the job description text here (minimum 100 characters)..."
-          value={rawText}
-          onChange={(e) => {
-            setRawText(e.target.value);
-            setValidationErrors((prev) => ({ ...prev, rawText: '' }));
-          }}
-          disabled={createJdMutation.isPending}
-          rows={10}
-          data-testid="paste-raw-text-textarea"
-          className={cn('h-60', { 'border-red-500': validationErrors.rawText })}
-        />
-        <div className="mt-1 flex items-start justify-between">
-          {validationErrors.rawText && <p className="text-sm text-red-500">{validationErrors.rawText}</p>}
-          <p className="ml-auto text-xs text-gray-500">{rawText.length}/∞</p>
-        </div>
-      </div>
-
-      <Button type="submit" disabled={createJdMutation.isPending} data-testid="paste-submit-button" className="w-full">
-        {createJdMutation.isPending ? 'Uploading...' : 'Create Job Description'}
-      </Button>
+      <FieldSet>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="paste-title">Title</FieldLabel>
+            <Input
+              id="paste-title"
+              type="text"
+              placeholder="e.g., Senior Software Engineer"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value.slice(0, 200));
+                setValidationErrors((prev) => ({ ...prev, title: '' }));
+              }}
+              maxLength={200}
+              disabled={createJdMutation.isPending}
+              data-testid="paste-title-input"
+              className={validationErrors.title ? 'border-red-500' : ''}
+            />
+            <FieldDescription className="flex items-center justify-between">
+              <div>The title of the job description (max 200 characters).</div>
+              <div className="text-xs">{title.length}/200</div>
+            </FieldDescription>
+            <FieldError>{validationErrors.title}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="paste-raw-text">Job Description</FieldLabel>
+            <Textarea
+              id="paste-raw-text"
+              placeholder="Paste the job description text here (minimum 100 characters)..."
+              value={rawText}
+              onChange={(e) => {
+                setRawText(e.target.value);
+                setValidationErrors((prev) => ({ ...prev, rawText: '' }));
+              }}
+              disabled={createJdMutation.isPending}
+              rows={10}
+              data-testid="paste-raw-text-textarea"
+              className={cn('h-60', { 'border-red-500': validationErrors.rawText })}
+            />
+            <FieldDescription className="flex items-center justify-between">
+              <div>The text of the job description (minimum 100 characters).</div>
+              <div className="text-xs">{rawText.length}/5000</div>
+            </FieldDescription>
+            <FieldError>{validationErrors.rawText}</FieldError>
+          </Field>
+          <Field>
+            <Button
+              type="submit"
+              disabled={createJdMutation.isPending}
+              data-testid="paste-submit-button"
+              className="w-full"
+            >
+              {createJdMutation.isPending ? 'Uploading...' : 'Create Job Description'}
+            </Button>
+          </Field>
+        </FieldGroup>
+      </FieldSet>
     </form>
   );
 };

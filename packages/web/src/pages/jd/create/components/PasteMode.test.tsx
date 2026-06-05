@@ -68,7 +68,7 @@ describe('PasteMode', () => {
 
     // Assert - validation error should be shown
     await waitFor(() => {
-      expect(screen.getByText(/rawText is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/Job description text must be at least 100 characters/i)).toBeInTheDocument();
     });
   });
 

@@ -5,11 +5,14 @@ import { z } from 'zod';
  * Validates all JD attributes: title, rawText, optional s3Key, timestamps, and TTL
  */
 export const JobDescriptionSchema = z.object({
-  jdId: z.uuid('jdId must be a valid UUID'),
-  title: z.string().min(1, 'title is required'),
-  rawText: z.string().min(1, 'rawText is required'),
+  jdId: z.uuid('Job description identifier must be a valid UUID'),
+  title: z.string().min(1, 'Title is required'),
+  rawText: z
+    .string()
+    .min(100, 'Job description text must be at least 100 characters')
+    .max(5000, 'Job description text must be 5000 characters or less'),
   s3Key: z.string().optional(),
-  createdAt: z.iso.datetime('createdAt must be a valid ISO 8601 datetime'),
+  createdAt: z.iso.datetime('Created at must be a valid ISO 8601 datetime'),
   TTL: z.number().int().positive('TTL must be a positive integer'),
 });
 
@@ -26,14 +29,17 @@ export type JobDescription = z.infer<typeof JobDescriptionSchema>;
 export const CreateJobDescriptionRequestSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('paste'),
-    title: z.string().min(1, 'title is required'),
-    rawText: z.string().min(1, 'rawText is required and must be non-empty'),
+    title: z.string().min(1, 'Title is required'),
+    rawText: z
+      .string()
+      .min(100, 'Job description text must be at least 100 characters')
+      .max(5000, 'Job description text must be 5000 characters or less'),
   }),
   z.object({
     mode: z.literal('upload'),
-    title: z.string().min(1, 'title is required'),
-    s3Key: z.string().min(1, 's3Key is required and must be non-empty'),
-    jdId: z.string().uuid('jdId must be a valid UUID').optional(),
+    title: z.string().min(1, 'Title is required'),
+    s3Key: z.string().min(1, 'S3 key is required'),
+    jdId: z.uuid('Job description identifier must be a valid UUID').optional(),
   }),
 ]);
 
@@ -47,7 +53,7 @@ export type CreateJobDescriptionRequest = z.infer<typeof CreateJobDescriptionReq
  * Accepts filename to construct S3 key: uploads/{jdId}/{filename}
  */
 export const CreatePresignedUrlRequestSchema = z.object({
-  filename: z.string().min(1, 'filename is required and must be non-empty'),
+  filename: z.string().min(1, 'Filename is required'),
 });
 
 /**
@@ -60,9 +66,9 @@ export type CreatePresignedUrlRequest = z.infer<typeof CreatePresignedUrlRequest
  * Returns jdId, s3Key, and presignedUrl for direct S3 upload
  */
 export const CreatePresignedUrlResponseSchema = z.object({
-  jdId: z.uuid('jdId must be a valid UUID'),
-  s3Key: z.string().min(1, 's3Key is required'),
-  presignedUrl: z.string().url('presignedUrl must be a valid URL'),
+  jdId: z.uuid('Job description identifier must be a valid UUID'),
+  s3Key: z.string().min(1, 'S3 key is required'),
+  presignedUrl: z.url('Presigned URL must be a valid URL'),
 });
 
 /**
