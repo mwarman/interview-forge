@@ -17,7 +17,8 @@ describe('JobDescriptionSchema', () => {
       const validJD = {
         jdId: '123e4567-e89b-12d3-a456-426614174000',
         title: 'Senior Engineer',
-        rawText: 'We are looking for a senior engineer...',
+        rawText:
+          'We are looking for a senior engineer... Must be at least 100 characters to pass validation. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
         createdAt: '2026-06-03T11:00:00Z',
         TTL: 1719014400,
       };
@@ -37,7 +38,8 @@ describe('JobDescriptionSchema', () => {
       const validJD: JobDescription = {
         jdId: '123e4567-e89b-12d3-a456-426614174000',
         title: 'Senior Engineer',
-        rawText: 'We are looking for a senior engineer...',
+        rawText:
+          'We are looking for a senior engineer... Must be at least 100 characters to pass validation. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
         s3Key: 'uploads/jd-123.pdf',
         createdAt: '2026-06-03T11:00:00Z',
         TTL: 1719014400,
@@ -58,7 +60,8 @@ describe('JobDescriptionSchema', () => {
       const validJD = {
         jdId: '123e4567-e89b-12d3-a456-426614174000',
         title: 'Senior Engineer',
-        rawText: 'We are looking for a senior engineer...',
+        rawText:
+          'We are looking for a senior engineer... Must be at least 100 characters to pass validation. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
         createdAt: '2026-06-03T11:00:00Z',
         TTL: 1719014400,
       };
@@ -271,7 +274,8 @@ describe('CreateJobDescriptionRequestSchema', () => {
       const request: CreateJobDescriptionRequest = {
         mode: 'paste',
         title: 'Senior Backend Engineer',
-        rawText: 'We are looking for a senior backend engineer with 5+ years experience...',
+        rawText:
+          'We are looking for a senior backend engineer with 5+ years experience... Must be at least 100 characters to pass validation. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
       };
 
       // Act

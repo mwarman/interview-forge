@@ -19,7 +19,7 @@ export const App = (): JSX.Element => {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <Router />
-          <Toaster />
+          <Toaster position="top-center" />
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
       </ThemeProvider>
