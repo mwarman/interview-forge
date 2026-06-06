@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from '@/common/layouts/Layout';
 import { JDListPage } from '@/pages/jd/list/JDListPage';
 import { JDCreatePage } from '@/pages/jd/create/JDCreatePage';
+import { JDSessionsPage } from '@/pages/jd/sessions/JDSessionsPage';
 
 /**
  * The Router component defines the routing structure of the application using React Router.
@@ -20,6 +21,7 @@ export const Router = (): JSX.Element => {
           <Route path="/" element={<Navigate to="/jds" replace />} />
           <Route path="/jds" element={<JDListPage />} />
           <Route path="/jds/create" element={<JDCreatePage />} />
+          <Route path="/jds/:jdId/sessions" element={<JDSessionsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
