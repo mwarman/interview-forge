@@ -103,6 +103,28 @@ export class SessionService {
       throw error;
     }
   }
+
+  /**
+   * Update a session with arbitrary updates
+   * Supports flexible updates to any session field(s) (e.g., plan, status, scorecard, assessment)
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param updates - Object with field names and values to update
+   * @returns The updated session
+   * @throws Error if repository update fails or session not found
+   */
+  async updateSession(jdId: string, sessionId: string, updates: Record<string, unknown>): Promise<Session> {
+    logger.info({ jdId, sessionId, updates }, '[SessionService.updateSession] > updateSession');
+
+    try {
+      const session = await sessionRepository.updateById(jdId, sessionId, updates);
+      logger.info({ jdId, sessionId }, '[SessionService.updateSession] < updateSession');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionService.updateSession] - Failed to update session');
+      throw error;
+    }
+  }
 }
 
 /**

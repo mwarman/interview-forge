@@ -16,6 +16,7 @@ vi.mock('@/repositories/session-repository', () => ({
     put: vi.fn(),
     queryByJdId: vi.fn(),
     getById: vi.fn(),
+    updateById: vi.fn(),
     toSession: vi.fn((item) => {
       const { PK: _pk, SK: _sk, ...session } = item;
       return session;
@@ -287,6 +288,110 @@ describe('SessionService', () => {
       // Act & Assert
       await expect(sessionService.getById(jdId, sessionId)).rejects.toThrow('DynamoDB get error');
       expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
+    });
+  });
+
+  describe('updateSession', () => {
+    it('should update session with provided updates and return updated session', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = {
+        status: 'PLAN_APPROVED',
+        plan: { competencies: [{ id: 'comp-1' }] },
+      };
+
+      const updatedSession = {
+        sessionId,
+        jdId,
+        candidateName: 'John Doe',
+        status: 'PLAN_APPROVED',
+        plan: { competencies: [{ id: 'comp-1' }] },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(sessionRepository.updateById).mockResolvedValue(updatedSession);
+
+      // Act
+      const result = await sessionService.updateSession(jdId, sessionId, updates);
+
+      // Assert
+      expect(result).toEqual(updatedSession);
+      expect(result.status).toBe('PLAN_APPROVED');
+      expect(result.plan).toEqual({ competencies: [{ id: 'comp-1' }] });
+      expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, updates);
+      expect(sessionRepository.updateById).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update only status field', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = { status: 'SCORED' };
+
+      const updatedSession = {
+        sessionId,
+        jdId,
+        candidateName: 'Jane Doe',
+        status: 'SCORED',
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(sessionRepository.updateById).mockResolvedValue(updatedSession);
+
+      // Act
+      const result = await sessionService.updateSession(jdId, sessionId, updates);
+
+      // Assert
+      expect(result.status).toBe('SCORED');
+      expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, updates);
+    });
+
+    it('should update multiple fields simultaneously', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = {
+        status: 'ASSESSED',
+        scorecard: { score: 95 },
+        assessment: { result: 'passed' },
+      };
+
+      const updatedSession = {
+        sessionId,
+        jdId,
+        candidateName: 'Bob Smith',
+        status: 'ASSESSED',
+        scorecard: { score: 95 },
+        assessment: { result: 'passed' },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(sessionRepository.updateById).mockResolvedValue(updatedSession);
+
+      // Act
+      const result = await sessionService.updateSession(jdId, sessionId, updates);
+
+      // Assert
+      expect(result.status).toBe('ASSESSED');
+      expect(result.scorecard).toEqual({ score: 95 });
+      expect(result.assessment).toEqual({ result: 'passed' });
+    });
+
+    it('should throw error when repository update fails', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = { status: 'PLAN_APPROVED' };
+
+      vi.mocked(sessionRepository.updateById).mockRejectedValue(new Error('DynamoDB update error'));
+
+      // Act & Assert
+      await expect(sessionService.updateSession(jdId, sessionId, updates)).rejects.toThrow('DynamoDB update error');
+      expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, updates);
     });
   });
 });

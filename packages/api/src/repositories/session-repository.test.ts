@@ -334,4 +334,126 @@ describe('SessionRepository', () => {
       await expect(sessionRepository.queryByJdId(jdId)).rejects.toThrow('DynamoDB error');
     });
   });
+
+  describe('updateById', () => {
+    it('should update a session with new values and return updated session', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = {
+        status: 'PLAN_APPROVED',
+        plan: { competencies: [{ id: '123' }] },
+      };
+
+      const updatedItem: SessionItem = {
+        PK: `JD#${jdId}`,
+        SK: `SESSION#${sessionId}`,
+        GSI1PK: `JD#${jdId}`,
+        GSI1SK: `SESSION#2026-06-03T12:00:00.000Z#${sessionId}`,
+        sessionId,
+        jdId,
+        candidateName: 'John Doe',
+        status: 'PLAN_APPROVED',
+        plan: { competencies: [{ id: '123' }] },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+
+      // Act
+      const result = await sessionRepository.updateById(jdId, sessionId, updates);
+
+      // Assert
+      expect(result).toEqual({
+        sessionId,
+        jdId,
+        candidateName: 'John Doe',
+        status: 'PLAN_APPROVED',
+        plan: { competencies: [{ id: '123' }] },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      });
+
+      expect(dynamoClient.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: {
+            TableName: expect.any(String),
+            Key: {
+              PK: `JD#${jdId}`,
+              SK: `SESSION#${sessionId}`,
+            },
+            UpdateExpression: expect.stringContaining('SET'),
+            ExpressionAttributeValues: expect.objectContaining({
+              ':val0': 'PLAN_APPROVED',
+              ':val1': { competencies: [{ id: '123' }] },
+            }),
+            ReturnValues: 'ALL_NEW',
+          },
+        }),
+      );
+    });
+
+    it('should update multiple fields independently', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = {
+        status: 'SCORED',
+        scorecard: { score: 95 },
+        assessment: { result: 'passed' },
+      };
+
+      const updatedItem: SessionItem = {
+        PK: `JD#${jdId}`,
+        SK: `SESSION#${sessionId}`,
+        GSI1PK: `JD#${jdId}`,
+        GSI1SK: `SESSION#2026-06-03T12:00:00.000Z#${sessionId}`,
+        sessionId,
+        jdId,
+        candidateName: 'Jane Doe',
+        status: 'SCORED',
+        scorecard: { score: 95 },
+        assessment: { result: 'passed' },
+        createdAt: '2026-06-03T12:00:00.000Z',
+        TTL: 1751590800,
+      };
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+
+      // Act
+      const result = await sessionRepository.updateById(jdId, sessionId, updates);
+
+      // Assert
+      expect(result.status).toBe('SCORED');
+      expect(result.scorecard).toEqual({ score: 95 });
+      expect(result.assessment).toEqual({ result: 'passed' });
+    });
+
+    it('should throw error when DynamoDB update fails', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = { status: 'PLAN_APPROVED' };
+
+      vi.mocked(dynamoClient.send).mockRejectedValue(new Error('DynamoDB error'));
+
+      // Act & Assert
+      await expect(sessionRepository.updateById(jdId, sessionId, updates)).rejects.toThrow('DynamoDB error');
+    });
+
+    it('should throw error when Attributes are not returned', async () => {
+      // Arrange
+      const jdId = '550e8400-e29b-41d4-a716-446655440000';
+      const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+      const updates = { status: 'PLAN_APPROVED' };
+
+      vi.mocked(dynamoClient.send).mockResolvedValue({});
+
+      // Act & Assert
+      await expect(sessionRepository.updateById(jdId, sessionId, updates)).rejects.toThrow(
+        'Updated item not returned from DynamoDB',
+      );
+    });
+  });
 });
