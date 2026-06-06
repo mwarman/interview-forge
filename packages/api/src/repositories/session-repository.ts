@@ -1,4 +1,4 @@
-import { PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, GetCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 import { Session } from '@interview-forge/shared';
 
@@ -136,6 +136,62 @@ export class SessionRepository {
       return sessions;
     } catch (error) {
       logger.error({ error, jdId }, '[SessionRepository.queryByJdId] - DynamoDB query failed');
+      throw error;
+    }
+  }
+
+  /**
+   * Update a Session with arbitrary updates
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param updates - Object with field names and values to update
+   * @returns The updated Session entity
+   * @throws Error if DynamoDB update fails or item not found
+   */
+  async updateById(jdId: string, sessionId: string, updates: Record<string, unknown>): Promise<Session> {
+    logger.debug({ jdId, sessionId, updates }, '[SessionRepository.updateById] > updateById');
+
+    try {
+      // Build update expression and attribute values dynamically
+      const updateExpressionParts: string[] = [];
+      const expressionAttributeValues: Record<string, unknown> = {};
+      let valueIndex = 0;
+
+      for (const [key, value] of Object.entries(updates)) {
+        const placeholder = `:val${valueIndex}`;
+        updateExpressionParts.push(`${key} = ${placeholder}`);
+        expressionAttributeValues[placeholder] = value;
+        valueIndex++;
+      }
+
+      const updateExpression = `SET ${updateExpressionParts.join(', ')}`;
+
+      const result = await dynamoClient.send(
+        new UpdateCommand({
+          TableName: config.JD_TABLE_NAME,
+          Key: {
+            PK: `JD#${jdId}`,
+            SK: `SESSION#${sessionId}`,
+          },
+          UpdateExpression: updateExpression,
+          ExpressionAttributeValues: expressionAttributeValues,
+          ReturnValues: 'ALL_NEW',
+        }),
+      );
+
+      if (!result.Attributes) {
+        logger.error({ jdId, sessionId }, '[SessionRepository.updateById] - Updated item not returned');
+        throw new Error('Updated item not returned from DynamoDB');
+      }
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateById] - Item updated in DynamoDB');
+
+      const session = this.toSession(result.Attributes as SessionItem);
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateById] < updateById');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionRepository.updateById] - DynamoDB update failed');
       throw error;
     }
   }
