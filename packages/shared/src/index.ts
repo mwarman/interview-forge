@@ -6,6 +6,7 @@ export {
   CreatePresignedUrlResponseSchema,
 } from './schemas/job-description';
 export { SessionSchema, SessionStatusSchema, CreateSessionRequestSchema } from './schemas/session';
+export { InterviewPlanSchema, CompetencySchema, QuestionSchema, QuestionTypeSchema } from './schemas/interview-plan';
 
 // Export inferred types
 export type {
@@ -15,3 +16,4 @@ export type {
   CreatePresignedUrlResponse,
 } from './schemas/job-description';
 export type { Session, SessionStatus, CreateSessionRequest } from './schemas/session';
+export type { InterviewPlan, Competency, Question, QuestionType } from './schemas/interview-plan';
