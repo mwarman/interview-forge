@@ -79,6 +79,7 @@ describe('PlanService', () => {
 
   describe('generatePlan', () => {
     it('should successfully generate a plan when agent writes plan to session', async () => {
+      // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithPlan = createMockSessionWithPlan(jdId, sessionId);
@@ -104,14 +105,17 @@ describe('PlanService', () => {
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithPlan);
 
+      // Act
       const result = await planService.generatePlan(jdId, sessionId);
 
+      // Assert
       expect(result).toEqual(mockSessionWithPlan);
       expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
       expect(result.plan).toBeDefined();
     });
 
     it('should throw PlanNotWrittenError when agent completes without writing plan', async () => {
+      // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithoutPlan = createMockSessionWithoutPlan(jdId, sessionId);
@@ -132,20 +136,24 @@ describe('PlanService', () => {
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithoutPlan);
 
+      // Act & Assert
       await expect(planService.generatePlan(jdId, sessionId)).rejects.toThrow(PlanNotWrittenError);
     });
 
     it('should throw AgentInvocationError when Bedrock Agent invocation fails', async () => {
+      // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
       const mockError = new Error('Network timeout');
       vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockRejectedValue(mockError);
 
+      // Act & Assert
       await expect(planService.generatePlan(jdId, sessionId)).rejects.toThrow(AgentInvocationError);
     });
 
     it('should throw AgentInvocationError when session not found after agent completion', async () => {
+      // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
@@ -164,10 +172,12 @@ describe('PlanService', () => {
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(null);
 
+      // Act & Assert
       await expect(planService.generatePlan(jdId, sessionId)).rejects.toThrow(AgentInvocationError);
     });
 
     it('should handle agent stream with multiple events before completion', async () => {
+      // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithPlan = createMockSessionWithPlan(jdId, sessionId);
@@ -198,8 +208,10 @@ describe('PlanService', () => {
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithPlan);
 
+      // Act
       const result = await planService.generatePlan(jdId, sessionId);
 
+      // Assert
       expect(result).toEqual(mockSessionWithPlan);
       expect(result.plan).toBeDefined();
     });
