@@ -92,7 +92,7 @@ describe('BackendStack', () => {
     expect(stack.api.restApiId).toBeDefined();
   });
 
-  it('should define all 8 Lambda functions with correct memory and timeout configurations', () => {
+  it('should define all 10 Lambda functions with correct memory and timeout configurations', () => {
     // Arrange
     const config = getConfig();
 
@@ -105,7 +105,7 @@ describe('BackendStack', () => {
 
     // Assert
     const template = Template.fromStack(stack);
-    template.resourceCountIs('AWS::Lambda::Function', 8);
+    template.resourceCountIs('AWS::Lambda::Function', 10);
 
     // Health Lambda: 128MB, 6s
     template.hasResourceProperties('AWS::Lambda::Function', {
@@ -161,6 +161,20 @@ describe('BackendStack', () => {
       FunctionName: `${config.CDK_APP_NAME}-get-session-${config.CDK_ENV_NAME}`,
       MemorySize: 128,
       Timeout: 10,
+    });
+
+    // Read JD Action Lambda: 128MB, 15s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 15,
+    });
+
+    // Write Plan Action Lambda: 128MB, 15s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 15,
     });
   });
 
@@ -226,7 +240,7 @@ describe('BackendStack', () => {
     });
 
     // Additionally verify that JD_TABLE_NAME and JD_BUCKET_NAME are present
-    template.resourceCountIs('AWS::Lambda::Function', 8);
+    template.resourceCountIs('AWS::Lambda::Function', 10);
     const allResources = template.findResources('AWS::Lambda::Function') as Record<
       string,
       Record<string, Record<string, Record<string, unknown>>>
@@ -260,7 +274,7 @@ describe('BackendStack', () => {
     const template = Template.fromStack(stack);
 
     // Verify CloudWatch Log Groups are created
-    template.resourceCountIs('AWS::Logs::LogGroup', 8);
+    template.resourceCountIs('AWS::Logs::LogGroup', 10);
 
     // Verify retention is set to ONE_WEEK
     template.hasResourceProperties('AWS::Logs::LogGroup', {
@@ -337,5 +351,23 @@ describe('BackendStack', () => {
         Name: 'test-app-APIGatewayUrl-dev',
       },
     });
+  });
+
+  it('should expose readJdActionLambda and writePlanActionLambda as public properties', () => {
+    // Arrange
+    const config = getConfig();
+
+    // Act
+    const stack = new BackendStack(app, 'TestBackendStack', {
+      config,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
+    });
+
+    // Assert
+    expect(stack.readJdActionLambda).toBeDefined();
+    expect(stack.readJdActionLambda.functionArn).toBeDefined();
+    expect(stack.writePlanActionLambda).toBeDefined();
+    expect(stack.writePlanActionLambda.functionArn).toBeDefined();
   });
 });

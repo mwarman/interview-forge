@@ -25,6 +25,8 @@ interface BackendStackProps extends cdk.StackProps {
  */
 export class BackendStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
+  public readonly readJdActionLambda: NodejsFunction;
+  public readonly writePlanActionLambda: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
@@ -266,6 +268,60 @@ export class BackendStack extends cdk.Stack {
 
     // Grant permissions to GetSessionLambda
     table.grantReadData(getSessionLambda);
+
+    // Read JD Action Lambda Function (Bedrock Agent action group handler)
+    this.readJdActionLambda = new NodejsFunction(this, 'ReadJdActionFunction', {
+      functionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'ReadJdActionFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to ReadJdActionLambda
+    table.grantReadData(this.readJdActionLambda);
+
+    // Write Plan Action Lambda Function (Bedrock Agent action group handler)
+    this.writePlanActionLambda = new NodejsFunction(this, 'WritePlanActionFunction', {
+      functionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'WritePlanActionFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to WritePlanActionLambda
+    table.grantReadWriteData(this.writePlanActionLambda);
 
     // Wire API Gateway routes
     // GET /health
