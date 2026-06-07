@@ -4,7 +4,7 @@
  *
  * Event schema expects:
  * {
- *   actionGroup: 'plan',
+ *   actionGroup: 'interview-forge-write-plan',
  *   function: 'write-plan-action',
  *   parameters: [
  *     { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -46,7 +46,7 @@ const writePlanActionEventParametersSchema = z.union([
  * Expects: { actionGroup, function, parameters: [sessionId, jdId, plan] }
  */
 export const writePlanActionEventSchema = BedrockActionEventSchema.extend({
-  actionGroup: z.literal('plan'),
+  actionGroup: z.literal('interview-forge-write-plan'),
   function: z.literal('write-plan-action'),
   parameters: z.array(writePlanActionEventParametersSchema),
 });

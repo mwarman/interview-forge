@@ -6,7 +6,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept valid WritePlanAction event with all required parameters', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -30,7 +30,7 @@ describe('writePlanActionEventSchema', () => {
       // Assert
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.actionGroup).toBe('plan');
+        expect(result.data.actionGroup).toBe('interview-forge-write-plan');
         expect(result.data.function).toBe('write-plan-action');
         expect(result.data.parameters).toHaveLength(3);
       }
@@ -39,7 +39,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with parameters in different order', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -67,7 +67,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with exactly required parameters', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -98,7 +98,7 @@ describe('writePlanActionEventSchema', () => {
     it('should infer correct type for valid event', () => {
       // Arrange
       const event: WritePlanActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -143,7 +143,7 @@ describe('writePlanActionEventSchema', () => {
       });
 
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -213,7 +213,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with wrong function', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'wrong-function',
         parameters: [
           { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -234,7 +234,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with empty sessionId value', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: 'sessionId', value: '' },
@@ -256,7 +256,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with valid sessionId even if other parameters missing', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [{ name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' }],
       };
@@ -273,7 +273,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with empty jdId value', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -295,7 +295,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with valid jdId even if other parameters missing', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [{ name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440001' }],
       };
@@ -312,7 +312,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with empty plan value', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -334,7 +334,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with valid plan even if other parameters missing', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [{ name: 'plan', value: '{"rounds": []}' }],
       };
@@ -351,7 +351,7 @@ describe('writePlanActionEventSchema', () => {
     it('should accept event with empty parameters array (union allows any combination)', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [],
       };
@@ -368,7 +368,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with missing parameters', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
       };
 
@@ -402,7 +402,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject event with missing function', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         parameters: [
           { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
           { name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440001' },
@@ -422,7 +422,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject parameter with missing name', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -441,7 +441,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject parameter with missing value', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: 'sessionId' },
@@ -460,7 +460,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject parameter with empty name', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: '', value: '550e8400-e29b-41d4-a716-446655440000' },
@@ -479,7 +479,7 @@ describe('writePlanActionEventSchema', () => {
     it('should reject parameter with empty value', () => {
       // Arrange
       const event = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           { name: 'sessionId', value: '' },
