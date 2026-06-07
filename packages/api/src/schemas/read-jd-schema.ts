@@ -4,7 +4,7 @@
  *
  * Event schema expects:
  * {
- *   actionGroup: 'jd',
+ *   actionGroup: 'interview-forge-read-jd',
  *   function: 'read-jd-action',
  *   parameters: [
  *     { name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440000' }
@@ -35,7 +35,7 @@ const readJdActionEventParametersSchema = z.union([
  * Expects: { actionGroup, function, parameters: [{ name: 'jdId', value: '...' }] }
  */
 export const readJdActionEventSchema = BedrockActionEventSchema.extend({
-  actionGroup: z.literal('jd'),
+  actionGroup: z.literal('interview-forge-read-jd'),
   function: z.literal('read-jd-action'),
   parameters: z.array(readJdActionEventParametersSchema),
 });

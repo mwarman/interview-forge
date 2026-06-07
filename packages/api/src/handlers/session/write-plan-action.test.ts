@@ -21,7 +21,7 @@ describe('write-plan-action', () => {
    * Helper to create a mock Bedrock action event with plan
    */
   const createMockEvent = (sessionId: string, jdId: string, plan: InterviewPlan): BedrockActionEvent => ({
-    actionGroup: 'plan',
+    actionGroup: 'interview-forge-write-plan',
     function: 'write-plan-action',
     parameters: [
       {
@@ -87,7 +87,7 @@ describe('write-plan-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('plan');
+      expect(result.actionGroup).toBe('interview-forge-write-plan');
       expect(result.function).toBe('write-plan-action');
       expect(result.functionResponse).toBeDefined();
 
@@ -109,7 +109,7 @@ describe('write-plan-action', () => {
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const validPlan = createValidPlan();
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -138,7 +138,7 @@ describe('write-plan-action', () => {
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
       const validPlan = createValidPlan();
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -166,7 +166,7 @@ describe('write-plan-action', () => {
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -195,7 +195,7 @@ describe('write-plan-action', () => {
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const validPlan = createValidPlan();
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -230,7 +230,7 @@ describe('write-plan-action', () => {
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -263,7 +263,7 @@ describe('write-plan-action', () => {
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -303,7 +303,7 @@ describe('write-plan-action', () => {
         generatedAt: '2026-06-03T12:00:00.000Z',
       };
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -341,7 +341,7 @@ describe('write-plan-action', () => {
         generatedAt: '2026-06-03T12:00:00.000Z',
       };
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -386,7 +386,7 @@ describe('write-plan-action', () => {
         generatedAt: '2026-06-03T12:00:00.000Z',
       };
       const event: BedrockActionEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         function: 'write-plan-action',
         parameters: [
           {
@@ -419,7 +419,7 @@ describe('write-plan-action', () => {
     it('should return error when event structure is invalid', async () => {
       // Arrange
       const invalidEvent = {
-        actionGroup: 'plan',
+        actionGroup: 'interview-forge-write-plan',
         // Missing function and parameters
       };
 
@@ -446,7 +446,7 @@ describe('write-plan-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('plan');
+      expect(result.actionGroup).toBe('interview-forge-write-plan');
       const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
       expect(responseBody.error).toBe('Internal Server Error');
       expect(responseBody.message).toContain('unexpected error');

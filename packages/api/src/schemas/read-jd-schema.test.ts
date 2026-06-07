@@ -6,7 +6,7 @@ describe('readJdActionEventSchema', () => {
     it('should accept valid ReadJdAction event with UUID jdId', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -22,7 +22,7 @@ describe('readJdActionEventSchema', () => {
       // Assert
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.actionGroup).toBe('jd');
+        expect(result.data.actionGroup).toBe('interview-forge-read-jd');
         expect(result.data.function).toBe('read-jd-action');
         expect(result.data.parameters[0].name).toBe('jdId');
         expect(result.data.parameters[0].value).toBe('550e8400-e29b-41d4-a716-446655440000');
@@ -32,7 +32,7 @@ describe('readJdActionEventSchema', () => {
     it('should accept valid event with single jdId parameter', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -55,7 +55,7 @@ describe('readJdActionEventSchema', () => {
     it('should infer correct type for valid event', () => {
       // Arrange
       const event: ReadJdActionEvent = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -119,7 +119,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with wrong function', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'wrong-function',
         parameters: [
           {
@@ -139,7 +139,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with empty function', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: '',
         parameters: [
           {
@@ -161,7 +161,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with empty jdId value', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -184,7 +184,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with missing jdId parameter', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -204,7 +204,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with wrong parameter name', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -226,7 +226,7 @@ describe('readJdActionEventSchema', () => {
     it('should accept event with empty parameters array (union allows any combination)', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [],
       };
@@ -243,7 +243,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with missing parameters', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
       };
 
@@ -278,7 +278,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject event with missing function', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         parameters: [
           {
             name: 'jdId',
@@ -299,7 +299,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject parameter with missing name', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -318,7 +318,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject parameter with missing value', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -337,7 +337,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject parameter with empty name', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -357,7 +357,7 @@ describe('readJdActionEventSchema', () => {
     it('should reject parameter with empty value', () => {
       // Arrange
       const event = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {

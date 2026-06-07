@@ -16,7 +16,7 @@ import { jobDescriptionService } from '../../services/job-description-service';
  * Helper to create a mock Bedrock action event
  */
 const createMockEvent = (jdId: string): BedrockActionEvent => ({
-  actionGroup: 'jd',
+  actionGroup: 'interview-forge-read-jd',
   function: 'read-jd-action',
   parameters: [
     {
@@ -51,7 +51,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('jd');
+      expect(result.actionGroup).toBe('interview-forge-read-jd');
       expect(result.function).toBe('read-jd-action');
       expect(result.functionResponse).toBeDefined();
       expect(result.functionResponse.responseBody).toBeDefined();
@@ -107,7 +107,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('jd');
+      expect(result.actionGroup).toBe('interview-forge-read-jd');
       expect(result.function).toBe('read-jd-action');
 
       const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
@@ -118,7 +118,7 @@ describe('read-jd-action', () => {
     it('should return error response when jdId parameter is missing', async () => {
       // Arrange
       const event: BedrockActionEvent = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [], // No jdId parameter
       };
@@ -127,7 +127,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('jd');
+      expect(result.actionGroup).toBe('interview-forge-read-jd');
       expect(result.function).toBe('read-jd-action');
 
       const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
@@ -141,7 +141,7 @@ describe('read-jd-action', () => {
     it('should return error response when parameters are empty', async () => {
       // Arrange
       const event: BedrockActionEvent = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
@@ -164,7 +164,7 @@ describe('read-jd-action', () => {
     it('should return error response when event structure is invalid', async () => {
       // Arrange
       const invalidEvent = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         // Missing function and parameters
       };
 
@@ -188,7 +188,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('jd');
+      expect(result.actionGroup).toBe('interview-forge-read-jd');
       expect(result.function).toBe('read-jd-action');
 
       const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
@@ -199,7 +199,7 @@ describe('read-jd-action', () => {
     it('should return error response when parameter name does not match jdId', async () => {
       // Arrange
       const event: BedrockActionEvent = {
-        actionGroup: 'jd',
+        actionGroup: 'interview-forge-read-jd',
         function: 'read-jd-action',
         parameters: [
           {
