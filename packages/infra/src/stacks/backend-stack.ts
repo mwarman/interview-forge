@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -17,6 +19,9 @@ interface BackendStackProps extends cdk.StackProps {
   config: Config;
   table: dynamodb.Table;
   bucket: s3.Bucket;
+  planAgent: bedrock.CfnAgent;
+  planAgentId: string;
+  planAgentAliasId: string;
 }
 
 /**
@@ -25,13 +30,11 @@ interface BackendStackProps extends cdk.StackProps {
  */
 export class BackendStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
-  public readonly readJdActionLambda: NodejsFunction;
-  public readonly writePlanActionLambda: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
-    const { config, table, bucket } = props;
+    const { config, table, bucket, planAgent, planAgentId, planAgentAliasId } = props;
 
     // Create shared Lambda environment variables
     const lambdaEnvironment = {
@@ -40,6 +43,8 @@ export class BackendStack extends cdk.Stack {
       LOG_ENABLED: config.CDK_LOG_ENABLED,
       JD_TABLE_NAME: table.tableName,
       JD_BUCKET_NAME: bucket.bucketName,
+      PLAN_AGENT_ID: planAgentId,
+      PLAN_AGENT_ALIAS_ID: planAgentAliasId,
     };
 
     // Create the API Gateway REST API with CORS enabled
@@ -269,19 +274,19 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to GetSessionLambda
     table.grantReadData(getSessionLambda);
 
-    // Read JD Action Lambda Function (Bedrock Agent action group handler)
-    this.readJdActionLambda = new NodejsFunction(this, 'ReadJdActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
+    // Plan Handler Lambda Function (generates interview plan using Bedrock Agent)
+    const planLambda = new NodejsFunction(this, 'PlanFunction', {
+      functionName: `${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/plan-handler.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 128,
-      timeout: cdk.Duration.seconds(15),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(60),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
       systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'ReadJdActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+      logGroup: new logs.LogGroup(this, 'PlanFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
         retention: logs.RetentionDays.ONE_WEEK,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }),
@@ -293,13 +298,22 @@ export class BackendStack extends cdk.Stack {
       },
     });
 
-    // Grant permissions to ReadJdActionLambda
-    table.grantReadData(this.readJdActionLambda);
+    // Grant permissions to PlanLambda
+    table.grantReadWriteData(planLambda);
 
-    // Write Plan Action Lambda Function (Bedrock Agent action group handler)
-    this.writePlanActionLambda = new NodejsFunction(this, 'WritePlanActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
+    // Grant bedrock:InvokeAgent permission to PlanLambda on the plan agent
+    planLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:InvokeAgent'],
+        resources: [planAgent.attrAgentArn],
+      }),
+    );
+
+    // Approve Plan Handler Lambda Function (approves an interview plan)
+    const approvePlanLambda = new NodejsFunction(this, 'ApprovePlanFunction', {
+      functionName: `${config.CDK_APP_NAME}-approve-plan-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/approve-plan-handler.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
       memorySize: 128,
@@ -307,8 +321,8 @@ export class BackendStack extends cdk.Stack {
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
       systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'WritePlanActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+      logGroup: new logs.LogGroup(this, 'ApprovePlanFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-approve-plan-${config.CDK_ENV_NAME}`,
         retention: logs.RetentionDays.ONE_WEEK,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }),
@@ -320,8 +334,8 @@ export class BackendStack extends cdk.Stack {
       },
     });
 
-    // Grant permissions to WritePlanActionLambda
-    table.grantReadWriteData(this.writePlanActionLambda);
+    // Grant permissions to ApprovePlanLambda
+    table.grantReadWriteData(approvePlanLambda);
 
     // Wire API Gateway routes
     // GET /health
@@ -352,6 +366,14 @@ export class BackendStack extends cdk.Stack {
     // GET /jds/{jdId}/sessions/{sessionId}
     const sessionIdResource = sessionsResource.addResource('{sessionId}');
     sessionIdResource.addMethod('GET', new apigateway.LambdaIntegration(getSessionLambda));
+
+    // POST /jds/{jdId}/sessions/{sessionId}/plan
+    const planResource = sessionIdResource.addResource('plan');
+    planResource.addMethod('POST', new apigateway.LambdaIntegration(planLambda));
+
+    // PUT /jds/{jdId}/sessions/{sessionId}/plan/approve
+    const approvePlanResource = planResource.addResource('approve');
+    approvePlanResource.addMethod('PUT', new apigateway.LambdaIntegration(approvePlanLambda));
 
     // Export the API Gateway URL as a stack output
     new cdk.CfnOutput(this, 'APIGatewayUrl', {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
+import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import { Template } from 'aws-cdk-lib/assertions';
 import { BackendStack } from './backend-stack';
 import { DataStack } from './data-stack';
@@ -9,6 +10,7 @@ describe('BackendStack', () => {
   let app: cdk.App;
   let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
+  let planAgent: bedrock.CfnAgent;
 
   beforeEach(() => {
     app = new cdk.App({
@@ -16,6 +18,15 @@ describe('BackendStack', () => {
     });
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
+
+    // Create a mock Bedrock Agent for testing
+    const tempStack = new cdk.Stack(app, 'TempAgentStack');
+    planAgent = new bedrock.CfnAgent(tempStack, 'TestPlanAgent', {
+      agentName: 'test-plan-agent',
+      foundationModel: 'anthropic.claude-sonnet-4-6',
+      agentResourceRoleArn: `arn:aws:iam::123456789012:role/test-agent-role`,
+      instruction: 'Test agent',
+    });
   });
 
   it('should define an API Gateway REST API with correct naming pattern', () => {
@@ -29,6 +40,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -47,6 +61,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -67,6 +84,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -85,6 +105,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -101,6 +124,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -163,16 +189,16 @@ describe('BackendStack', () => {
       Timeout: 10,
     });
 
-    // Read JD Action Lambda: 128MB, 15s
+    // Plan Lambda: 256MB, 60s
     template.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
-      MemorySize: 128,
-      Timeout: 15,
+      FunctionName: `${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
+      MemorySize: 256,
+      Timeout: 60,
     });
 
-    // Write Plan Action Lambda: 128MB, 15s
+    // Approve Plan Lambda: 128MB, 15s
     template.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+      FunctionName: `${config.CDK_APP_NAME}-approve-plan-${config.CDK_ENV_NAME}`,
       MemorySize: 128,
       Timeout: 15,
     });
@@ -187,6 +213,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -222,6 +251,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -235,6 +267,8 @@ describe('BackendStack', () => {
           LOG_LEVEL: config.CDK_LOG_LEVEL,
           LOG_FORMAT: config.CDK_LOG_FORMAT,
           LOG_ENABLED: config.CDK_LOG_ENABLED,
+          PLAN_AGENT_ID: 'test-agent-id',
+          PLAN_AGENT_ALIAS_ID: 'test-alias-id',
         },
       },
     });
@@ -268,6 +302,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -291,6 +328,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -326,8 +366,20 @@ describe('BackendStack', () => {
       },
     );
 
+    // Verify at least one policy contains bedrock actions (for plan-handler)
+    const hasBedrockPolicy = Object.values(allPolicies).some(
+      (policy: Record<string, Record<string, Record<string, unknown>[]>>) => {
+        const statements = (policy.Properties.PolicyDocument.Statement || []) as Record<string, unknown>[];
+        return statements.some((stmt: Record<string, unknown>) => {
+          const actions = Array.isArray(stmt.Action) ? (stmt.Action as string[]) : [stmt.Action as string];
+          return actions.some((action: string) => action.includes('bedrock'));
+        });
+      },
+    );
+
     expect(hasDynamoDBPolicy).toBe(true);
     expect(hasS3Policy).toBe(true);
+    expect(hasBedrockPolicy).toBe(true);
   });
 
   it('should export the API Gateway URL as a stack output', () => {
@@ -341,6 +393,9 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
@@ -362,12 +417,14 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
+      planAgent,
+      planAgentId: 'test-agent-id',
+      planAgentAliasId: 'test-alias-id',
     });
 
     // Assert
-    expect(stack.readJdActionLambda).toBeDefined();
-    expect(stack.readJdActionLambda.functionArn).toBeDefined();
-    expect(stack.writePlanActionLambda).toBeDefined();
-    expect(stack.writePlanActionLambda.functionArn).toBeDefined();
+    // Note: readJdActionLambda and writePlanActionLambda are now created in AgentStack, not BackendStack
+    // This test verifies the API is created successfully (which it is if we reach here without error)
+    expect(stack.api).toBeDefined();
   });
 });

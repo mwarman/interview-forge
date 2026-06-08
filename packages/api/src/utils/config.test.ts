@@ -19,6 +19,7 @@ describe('config', () => {
       process.env.LOG_FORMAT = 'json';
       process.env.JD_TABLE_NAME = 'test-table';
       process.env.JD_BUCKET_NAME = 'test-bucket';
+      process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
 
       // Act
@@ -29,6 +30,7 @@ describe('config', () => {
       expect(config.LOG_FORMAT).toBe('json');
       expect(config.JD_TABLE_NAME).toBe('test-table');
       expect(config.JD_BUCKET_NAME).toBe('test-bucket');
+      expect(config.PLAN_AGENT_ID).toBe('test-agent-id');
       expect(config.PLAN_AGENT_ALIAS_ID).toBe('test-agent-alias');
     });
 
@@ -37,6 +39,7 @@ describe('config', () => {
       delete process.env.LOG_LEVEL;
       process.env.JD_TABLE_NAME = 'test-table';
       process.env.JD_BUCKET_NAME = 'test-bucket';
+      process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
 
       // Act
@@ -51,6 +54,7 @@ describe('config', () => {
       delete process.env.LOG_FORMAT;
       process.env.JD_TABLE_NAME = 'test-table';
       process.env.JD_BUCKET_NAME = 'test-bucket';
+      process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
 
       // Act

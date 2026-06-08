@@ -3,4 +3,5 @@ process.env.LOG_LEVEL = 'info';
 process.env.LOG_FORMAT = 'text';
 process.env.JD_TABLE_NAME = 'test-table';
 process.env.JD_BUCKET_NAME = 'test-bucket';
+process.env.PLAN_AGENT_ID = 'test-agent-id';
 process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias-id';
