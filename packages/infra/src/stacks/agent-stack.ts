@@ -122,7 +122,7 @@ export class AgentStack extends cdk.Stack {
     agentRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeModel'],
+        actions: ['bedrock:InvokeModel', 'bedrock:ListInferenceProfiles', 'bedrock:GetInferenceProfile'],
         resources: [
           `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_SONNET_4_6_MODEL_ID}`,
           `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
@@ -198,7 +198,7 @@ export class AgentStack extends cdk.Stack {
     // Create the Bedrock Plan Agent
     this.planAgent = new bedrock.CfnAgent(this, 'PlanAgent', {
       agentName: `${config.CDK_APP_NAME}-plan-agent`,
-      foundationModel: CLAUDE_SONNET_4_6_MODEL_ID,
+      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_SONNET_4_6_MODEL_ID}`,
       agentResourceRoleArn: agentRole.roleArn,
       instruction: PLAN_GENERATION_SYSTEM_PROMPT,
       actionGroups: [readJdActionGroup, writePlanActionGroup],
