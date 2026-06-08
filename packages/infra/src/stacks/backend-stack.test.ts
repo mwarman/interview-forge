@@ -10,7 +10,7 @@ describe('BackendStack', () => {
   let app: cdk.App;
   let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
-  let planAgent: bedrock.CfnAgent;
+  let planAgentAlias: bedrock.CfnAgentAlias;
 
   beforeEach(() => {
     app = new cdk.App({
@@ -19,13 +19,17 @@ describe('BackendStack', () => {
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
 
-    // Create a mock Bedrock Agent for testing
+    // Create a mock Bedrock Agent and Alias for testing
     const tempStack = new cdk.Stack(app, 'TempAgentStack');
-    planAgent = new bedrock.CfnAgent(tempStack, 'TestPlanAgent', {
+    const planAgent = new bedrock.CfnAgent(tempStack, 'TestPlanAgent', {
       agentName: 'test-plan-agent',
       foundationModel: 'anthropic.claude-sonnet-4-6',
       agentResourceRoleArn: `arn:aws:iam::123456789012:role/test-agent-role`,
       instruction: 'Test agent',
+    });
+    planAgentAlias = new bedrock.CfnAgentAlias(tempStack, 'TestPlanAgentAlias', {
+      agentId: planAgent.attrAgentId,
+      agentAliasName: 'test',
     });
   });
 
@@ -40,7 +44,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -61,7 +65,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -84,7 +88,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -105,7 +109,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -124,7 +128,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -213,7 +217,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -251,7 +255,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -302,7 +306,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -328,7 +332,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -393,7 +397,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
@@ -417,7 +421,7 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgent,
+      planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
     });
