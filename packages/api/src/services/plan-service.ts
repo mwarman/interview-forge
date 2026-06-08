@@ -47,7 +47,7 @@ export class PlanService {
 
       // Prepare the InvokeAgentCommand
       const input: InvokeAgentCommandInput = {
-        agentId: config.PLAN_AGENT_ALIAS_ID,
+        agentId: config.PLAN_AGENT_ID,
         agentAliasId: config.PLAN_AGENT_ALIAS_ID,
         sessionId: sessionId, // Pass sessionId as Bedrock session ID for continuity
         inputText: userMessage,

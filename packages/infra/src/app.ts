@@ -29,6 +29,20 @@ const dataStack = new DataStack(app, 'DataStack', {
   tags,
 });
 
+// Instantiate the agent stack (Bedrock Agent, action groups, IAM role)
+const agentStack = new AgentStack(app, 'AgentStack', {
+  stackName: `${config.CDK_APP_NAME}-agent-stack-${config.CDK_ENV_NAME}`,
+  description: `Agent layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
+  config,
+  env,
+  tags,
+  table: dataStack.table,
+  bucket: dataStack.bucket,
+});
+
+// Set stack dependencies (agent depends on data)
+agentStack.addDependency(dataStack);
+
 // Instantiate the backend stack (API Gateway, Lambda, etc.)
 const backendStack = new BackendStack(app, 'BackendStack', {
   stackName: `${config.CDK_APP_NAME}-backend-stack-${config.CDK_ENV_NAME}`,
@@ -38,24 +52,14 @@ const backendStack = new BackendStack(app, 'BackendStack', {
   tags,
   table: dataStack.table,
   bucket: dataStack.bucket,
+  planAgent: agentStack.planAgent,
+  planAgentId: agentStack.planAgent.attrAgentId,
+  planAgentAliasId: agentStack.planAgentAlias.attrAgentAliasId,
 });
 
-// Set stack dependencies (backend depends on data)
+// Set stack dependencies (backend depends on data and agent)
 backendStack.addDependency(dataStack);
-
-// Instantiate the agent stack (Bedrock Agent, action groups, IAM role)
-const agentStack = new AgentStack(app, 'AgentStack', {
-  stackName: `${config.CDK_APP_NAME}-agent-stack-${config.CDK_ENV_NAME}`,
-  description: `Agent layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
-  config,
-  env,
-  tags,
-  readJdActionLambda: backendStack.readJdActionLambda,
-  writePlanActionLambda: backendStack.writePlanActionLambda,
-});
-
-// Set stack dependencies (agent depends on backend for Lambda ARNs)
-agentStack.addDependency(backendStack);
+backendStack.addDependency(agentStack);
 
 // Synthesize the CloudFormation templates
 app.synth();

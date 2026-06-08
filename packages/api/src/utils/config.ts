@@ -20,6 +20,7 @@ const ConfigSchema = z.object({
     .describe('LOG_FORMAT - Logging format (optional, default: "json")'),
   JD_TABLE_NAME: z.string().min(1).describe('JD_TABLE_NAME - DynamoDB table for Job Descriptions (required)'),
   JD_BUCKET_NAME: z.string().min(1).describe('JD_BUCKET_NAME - S3 bucket for Job Descriptions (required)'),
+  PLAN_AGENT_ID: z.string().min(1).describe('PLAN_AGENT_ID - Bedrock Agent ID for plan generation (required)'),
   PLAN_AGENT_ALIAS_ID: z
     .string()
     .min(1)
