@@ -7,11 +7,11 @@ import { Session } from '@interview-forge/shared';
 
 import { JDSessionsPage } from './JDSessionsPage';
 
-vi.mock('@/pages/jd/sessions/api/useGetSessions', () => ({
+vi.mock('@/pages/jd/sessions/list/api/useGetSessions', () => ({
   useGetSessions: vi.fn(),
 }));
 
-vi.mock('@/pages/jd/sessions/components/SessionCard', () => ({
+vi.mock('@/pages/jd/sessions/list/components/SessionCard', () => ({
   SessionCard: ({ session }: { session: Session }) => (
     <div data-testid="session-card-mock" data-session-id={session.sessionId}>
       {session.candidateName}
@@ -19,7 +19,7 @@ vi.mock('@/pages/jd/sessions/components/SessionCard', () => ({
   ),
 }));
 
-vi.mock('@/pages/jd/sessions/components/NewSessionDialog', () => ({
+vi.mock('@/pages/jd/sessions/list/components/NewSessionDialog', () => ({
   NewSessionDialog: ({ open, onSuccess }: { open: boolean; onSuccess: (id: string) => void }) =>
     open ? (
       <div data-testid="new-session-dialog-mock">
@@ -66,7 +66,7 @@ describe('JDSessionsPage', () => {
 
   it('should render the page container', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
@@ -82,7 +82,7 @@ describe('JDSessionsPage', () => {
 
   it('should render the page title, back button, and new session button', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
@@ -101,7 +101,7 @@ describe('JDSessionsPage', () => {
   it('should navigate back to /jds when back button is clicked', async () => {
     // Arrange
     const user = userEvent.setup();
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
@@ -118,7 +118,7 @@ describe('JDSessionsPage', () => {
 
   it('should render a loading skeleton while fetching', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -134,7 +134,7 @@ describe('JDSessionsPage', () => {
 
   it('should render an error state on fetch failure', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -150,7 +150,7 @@ describe('JDSessionsPage', () => {
 
   it('should render the empty state when no sessions exist', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: [],
       isLoading: false,
@@ -168,7 +168,7 @@ describe('JDSessionsPage', () => {
 
   it('should render session cards when sessions are available', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
@@ -189,7 +189,7 @@ describe('JDSessionsPage', () => {
   it('should open the new session dialog when "New Session" button is clicked', async () => {
     // Arrange
     const user = userEvent.setup();
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
@@ -207,7 +207,7 @@ describe('JDSessionsPage', () => {
   it('should navigate to the plan page after a session is created', async () => {
     // Arrange
     const user = userEvent.setup();
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({
       data: mockSessions,
       isLoading: false,
