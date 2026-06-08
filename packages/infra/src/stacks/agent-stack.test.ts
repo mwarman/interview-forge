@@ -1,17 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Template } from 'aws-cdk-lib/assertions';
 import { AgentStack } from './agent-stack';
 import { DataStack } from './data-stack';
-import { BackendStack } from './backend-stack';
 import { getConfig } from '../utils/config';
 
 describe('AgentStack', () => {
   let app: cdk.App;
   let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
-  let backendStack: BackendStack;
 
   beforeEach(() => {
     app = new cdk.App({
@@ -19,11 +16,6 @@ describe('AgentStack', () => {
     });
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
-    backendStack = new BackendStack(app, 'TestBackendStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
   });
 
   it('should define a CfnAgent with the correct agent name and foundation model', () => {
@@ -35,8 +27,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -54,8 +46,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -80,8 +72,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -106,8 +98,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -142,8 +134,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -184,8 +176,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -202,8 +194,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -233,8 +225,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -258,8 +250,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -282,8 +274,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -300,8 +292,8 @@ describe('AgentStack', () => {
     // Act
     const stack = new AgentStack(app, 'TestAgentStack', {
       config,
-      readJdActionLambda: backendStack.readJdActionLambda,
-      writePlanActionLambda: backendStack.writePlanActionLambda,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
     });
 
     // Assert
@@ -323,25 +315,13 @@ describe('AgentStack', () => {
   it('should accept externally created Lambda functions as props (edge case: function from ARN)', () => {
     // Arrange
     const config = getConfig();
-    // Lambda.fromFunctionArn must be created in a stack scope, not the app scope
-    const tempStack = new cdk.Stack(app, 'TempStack');
-    const externalReadLambda = lambda.Function.fromFunctionArn(
-      tempStack,
-      'ExternalReadLambda',
-      'arn:aws:lambda:us-east-1:123456789012:function:external-read-jd',
-    );
-    const externalWriteLambda = lambda.Function.fromFunctionArn(
-      tempStack,
-      'ExternalWriteLambda',
-      'arn:aws:lambda:us-east-1:123456789012:function:external-write-plan',
-    );
 
     // Act & Assert — should not throw
     expect(() => {
       new AgentStack(app, 'TestAgentStackExternal', {
         config,
-        readJdActionLambda: externalReadLambda,
-        writePlanActionLambda: externalWriteLambda,
+        table: dataStack.table,
+        bucket: dataStack.bucket,
       });
     }).not.toThrow();
   });

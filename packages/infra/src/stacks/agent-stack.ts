@@ -1,8 +1,13 @@
 import * as cdk from 'aws-cdk-lib';
 import * as bedrock from 'aws-cdk-lib/aws-bedrock';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
+import path from 'path';
 
 import type { Config } from '../utils/config.js';
 import { PLAN_GENERATION_SYSTEM_PROMPT } from '../utils/prompts.js';
@@ -17,22 +22,89 @@ const CLAUDE_SONNET_4_6_MODEL_ID = 'anthropic.claude-sonnet-4-6';
  */
 interface AgentStackProps extends cdk.StackProps {
   config: Config;
-  readJdActionLambda: lambda.IFunction;
-  writePlanActionLambda: lambda.IFunction;
+  table: dynamodb.Table;
+  bucket: s3.Bucket;
 }
 
 /**
  * AgentStack: Bedrock Agent resources for interview plan generation
- * This stack contains the Bedrock plan agent, its action groups, IAM role, and alias.
+ * This stack contains Bedrock agent action group Lambdas, the plan agent, its action groups, IAM role, and alias.
  */
 export class AgentStack extends cdk.Stack {
+  public readonly readJdActionLambda: NodejsFunction;
+  public readonly writePlanActionLambda: NodejsFunction;
   public readonly planAgent: bedrock.CfnAgent;
   public readonly planAgentAlias: bedrock.CfnAgentAlias;
 
   constructor(scope: Construct, id: string, props: AgentStackProps) {
     super(scope, id, props);
 
-    const { config, readJdActionLambda, writePlanActionLambda } = props;
+    const { config, table, bucket } = props;
+
+    // Create shared Lambda environment variables
+    const lambdaEnvironment = {
+      LOG_LEVEL: config.CDK_LOG_LEVEL,
+      LOG_FORMAT: config.CDK_LOG_FORMAT,
+      LOG_ENABLED: config.CDK_LOG_ENABLED,
+      JD_TABLE_NAME: table.tableName,
+      JD_BUCKET_NAME: bucket.bucketName,
+      PLAN_AGENT_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
+      PLAN_AGENT_ALIAS_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
+    };
+
+    // Read JD Action Lambda Function (Bedrock Agent action group handler)
+    this.readJdActionLambda = new NodejsFunction(this, 'ReadJdActionFunction', {
+      functionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'ReadJdActionFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to ReadJdActionLambda
+    table.grantReadData(this.readJdActionLambda);
+
+    // Write Plan Action Lambda Function (Bedrock Agent action group handler)
+    this.writePlanActionLambda = new NodejsFunction(this, 'WritePlanActionFunction', {
+      functionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'WritePlanActionFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to WritePlanActionLambda
+    table.grantReadWriteData(this.writePlanActionLambda);
 
     // Create the IAM execution role for the Bedrock Agent.
     // AWS requires the role name to start with AmazonBedrockExecutionRoleForAgents_.
@@ -66,7 +138,7 @@ export class AgentStack extends cdk.Stack {
     const readJdActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
       actionGroupName: 'interview-forge-read-jd',
       actionGroupExecutor: {
-        lambda: readJdActionLambda.functionArn,
+        lambda: this.readJdActionLambda.functionArn,
       },
       functionSchema: {
         functions: [
@@ -92,7 +164,7 @@ export class AgentStack extends cdk.Stack {
     const writePlanActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
       actionGroupName: 'interview-forge-write-plan',
       actionGroupExecutor: {
-        lambda: writePlanActionLambda.functionArn,
+        lambda: this.writePlanActionLambda.functionArn,
       },
       functionSchema: {
         functions: [
@@ -147,7 +219,7 @@ export class AgentStack extends cdk.Stack {
     // reference this stack's agent ARN, creating a BackendStack → AgentStack dependency that
     // conflicts with the existing AgentStack → BackendStack dependency.
     new lambda.CfnPermission(this, 'BedrockInvokeReadJdAction', {
-      functionName: readJdActionLambda.functionArn,
+      functionName: this.readJdActionLambda.functionArn,
       principal: 'bedrock.amazonaws.com',
       action: 'lambda:InvokeFunction',
       sourceArn: this.planAgent.attrAgentArn,
@@ -155,7 +227,7 @@ export class AgentStack extends cdk.Stack {
 
     // Grant the Bedrock service principal permission to invoke the write-plan-action Lambda.
     new lambda.CfnPermission(this, 'BedrockInvokeWritePlanAction', {
-      functionName: writePlanActionLambda.functionArn,
+      functionName: this.writePlanActionLambda.functionArn,
       principal: 'bedrock.amazonaws.com',
       action: 'lambda:InvokeFunction',
       sourceArn: this.planAgent.attrAgentArn,
