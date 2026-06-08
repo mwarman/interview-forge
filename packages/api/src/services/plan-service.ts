@@ -114,7 +114,8 @@ export class PlanService {
         throw error;
       }
 
-      logger.error({ error, jdId, sessionId }, '[PlanService.generatePlan] - Failed to generate plan');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error, errorMessage, jdId, sessionId }, '[PlanService.generatePlan] - Failed to generate plan');
       throw new AgentInvocationError(jdId, sessionId, error as Error);
     }
   }

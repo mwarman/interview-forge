@@ -19,7 +19,7 @@ interface BackendStackProps extends cdk.StackProps {
   config: Config;
   table: dynamodb.Table;
   bucket: s3.Bucket;
-  planAgent: bedrock.CfnAgent;
+  planAgentAlias: bedrock.CfnAgentAlias;
   planAgentId: string;
   planAgentAliasId: string;
 }
@@ -34,7 +34,7 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
-    const { config, table, bucket, planAgent, planAgentId, planAgentAliasId } = props;
+    const { config, table, bucket, planAgentAlias, planAgentId, planAgentAliasId } = props;
 
     // Create shared Lambda environment variables
     const lambdaEnvironment = {
@@ -306,7 +306,7 @@ export class BackendStack extends cdk.Stack {
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeAgent'],
-        resources: [planAgent.attrAgentArn],
+        resources: [planAgentAlias.attrAgentAliasArn],
       }),
     );
 
