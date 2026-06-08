@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { InterviewPlanSchema } from './interview-plan';
+
 /**
  * SessionStatus - Zod enum for Session lifecycle states
  */
@@ -45,3 +47,17 @@ export const CreateSessionRequestSchema = z.object({
  * CreateSessionRequest - TypeScript type inferred from CreateSessionRequestSchema
  */
 export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
+
+/**
+ * ApprovePlanRequestSchema - Zod schema for approve plan request
+ * Accepts an optional modified plan to replace the current session plan
+ * Plan validation is included inline to validate in a single pass
+ */
+export const ApprovePlanRequestSchema = z.object({
+  plan: InterviewPlanSchema.optional(),
+});
+
+/**
+ * ApprovePlanRequest - TypeScript type inferred from ApprovePlanRequestSchema
+ */
+export type ApprovePlanRequest = z.infer<typeof ApprovePlanRequestSchema>;

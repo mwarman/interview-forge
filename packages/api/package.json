@@ -11,7 +11,7 @@
     "test:coverage": "vitest run --coverage --silent passed-only"
   },
   "devDependencies": {
-    "@types/aws-lambda": "8.10.161"
+    "@types/aws-lambda": "8.10.162"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-agent-runtime": "3.1063.0",
