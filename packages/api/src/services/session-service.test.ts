@@ -17,6 +17,7 @@ vi.mock('@/repositories/session-repository', () => ({
     queryByJdId: vi.fn(),
     getById: vi.fn(),
     updateById: vi.fn(),
+    updateWithApprovedPlan: vi.fn(),
     toSession: vi.fn((item) => {
       const { PK: _pk, SK: _sk, ...session } = item;
       return session;
@@ -392,6 +393,300 @@ describe('SessionService', () => {
       // Act & Assert
       await expect(sessionService.updateSession(jdId, sessionId, updates)).rejects.toThrow('DynamoDB update error');
       expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, updates);
+    });
+  });
+
+  describe('approvePlan', () => {
+    const jdId = '550e8400-e29b-41d4-a716-446655440000';
+    const sessionId = '660f9411-f30c-42e5-b827-557766551111';
+
+    describe('happy path - approving without modified plan', () => {
+      it('should approve an existing plan and return updated session', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'John Doe',
+          status: 'PLAN_APPROVED',
+          plan: { rounds: 3 },
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        const result = await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(result).toEqual(mockSession);
+        expect(result.status).toBe('PLAN_APPROVED');
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledOnce();
+      });
+
+      it('should log appropriately when approving without modification', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'Jane Smith',
+          status: 'PLAN_APPROVED',
+          plan: { rounds: 2 },
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
+      });
+    });
+
+    describe('happy path - approving with modified plan', () => {
+      it('should approve with a modified plan and return updated session', async () => {
+        // Arrange
+        const modifiedPlan = {
+          rounds: 4,
+          duration: '90 minutes',
+          interviewers: ['Alice', 'Bob'],
+        };
+
+        const request = {
+          plan: modifiedPlan,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'John Doe',
+          status: 'PLAN_APPROVED',
+          plan: modifiedPlan,
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        const result = await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(result).toEqual(mockSession);
+        expect(result.plan).toEqual(modifiedPlan);
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, modifiedPlan);
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledOnce();
+      });
+
+      it('should pass complex modified plan to repository', async () => {
+        // Arrange
+        const modifiedPlan = {
+          rounds: 3,
+          stages: [
+            {
+              name: 'Technical Round 1',
+              duration: 60,
+              topics: ['React', 'TypeScript'],
+            },
+            {
+              name: 'Behavioral Round',
+              duration: 45,
+            },
+          ],
+        };
+
+        const request = {
+          plan: modifiedPlan,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'Jane Smith',
+          status: 'PLAN_APPROVED',
+          plan: modifiedPlan,
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, modifiedPlan);
+      });
+    });
+
+    describe('error cases', () => {
+      it('should propagate ConditionalCheckFailedException from repository', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const conditionalError = new Error('ConditionalCheckFailedException');
+        conditionalError.name = 'ConditionalCheckFailedException';
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockRejectedValue(conditionalError);
+
+        // Act & Assert
+        await expect(sessionService.approvePlan(jdId, sessionId, request)).rejects.toThrow(
+          'ConditionalCheckFailedException',
+        );
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
+      });
+
+      it('should propagate generic repository error', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const repositoryError = new Error('DynamoDB update failed');
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockRejectedValue(repositoryError);
+
+        // Act & Assert
+        await expect(sessionService.approvePlan(jdId, sessionId, request)).rejects.toThrow('DynamoDB update failed');
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledOnce();
+      });
+
+      it('should handle session not found error', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const notFoundError = new Error('Item not found');
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockRejectedValue(notFoundError);
+
+        // Act & Assert
+        await expect(sessionService.approvePlan(jdId, sessionId, request)).rejects.toThrow('Item not found');
+      });
+    });
+
+    describe('status validation', () => {
+      it('should return session with PLAN_APPROVED status', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'John Doe',
+          status: 'PLAN_APPROVED',
+          plan: { rounds: 3 },
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        const result = await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(result.status).toBe('PLAN_APPROVED');
+      });
+
+      it('should preserve session metadata in returned result', async () => {
+        // Arrange
+        const request = {
+          plan: undefined,
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'John Doe',
+          status: 'PLAN_APPROVED',
+          plan: { rounds: 3 },
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        const result = await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(result.sessionId).toBe(sessionId);
+        expect(result.jdId).toBe(jdId);
+        expect(result.candidateName).toBe('John Doe');
+        expect(result.createdAt).toBe(mockSession.createdAt);
+        expect(result.TTL).toBe(mockSession.TTL);
+      });
+    });
+
+    describe('input parameter handling', () => {
+      it('should correctly pass jdId and sessionId to repository', async () => {
+        // Arrange
+        const customJdId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+        const customSessionId = 'ffffffff-1111-2222-3333-444444444444';
+        const request = {
+          plan: undefined,
+        };
+
+        const mockSession = {
+          sessionId: customSessionId,
+          jdId: customJdId,
+          candidateName: 'Test User',
+          status: 'PLAN_APPROVED',
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        await sessionService.approvePlan(customJdId, customSessionId, request);
+
+        // Assert
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(customJdId, customSessionId, undefined);
+      });
+
+      it('should handle empty plan object', async () => {
+        // Arrange
+        const request = {
+          plan: {},
+        };
+
+        const mockSession = {
+          sessionId,
+          jdId,
+          candidateName: 'John Doe',
+          status: 'PLAN_APPROVED',
+          plan: {},
+          createdAt: '2026-06-03T12:00:00.000Z',
+          TTL: 1234567890,
+        };
+
+        vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
+
+        // Act
+        await sessionService.approvePlan(jdId, sessionId, request);
+
+        // Assert
+        expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, {});
+      });
     });
   });
 });

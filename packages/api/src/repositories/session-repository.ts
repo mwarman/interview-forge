@@ -195,6 +195,74 @@ export class SessionRepository {
       throw error;
     }
   }
+
+  /**
+   * Update a Session's plan with approval status using conditional expression
+   * Atomically updates plan and status to PLAN_APPROVED
+   * Uses a condition expression to ensure status is PLAN_PENDING (idempotency guard)
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param plan - Optional modified plan to overwrite existing plan
+   * @returns The updated Session entity
+   * @throws ConditionalCheckFailedException if status is not PLAN_PENDING
+   * @throws Error if DynamoDB update fails or item not found
+   */
+  async updateWithApprovedPlan(jdId: string, sessionId: string, plan?: Record<string, unknown>): Promise<Session> {
+    logger.debug(
+      { jdId, sessionId, hasPlan: !!plan },
+      '[SessionRepository.updateWithApprovedPlan] > updateWithApprovedPlan',
+    );
+
+    try {
+      // Build update expression for status and optionally plan
+      const updateExpressionParts: string[] = [];
+      const expressionAttributeValues: Record<string, unknown> = {
+        ':pending': 'PLAN_PENDING',
+        ':approved': 'PLAN_APPROVED',
+      };
+
+      updateExpressionParts.push('#s = :approved');
+
+      if (plan) {
+        updateExpressionParts.push('plan = :plan');
+        expressionAttributeValues[':plan'] = plan;
+      }
+
+      const updateExpression = `SET ${updateExpressionParts.join(', ')}`;
+
+      const result = await dynamoClient.send(
+        new UpdateCommand({
+          TableName: config.JD_TABLE_NAME,
+          Key: {
+            PK: `JD#${jdId}`,
+            SK: `SESSION#${sessionId}`,
+          },
+          UpdateExpression: updateExpression,
+          ExpressionAttributeNames: {
+            '#s': 'status',
+          },
+          ExpressionAttributeValues: expressionAttributeValues,
+          ConditionExpression: '#s = :pending',
+          ReturnValues: 'ALL_NEW',
+        }),
+      );
+
+      if (!result.Attributes) {
+        logger.error({ jdId, sessionId }, '[SessionRepository.updateWithApprovedPlan] - Updated item not returned');
+        throw new Error('Updated item not returned from DynamoDB');
+      }
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedPlan] - Item updated in DynamoDB');
+
+      const session = this.toSession(result.Attributes as SessionItem);
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedPlan] < updateWithApprovedPlan');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionRepository.updateWithApprovedPlan] - DynamoDB update failed');
+      throw error;
+    }
+  }
 }
 
 /**
