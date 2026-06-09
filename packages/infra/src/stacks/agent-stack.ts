@@ -58,7 +58,7 @@ export class AgentStack extends cdk.Stack {
       entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 128,
+      memorySize: 512,
       timeout: cdk.Duration.seconds(15),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
@@ -85,7 +85,7 @@ export class AgentStack extends cdk.Stack {
       entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 128,
+      memorySize: 512,
       timeout: cdk.Duration.seconds(15),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
@@ -214,10 +214,6 @@ export class AgentStack extends cdk.Stack {
     });
 
     // Grant the Bedrock service principal permission to invoke the read-jd-action Lambda.
-    // CfnPermission is created directly in the AgentStack (not via addPermission) to avoid a
-    // cross-stack cyclic dependency: addPermission would place the resource in BackendStack and
-    // reference this stack's agent ARN, creating a BackendStack → AgentStack dependency that
-    // conflicts with the existing AgentStack → BackendStack dependency.
     new lambda.CfnPermission(this, 'BedrockInvokeReadJdAction', {
       functionName: this.readJdActionLambda.functionArn,
       principal: 'bedrock.amazonaws.com',
