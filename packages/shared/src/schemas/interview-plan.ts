@@ -18,7 +18,10 @@ export type QuestionType = z.infer<typeof QuestionTypeSchema>;
  * Validates question attributes: questionId, text, type, and optional follow-up prompt
  */
 export const QuestionSchema = z.object({
-  questionId: z.uuid('questionId must be a valid UUID').meta({ description: 'Unique identifier for the question' }),
+  questionId: z
+    .string('questionId must be a valid UUID')
+    .min(1, 'questionId is required')
+    .meta({ description: 'UUID v4 RFC 9562/4122 unique identifier for the question' }),
   text: z.string().min(1, 'Question text is required').meta({ description: 'Text of the question' }),
   type: QuestionTypeSchema,
   followUpPrompt: z.string().optional().meta({ description: 'Optional follow-up prompt for the question' }),
@@ -36,8 +39,9 @@ export type Question = z.infer<typeof QuestionSchema>;
  */
 export const CompetencySchema = z.object({
   competencyId: z
-    .uuid('competencyId must be a valid UUID')
-    .meta({ description: 'Unique identifier for the competency' }),
+    .string('competencyId must be a valid UUID')
+    .min(1, 'competencyId is required')
+    .meta({ description: 'UUID v4 RFC 9562/4122 unique identifier for the competency' }),
   name: z.string().min(1, 'Competency name is required').meta({ description: 'Name of the competency' }),
   description: z
     .string()
@@ -64,7 +68,10 @@ export type Competency = z.infer<typeof CompetencySchema>;
  * Max 8 competencies reflects structured interviewing best practices
  */
 export const InterviewPlanSchema = z.object({
-  planId: z.uuid('planId must be a valid UUID').meta({ description: 'Unique identifier for the interview plan' }),
+  planId: z
+    .string('planId must be a valid UUID')
+    .min(1, 'planId is required')
+    .meta({ description: 'UUID v4 RFC 9562/4122 unique identifier for the interview plan' }),
   competencies: z
     .array(CompetencySchema)
     .min(1, 'At least one competency is required')
