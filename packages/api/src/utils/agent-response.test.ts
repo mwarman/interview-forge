@@ -19,10 +19,10 @@ describe('agent-response utilities', () => {
       const result = agentResponse.ok(mockEvent, payload);
 
       // Assert
-      expect(result.actionGroup).toBe('plan');
-      expect(result.function).toBe('write-plan-action');
-      expect(result.functionResponse).toBeDefined();
-      expect(result.functionResponse.responseBody.TEXT.body).toBe(JSON.stringify(payload));
+      expect(result.response.actionGroup).toBe('plan');
+      expect(result.response.function).toBe('write-plan-action');
+      expect(result.response.functionResponse).toBeDefined();
+      expect(result.response.functionResponse.responseBody.TEXT.body).toBe(JSON.stringify(payload));
     });
 
     it('should parse response body as valid JSON', () => {
@@ -31,7 +31,7 @@ describe('agent-response utilities', () => {
 
       // Act
       const result = agentResponse.ok(mockEvent, payload);
-      const parsedBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const parsedBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
 
       // Assert
       expect(parsedBody).toEqual(payload);
@@ -49,8 +49,8 @@ describe('agent-response utilities', () => {
       const result = agentResponse.ok(customEvent, {});
 
       // Assert
-      expect(result.actionGroup).toBe('custom-group');
-      expect(result.function).toBe('custom-function');
+      expect(result.response.actionGroup).toBe('custom-group');
+      expect(result.response.function).toBe('custom-function');
     });
   });
 
@@ -64,9 +64,9 @@ describe('agent-response utilities', () => {
       const result = agentResponse.error(mockEvent, errorType, errorMessage);
 
       // Assert
-      expect(result.actionGroup).toBe('plan');
-      expect(result.function).toBe('write-plan-action');
-      const body = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      expect(result.response.actionGroup).toBe('plan');
+      expect(result.response.function).toBe('write-plan-action');
+      const body = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(body.error).toBe(errorType);
       expect(body.message).toBe(errorMessage);
     });
@@ -78,7 +78,7 @@ describe('agent-response utilities', () => {
 
       // Act
       const result = agentResponse.error(mockEvent, errorType, errorMessage);
-      const body = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const body = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
 
       // Assert
       expect(body).toHaveProperty('error', errorType);
@@ -90,13 +90,14 @@ describe('agent-response utilities', () => {
       const result = agentResponse.error(mockEvent, 'Error', 'Message');
 
       // Assert
-      expect(result).toHaveProperty('actionGroup');
-      expect(result).toHaveProperty('function');
-      expect(result).toHaveProperty('functionResponse');
-      expect(result.functionResponse).toHaveProperty('responseBody');
-      expect(result.functionResponse.responseBody).toHaveProperty('TEXT');
-      expect(result.functionResponse.responseBody.TEXT).toHaveProperty('body');
-      expect(typeof result.functionResponse.responseBody.TEXT.body).toBe('string');
+      expect(result).toHaveProperty('response');
+      expect(result.response).toHaveProperty('actionGroup');
+      expect(result.response).toHaveProperty('function');
+      expect(result.response).toHaveProperty('functionResponse');
+      expect(result.response.functionResponse).toHaveProperty('responseBody');
+      expect(result.response.functionResponse.responseBody).toHaveProperty('TEXT');
+      expect(result.response.functionResponse.responseBody.TEXT).toHaveProperty('body');
+      expect(typeof result.response.functionResponse.responseBody.TEXT.body).toBe('string');
     });
   });
 });
