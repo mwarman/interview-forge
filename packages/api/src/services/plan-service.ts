@@ -51,6 +51,7 @@ export class PlanService {
         agentAliasId: config.PLAN_AGENT_ALIAS_ID,
         sessionId: sessionId, // Pass sessionId as Bedrock session ID for continuity
         inputText: userMessage,
+        enableTrace: true, // Enable tracing for better observability in CloudWatch
       };
 
       logger.debug('[PlanService.generatePlan] - Invoking Bedrock Agent');
@@ -58,7 +59,7 @@ export class PlanService {
       // Invoke the agent and get the streaming response
       const response = await this.bedrockClient.send(new InvokeAgentCommand(input));
 
-      logger.debug('[PlanService.generatePlan] - Streaming agent response');
+      logger.debug({ response }, '[PlanService.generatePlan] - Streaming agent response');
 
       // Iterate through the response stream to ensure the agent completes
       // The stream's completion (when it exhausts) marks the end of the agent's work
@@ -71,15 +72,17 @@ export class PlanService {
         );
       }
 
+      let agentResponse = '';
       for await (const event of response.completion) {
-        if (event.chunk?.bytes) {
+        logger.debug('[PlanService.generatePlan] - Received agent event');
+        if (event.chunk) {
           // Decode the binary bytes of the response (optional, for logging purposes)
-          const chunkText = new TextDecoder('utf-8').decode(event.chunk.bytes);
-          logger.debug({ bytes: chunkText.length }, '[PlanService.generatePlan] - Received chunk');
+          const decodedChunk = new TextDecoder('utf-8').decode(event.chunk.bytes);
+          agentResponse += decodedChunk;
         }
       }
 
-      logger.debug('[PlanService.generatePlan] - Agent stream completed');
+      logger.debug({ agentResponse }, '[PlanService.generatePlan] - Agent stream completed');
 
       const durationMs = Date.now() - startTime;
       logger.info({ jdId, sessionId, durationMs }, '[PlanService.generatePlan] - Agent invocation completed');
