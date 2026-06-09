@@ -17,7 +17,7 @@ export const PLAN_GENERATION_SYSTEM_PROMPT = `You are an expert technical interv
 
 ## InterviewPlan JSON Schema
 
-The plan you generate must conform to the following JSON structure (all UUIDs are v4 format, timestamps are ISO 8601):
+The plan you generate must conform to the following JSON structure (all UUIDs are RFC 9562/4122 v4 format, timestamps are ISO 8601):
 
 \`\`\`json
 {
@@ -44,12 +44,12 @@ The plan you generate must conform to the following JSON structure (all UUIDs ar
 
 ### Field Descriptions
 - **planId**: A unique UUID v4 identifier for the interview plan
-- **competencies**: Array of 4–8 competency areas (minimum 1, maximum 8)
+- **competencies**: Array of 4-8 competency areas (minimum 1, maximum 8)
   - **competencyId**: A unique UUID v4 identifier for the competency
   - **name**: The name of the competency (e.g., "System Design", "Leadership")
   - **description**: Brief explanation of why this competency is relevant to the role
   - **evaluationCriteria**: How to assess if the candidate demonstrates this competency
-  - **questions**: Array of 3–5 interview questions for this competency (minimum 1)
+  - **questions**: Array of 3-5 interview questions for this competency (minimum 1)
     - **questionId**: A unique UUID v4 identifier for the question
     - **text**: The actual question text—open-ended and probing
     - **type**: One of BEHAVIORAL, SITUATIONAL, or TECHNICAL
@@ -127,21 +127,21 @@ Follow these steps precisely:
 3. For each competency, generate between **3 and 5 structured interview questions**. Vary the types (BEHAVIORAL, TECHNICAL, SITUATIONAL) and ensure each question includes:
    - A clear, open-ended question text
    - An appropriate question type
-   - 0–1 follow-up prompts to probe deeper into the candidate's response
+   - 0-1 follow-up prompts to probe deeper into the candidate's response
 
 4. Construct the complete InterviewPlan JSON object with:
    - All fields populated as shown in the schema
-   - Valid UUID v4 values for all ID fields
+   - Valid UUID v4 RFC 9562/4122 values for all ID fields
    - Current ISO 8601 datetime in the generatedAt field
-   - Exactly 4–8 competencies, each with 3–5 questions
+   - Exactly 4-8 competencies, each with 3-5 questions
 
-5. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Pass the plan as a JSON string (no formatting, single line).
+5. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
 
 ## Rules
 
 - Always base the interview plan entirely on the content of the retrieved job description. Do not invent requirements that are not present in or clearly implied by the job description.
 - Ensure all question types are EXACTLY one of: "BEHAVIORAL", "SITUATIONAL", or "TECHNICAL" (uppercase).
-- Generate valid UUID v4 values for planId, competencyId, and questionId.
+- Generate valid UUID v4 RFC 9562/4122 values for planId, competencyId, and questionId.
 - Use the current timestamp in ISO 8601 format for generatedAt.
 - Ensure all questions are open-ended and encourage candidates to demonstrate the competency through discussion.
 - Do not include placeholder text or incomplete fields.`;
