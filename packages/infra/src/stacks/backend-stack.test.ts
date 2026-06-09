@@ -193,11 +193,11 @@ describe('BackendStack', () => {
       Timeout: 10,
     });
 
-    // Plan Lambda: 256MB, 60s
+    // Plan Lambda: 1024MB, 180s
     template.hasResourceProperties('AWS::Lambda::Function', {
       FunctionName: `${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
-      MemorySize: 256,
-      Timeout: 60,
+      MemorySize: 1024,
+      Timeout: 180,
     });
 
     // Approve Plan Lambda: 128MB, 15s
