@@ -35,6 +35,9 @@ export type BedrockActionEvent = z.infer<typeof BedrockActionEventSchema>;
  * The responseBody.TEXT.body contains a JSON string of the actual response data
  */
 export const BedrockFunctionResponseSchema = z.object({
+  responseState: z
+    .enum(['FAILURE', 'REPROMPT'], { message: 'responseState must be either FAILURE or REPROMPT' })
+    .optional(),
   responseBody: z.object({
     TEXT: z.object({
       body: z.string().min(1, 'Response body is required'),
@@ -52,9 +55,11 @@ export type BedrockFunctionResponse = z.infer<typeof BedrockFunctionResponseSche
  * Echoes the actionGroup and function, and includes the functionResponse
  */
 export const BedrockActionResponseSchema = z.object({
-  actionGroup: z.string().min(1, 'actionGroup is required'),
-  function: z.string().min(1, 'function is required'),
-  functionResponse: BedrockFunctionResponseSchema,
+  response: z.object({
+    actionGroup: z.string().min(1, 'actionGroup is required'),
+    function: z.string().min(1, 'function is required'),
+    functionResponse: BedrockFunctionResponseSchema,
+  }),
 });
 
 /**

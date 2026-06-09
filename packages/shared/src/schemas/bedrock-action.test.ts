@@ -460,12 +460,14 @@ describe('BedrockActionResponseSchema', () => {
     it('should accept valid action response with all required fields', () => {
       // Arrange
       const response = {
-        actionGroup: 'jd',
-        function: 'read-jd-action',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: '{"title": "Senior Engineer"}',
+        response: {
+          actionGroup: 'jd',
+          function: 'read-jd-action',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: '{"title": "Senior Engineer"}',
+              },
             },
           },
         },
@@ -477,20 +479,22 @@ describe('BedrockActionResponseSchema', () => {
       // Assert
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.actionGroup).toBe('jd');
-        expect(result.data.function).toBe('read-jd-action');
+        expect(result.data.response.actionGroup).toBe('jd');
+        expect(result.data.response.function).toBe('read-jd-action');
       }
     });
 
     it('should infer correct type for valid response', () => {
       // Arrange
       const response: BedrockActionResponse = {
-        actionGroup: 'plan',
-        function: 'write-plan-action',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: 'plan created',
+        response: {
+          actionGroup: 'plan',
+          function: 'write-plan-action',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: 'plan created',
+              },
             },
           },
         },
@@ -508,12 +512,14 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with empty actionGroup', () => {
       // Arrange
       const response = {
-        actionGroup: '',
-        function: 'read-jd-action',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: 'response',
+        response: {
+          actionGroup: '',
+          function: 'read-jd-action',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: 'response',
+              },
             },
           },
         },
@@ -532,11 +538,13 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with missing actionGroup', () => {
       // Arrange
       const response = {
-        function: 'read-jd-action',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: 'response',
+        response: {
+          function: 'read-jd-action',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: 'response',
+              },
             },
           },
         },
@@ -554,12 +562,14 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with empty function', () => {
       // Arrange
       const response = {
-        actionGroup: 'jd',
-        function: '',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: 'response',
+        response: {
+          actionGroup: 'jd',
+          function: '',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: 'response',
+              },
             },
           },
         },
@@ -578,11 +588,13 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with missing function', () => {
       // Arrange
       const response = {
-        actionGroup: 'jd',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: 'response',
+        response: {
+          actionGroup: 'jd',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: 'response',
+              },
             },
           },
         },
@@ -600,8 +612,10 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with missing functionResponse', () => {
       // Arrange
       const response = {
-        actionGroup: 'jd',
-        function: 'read-jd-action',
+        response: {
+          actionGroup: 'jd',
+          function: 'read-jd-action',
+        },
       };
 
       // Act
@@ -614,12 +628,14 @@ describe('BedrockActionResponseSchema', () => {
     it('should reject response with invalid functionResponse', () => {
       // Arrange
       const response = {
-        actionGroup: 'jd',
-        function: 'read-jd-action',
-        functionResponse: {
-          responseBody: {
-            TEXT: {
-              body: '',
+        response: {
+          actionGroup: 'jd',
+          function: 'read-jd-action',
+          functionResponse: {
+            responseBody: {
+              TEXT: {
+                body: '',
+              },
             },
           },
         },
