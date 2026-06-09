@@ -154,12 +154,14 @@ export class SessionRepository {
     try {
       // Build update expression and attribute values dynamically
       const updateExpressionParts: string[] = [];
+      const expressionAttributeNames: Record<string, string> = {};
       const expressionAttributeValues: Record<string, unknown> = {};
       let valueIndex = 0;
 
       for (const [key, value] of Object.entries(updates)) {
         const placeholder = `:val${valueIndex}`;
-        updateExpressionParts.push(`${key} = ${placeholder}`);
+        updateExpressionParts.push(`#${key} = ${placeholder}`);
+        expressionAttributeNames[`#${key}`] = key;
         expressionAttributeValues[placeholder] = value;
         valueIndex++;
       }
@@ -174,6 +176,7 @@ export class SessionRepository {
             SK: `SESSION#${sessionId}`,
           },
           UpdateExpression: updateExpression,
+          ExpressionAttributeNames: expressionAttributeNames,
           ExpressionAttributeValues: expressionAttributeValues,
           ReturnValues: 'ALL_NEW',
         }),
