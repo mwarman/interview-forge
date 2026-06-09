@@ -11,11 +11,7 @@ import path from 'path';
 
 import type { Config } from '../utils/config.js';
 import { PLAN_GENERATION_SYSTEM_PROMPT } from '../utils/prompts.js';
-
-/**
- * Claude Sonnet 4.6 model identifier used by Bedrock Agents
- */
-const CLAUDE_SONNET_4_6_MODEL_ID = 'anthropic.claude-sonnet-4-6';
+import { CLAUDE_HAIKU_4_5_MODEL_ID } from '../utils/constants.js';
 
 /**
  * Props for the AgentStack
@@ -124,10 +120,10 @@ export class AgentStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel', 'bedrock:ListInferenceProfiles', 'bedrock:GetInferenceProfile'],
         resources: [
-          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
         ],
       }),
     );
@@ -198,7 +194,7 @@ export class AgentStack extends cdk.Stack {
     // Create the Bedrock Plan Agent
     this.planAgent = new bedrock.CfnAgent(this, 'PlanAgent', {
       agentName: `${config.CDK_APP_NAME}-plan-agent`,
-      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_SONNET_4_6_MODEL_ID}`,
+      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
       agentResourceRoleArn: agentRole.roleArn,
       instruction: PLAN_GENERATION_SYSTEM_PROMPT,
       actionGroups: [readJdActionGroup, writePlanActionGroup],
