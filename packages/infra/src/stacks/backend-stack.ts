@@ -5,7 +5,9 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaDestinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import path from 'path';
@@ -274,19 +276,27 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to GetSessionLambda
     table.grantReadData(getSessionLambda);
 
-    // Plan Handler Lambda Function (generates interview plan using Bedrock Agent)
-    const planLambda = new NodejsFunction(this, 'PlanFunction', {
-      functionName: `${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/plan-handler.ts'),
+    // Create SQS Dead Letter Queue for plan-worker Lambda
+    const planWorkerDLQ = new sqs.Queue(this, 'PlanWorkerDLQ', {
+      queueName: `${config.CDK_APP_NAME}-plan-worker-dlq-${config.CDK_ENV_NAME}`,
+      retentionPeriod: cdk.Duration.days(1),
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Plan Worker Lambda Function (asynchronously generates interview plan using Bedrock Agent)
+    // Invoked only by plan-kickoff-handler, never directly by API Gateway
+    const planWorkerLambda = new NodejsFunction(this, 'PlanWorkerFunction', {
+      functionName: `${config.CDK_APP_NAME}-plan-worker-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/plan-worker-handler.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 1024,
-      timeout: cdk.Duration.minutes(3),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(300),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
       systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'PlanFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
+      logGroup: new logs.LogGroup(this, 'PlanWorkerFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-plan-worker-${config.CDK_ENV_NAME}`,
         retention: logs.RetentionDays.ONE_WEEK,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }),
@@ -298,17 +308,58 @@ export class BackendStack extends cdk.Stack {
       },
     });
 
-    // Grant permissions to PlanLambda
-    table.grantReadWriteData(planLambda);
+    // Configure EventInvokeConfig for async invocations with DLQ and max 1 retry (0 retries = immediate DLQ on first failure)
+    planWorkerLambda.configureAsyncInvoke({
+      maxEventAge: cdk.Duration.seconds(60),
+      retryAttempts: 0,
+      onFailure: new lambdaDestinations.SqsDestination(planWorkerDLQ),
+    });
 
-    // Grant bedrock:InvokeAgent permission to PlanLambda on the plan agent
-    planLambda.addToRolePolicy(
+    // Grant permissions to PlanWorkerLambda
+    table.grantReadWriteData(planWorkerLambda);
+
+    // Grant bedrock:InvokeAgent permission to PlanWorkerLambda on the plan agent
+    planWorkerLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeAgent'],
         resources: [planAgentAlias.attrAgentAliasArn],
       }),
     );
+
+    // Plan Kickoff Handler Lambda Function (initiates async plan generation)
+    // Receives API Gateway request and asynchronously invokes plan-worker
+    const planKickoffLambda = new NodejsFunction(this, 'PlanKickoffFunction', {
+      functionName: `${config.CDK_APP_NAME}-plan-kickoff-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/plan-kickoff-handler.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(10),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'PlanKickoffFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-plan-kickoff-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        ...lambdaEnvironment,
+        PLAN_WORKER_FUNCTION_NAME: planWorkerLambda.functionName,
+      },
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to PlanKickoffLambda
+    table.grantReadWriteData(planKickoffLambda);
+
+    // Grant lambda:InvokeFunction permission to PlanKickoffLambda to invoke PlanWorkerLambda
+    planWorkerLambda.grantInvoke(planKickoffLambda);
 
     // Approve Plan Handler Lambda Function (approves an interview plan)
     const approvePlanLambda = new NodejsFunction(this, 'ApprovePlanFunction', {
@@ -369,7 +420,7 @@ export class BackendStack extends cdk.Stack {
 
     // POST /jds/{jdId}/sessions/{sessionId}/plan
     const planResource = sessionIdResource.addResource('plan');
-    planResource.addMethod('POST', new apigateway.LambdaIntegration(planLambda));
+    planResource.addMethod('POST', new apigateway.LambdaIntegration(planKickoffLambda));
 
     // PUT /jds/{jdId}/sessions/{sessionId}/plan/approve
     const approvePlanResource = planResource.addResource('approve');

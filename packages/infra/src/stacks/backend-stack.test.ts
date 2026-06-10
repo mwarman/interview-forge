@@ -135,7 +135,7 @@ describe('BackendStack', () => {
 
     // Assert
     const template = Template.fromStack(stack);
-    template.resourceCountIs('AWS::Lambda::Function', 10);
+    template.resourceCountIs('AWS::Lambda::Function', 11);
 
     // Health Lambda: 128MB, 6s
     template.hasResourceProperties('AWS::Lambda::Function', {
@@ -193,11 +193,18 @@ describe('BackendStack', () => {
       Timeout: 10,
     });
 
-    // Plan Lambda: 1024MB, 180s
+    // Plan Kickoff Lambda: 128MB, 10s
     template.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: `${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
-      MemorySize: 1024,
-      Timeout: 180,
+      FunctionName: `${config.CDK_APP_NAME}-plan-kickoff-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 10,
+    });
+
+    // Plan Worker Lambda: 256MB, 300s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-plan-worker-${config.CDK_ENV_NAME}`,
+      MemorySize: 256,
+      Timeout: 300,
     });
 
     // Approve Plan Lambda: 128MB, 15s
@@ -278,7 +285,7 @@ describe('BackendStack', () => {
     });
 
     // Additionally verify that JD_TABLE_NAME and JD_BUCKET_NAME are present
-    template.resourceCountIs('AWS::Lambda::Function', 10);
+    template.resourceCountIs('AWS::Lambda::Function', 11);
     const allResources = template.findResources('AWS::Lambda::Function') as Record<
       string,
       Record<string, Record<string, Record<string, unknown>>>
@@ -315,7 +322,7 @@ describe('BackendStack', () => {
     const template = Template.fromStack(stack);
 
     // Verify CloudWatch Log Groups are created
-    template.resourceCountIs('AWS::Logs::LogGroup', 10);
+    template.resourceCountIs('AWS::Logs::LogGroup', 11);
 
     // Verify retention is set to ONE_WEEK
     template.hasResourceProperties('AWS::Logs::LogGroup', {
