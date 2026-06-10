@@ -151,7 +151,7 @@ export class PlanService {
       }
 
       // Validate session status is in valid pre-generation states
-      const validPreGenerationStatuses = ['PLAN_GENERATING', 'PLAN_ERROR'];
+      const validPreGenerationStatuses = ['PLAN_PENDING', 'PLAN_ERROR'];
       if (!validPreGenerationStatuses.includes(session.status)) {
         logger.warn(
           { jdId, sessionId, currentStatus: session.status },
