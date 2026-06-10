@@ -22,12 +22,14 @@ export const agentResponse = {
    */
   ok<T>(event: BedrockActionEvent, payload: T): BedrockActionResponse {
     return {
-      actionGroup: event.actionGroup,
-      function: event.function,
-      functionResponse: {
-        responseBody: {
-          TEXT: {
-            body: JSON.stringify(payload),
+      response: {
+        actionGroup: event.actionGroup,
+        function: event.function,
+        functionResponse: {
+          responseBody: {
+            TEXT: {
+              body: JSON.stringify(payload),
+            },
           },
         },
       },
@@ -43,15 +45,18 @@ export const agentResponse = {
    */
   error(event: BedrockActionEvent, errorType: string, errorMessage: string): BedrockActionResponse {
     return {
-      actionGroup: event.actionGroup || 'unknown-group',
-      function: event.function || 'unknown-function',
-      functionResponse: {
-        responseBody: {
-          TEXT: {
-            body: JSON.stringify({
-              error: errorType,
-              message: errorMessage,
-            }),
+      response: {
+        actionGroup: event.actionGroup || 'unknown-group',
+        function: event.function || 'unknown-function',
+        functionResponse: {
+          responseState: 'FAILURE',
+          responseBody: {
+            TEXT: {
+              body: JSON.stringify({
+                error: errorType,
+                message: errorMessage,
+              }),
+            },
           },
         },
       },

@@ -14,7 +14,7 @@ import {
 } from '@/common/components/shadcn/dialog';
 import { Field, FieldError, FieldLabel } from '@/common/components/shadcn/field';
 import { Input } from '@/common/components/shadcn/input';
-import { useCreateSession } from '@/pages/jd/sessions/api/useCreateSession';
+import { useCreateSession } from '@/pages/jd/sessions/list/api/useCreateSession';
 
 interface NewSessionDialogProps {
   jdId: string;

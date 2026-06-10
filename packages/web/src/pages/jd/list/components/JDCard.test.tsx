@@ -7,7 +7,7 @@ import { JobDescription } from '@interview-forge/shared';
 
 import { JDCard, formatTTLCountdown } from './JDCard';
 
-vi.mock('@/pages/jd/sessions/api/useGetSessions', () => ({
+vi.mock('@/pages/jd/sessions/list/api/useGetSessions', () => ({
   useGetSessions: vi.fn(() => ({ data: [] })),
 }));
 
@@ -64,7 +64,7 @@ describe('JDCard', () => {
 
   it('should render "session" (singular) when count is 1', async () => {
     // Arrange
-    const { useGetSessions } = await import('@/pages/jd/sessions/api/useGetSessions');
+    const { useGetSessions } = await import('@/pages/jd/sessions/list/api/useGetSessions');
     vi.mocked(useGetSessions).mockReturnValue({ data: [{ sessionId: 'x' }] } as never);
 
     // Act

@@ -6,7 +6,7 @@ import { renderWithAllProviders } from '@/test/test-utils';
 
 import { NewSessionDialog } from './NewSessionDialog';
 
-vi.mock('@/pages/jd/sessions/api/useCreateSession', () => ({
+vi.mock('@/pages/jd/sessions/list/api/useCreateSession', () => ({
   useCreateSession: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ const renderDialog = (overrides: { onSuccess?: (id: string) => void; onOpenChang
 describe('NewSessionDialog', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    const { useCreateSession } = await import('@/pages/jd/sessions/api/useCreateSession');
+    const { useCreateSession } = await import('@/pages/jd/sessions/list/api/useCreateSession');
     vi.mocked(useCreateSession).mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: false,
@@ -113,7 +113,7 @@ describe('NewSessionDialog', () => {
 
   it('should show "Creating..." on the submit button while pending', async () => {
     // Arrange
-    const { useCreateSession } = await import('@/pages/jd/sessions/api/useCreateSession');
+    const { useCreateSession } = await import('@/pages/jd/sessions/list/api/useCreateSession');
     vi.mocked(useCreateSession).mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: true,

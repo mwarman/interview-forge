@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { AgentStack } from './agent-stack';
 import { DataStack } from './data-stack';
 import { getConfig } from '../utils/config';
@@ -35,7 +35,16 @@ describe('AgentStack', () => {
     const template = Template.fromStack(stack);
     template.hasResourceProperties('AWS::Bedrock::Agent', {
       AgentName: 'test-app-plan-agent',
-      FoundationModel: 'anthropic.claude-sonnet-4-6',
+      FoundationModel: Match.objectLike({
+        'Fn::Join': [
+          '',
+          [
+            'arn:aws:bedrock:us-east-1:',
+            Match.anyValue(),
+            ':inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0',
+          ],
+        ],
+      }),
     });
   });
 

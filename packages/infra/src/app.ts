@@ -52,7 +52,7 @@ const backendStack = new BackendStack(app, 'BackendStack', {
   tags,
   table: dataStack.table,
   bucket: dataStack.bucket,
-  planAgent: agentStack.planAgent,
+  planAgentAlias: agentStack.planAgentAlias,
   planAgentId: agentStack.planAgent.attrAgentId,
   planAgentAliasId: agentStack.planAgentAlias.attrAgentAliasId,
 });

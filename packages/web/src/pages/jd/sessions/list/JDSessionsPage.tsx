@@ -12,9 +12,9 @@ import {
   EmptyTitle,
 } from '@/common/components/shadcn/empty';
 import { Skeleton } from '@/common/components/shadcn/skeleton';
-import { useGetSessions } from '@/pages/jd/sessions/api/useGetSessions';
-import { NewSessionDialog } from '@/pages/jd/sessions/components/NewSessionDialog';
-import { SessionCard } from '@/pages/jd/sessions/components/SessionCard';
+import { useGetSessions } from '@/pages/jd/sessions/list/api/useGetSessions';
+import { NewSessionDialog } from '@/pages/jd/sessions/list/components/NewSessionDialog';
+import { SessionCard } from '@/pages/jd/sessions/list/components/SessionCard';
 
 /**
  * JDSessionsPage component - displays all sessions for a given job description.

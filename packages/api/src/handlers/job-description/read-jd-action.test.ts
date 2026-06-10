@@ -51,13 +51,13 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('interview-forge-read-jd');
-      expect(result.function).toBe('read-jd-action');
-      expect(result.functionResponse).toBeDefined();
-      expect(result.functionResponse.responseBody).toBeDefined();
-      expect(result.functionResponse.responseBody.TEXT).toBeDefined();
+      expect(result.response.actionGroup).toBe('interview-forge-read-jd');
+      expect(result.response.function).toBe('read-jd-action');
+      expect(result.response.functionResponse).toBeDefined();
+      expect(result.response.functionResponse.responseBody).toBeDefined();
+      expect(result.response.functionResponse.responseBody.TEXT).toBeDefined();
 
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody).toEqual({
         title: 'Senior Backend Engineer',
         rawText: 'This is a job description for a senior backend engineer.',
@@ -85,7 +85,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       // Should only include title and rawText, not s3Key
       expect(responseBody).toEqual({
         title: 'Senior Frontend Engineer',
@@ -107,10 +107,10 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('interview-forge-read-jd');
-      expect(result.function).toBe('read-jd-action');
+      expect(result.response.actionGroup).toBe('interview-forge-read-jd');
+      expect(result.response.function).toBe('read-jd-action');
 
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody.error).toBe('Not Found');
       expect(responseBody.message).toContain('not found');
     });
@@ -127,10 +127,10 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('interview-forge-read-jd');
-      expect(result.function).toBe('read-jd-action');
+      expect(result.response.actionGroup).toBe('interview-forge-read-jd');
+      expect(result.response.function).toBe('read-jd-action');
 
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       // When jdId is missing, extractParameter returns undefined, which gets passed to service
       // Service returns null, resulting in "Not Found" error
       expect(responseBody.error).toBe('Not Found');
@@ -155,7 +155,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody).toHaveProperty('error');
       expect(responseBody).toHaveProperty('message');
       expect(jobDescriptionService.getById).not.toHaveBeenCalled();
@@ -172,8 +172,8 @@ describe('read-jd-action', () => {
       const result = (await handle(invalidEvent)) as BedrockActionResponse;
 
       // Assert
-      expect(result.functionResponse).toBeDefined();
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      expect(result.response.functionResponse).toBeDefined();
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody.error).toBe('Invalid event structure');
     });
 
@@ -188,10 +188,10 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('interview-forge-read-jd');
-      expect(result.function).toBe('read-jd-action');
+      expect(result.response.actionGroup).toBe('interview-forge-read-jd');
+      expect(result.response.function).toBe('read-jd-action');
 
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody.error).toBe('Internal Server Error');
       expect(responseBody.message).toContain('unexpected error');
     });
@@ -213,7 +213,7 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      const responseBody = JSON.parse(result.functionResponse.responseBody.TEXT.body);
+      const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       // Schema validation fails because parameters don't include a 'jdId' parameter
       expect(responseBody.error).toBe('Invalid event structure');
       expect(jobDescriptionService.getById).not.toHaveBeenCalled();
@@ -241,15 +241,15 @@ describe('read-jd-action', () => {
 
       // Assert
       // Verify structure matches BedrockActionResponse
-      expect(result).toHaveProperty('actionGroup');
-      expect(result).toHaveProperty('function');
-      expect(result).toHaveProperty('functionResponse');
-      expect(result.functionResponse).toHaveProperty('responseBody');
-      expect(result.functionResponse.responseBody).toHaveProperty('TEXT');
-      expect(result.functionResponse.responseBody.TEXT).toHaveProperty('body');
+      expect(result.response).toHaveProperty('actionGroup');
+      expect(result.response).toHaveProperty('function');
+      expect(result.response).toHaveProperty('functionResponse');
+      expect(result.response.functionResponse).toHaveProperty('responseBody');
+      expect(result.response.functionResponse.responseBody).toHaveProperty('TEXT');
+      expect(result.response.functionResponse.responseBody.TEXT).toHaveProperty('body');
 
       // Verify body is a JSON string
-      const body = result.functionResponse.responseBody.TEXT.body;
+      const body = result.response.functionResponse.responseBody.TEXT.body;
       expect(typeof body).toBe('string');
       expect(() => JSON.parse(body)).not.toThrow();
     });
@@ -277,8 +277,8 @@ describe('read-jd-action', () => {
       const result = (await handle(event)) as BedrockActionResponse;
 
       // Assert
-      expect(result.actionGroup).toBe('custom-group');
-      expect(result.function).toBe('custom-function');
+      expect(result.response.actionGroup).toBe('custom-group');
+      expect(result.response.function).toBe('custom-function');
     });
   });
 });

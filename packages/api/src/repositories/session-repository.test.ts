@@ -391,6 +391,10 @@ describe('SessionRepository', () => {
               ':val0': 'PLAN_APPROVED',
               ':val1': { competencies: [{ id: '123' }] },
             }),
+            ExpressionAttributeNames: expect.objectContaining({
+              '#status': 'status',
+              '#plan': 'plan',
+            }),
             ReturnValues: 'ALL_NEW',
           },
         }),

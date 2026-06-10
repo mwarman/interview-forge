@@ -19,7 +19,7 @@ interface BackendStackProps extends cdk.StackProps {
   config: Config;
   table: dynamodb.Table;
   bucket: s3.Bucket;
-  planAgent: bedrock.CfnAgent;
+  planAgentAlias: bedrock.CfnAgentAlias;
   planAgentId: string;
   planAgentAliasId: string;
 }
@@ -34,7 +34,7 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
-    const { config, table, bucket, planAgent, planAgentId, planAgentAliasId } = props;
+    const { config, table, bucket, planAgentAlias, planAgentId, planAgentAliasId } = props;
 
     // Create shared Lambda environment variables
     const lambdaEnvironment = {
@@ -280,8 +280,8 @@ export class BackendStack extends cdk.Stack {
       entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/plan-handler.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 256,
-      timeout: cdk.Duration.seconds(60),
+      memorySize: 1024,
+      timeout: cdk.Duration.minutes(3),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
       systemLogLevelV2: lambda.SystemLogLevel.INFO,
@@ -306,7 +306,7 @@ export class BackendStack extends cdk.Stack {
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeAgent'],
-        resources: [planAgent.attrAgentArn],
+        resources: [planAgentAlias.attrAgentAliasArn],
       }),
     );
 

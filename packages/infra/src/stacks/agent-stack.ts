@@ -11,11 +11,7 @@ import path from 'path';
 
 import type { Config } from '../utils/config.js';
 import { PLAN_GENERATION_SYSTEM_PROMPT } from '../utils/prompts.js';
-
-/**
- * Claude Sonnet 4.6 model identifier used by Bedrock Agents
- */
-const CLAUDE_SONNET_4_6_MODEL_ID = 'anthropic.claude-sonnet-4-6';
+import { CLAUDE_HAIKU_4_5_MODEL_ID } from '../utils/constants.js';
 
 /**
  * Props for the AgentStack
@@ -58,7 +54,7 @@ export class AgentStack extends cdk.Stack {
       entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 128,
+      memorySize: 512,
       timeout: cdk.Duration.seconds(15),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
@@ -85,7 +81,7 @@ export class AgentStack extends cdk.Stack {
       entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 128,
+      memorySize: 512,
       timeout: cdk.Duration.seconds(15),
       loggingFormat: lambda.LoggingFormat.JSON,
       applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
@@ -122,12 +118,12 @@ export class AgentStack extends cdk.Stack {
     agentRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeModel'],
+        actions: ['bedrock:InvokeModel', 'bedrock:ListInferenceProfiles', 'bedrock:GetInferenceProfile'],
         resources: [
-          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
-          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_SONNET_4_6_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
         ],
       }),
     );
@@ -198,7 +194,7 @@ export class AgentStack extends cdk.Stack {
     // Create the Bedrock Plan Agent
     this.planAgent = new bedrock.CfnAgent(this, 'PlanAgent', {
       agentName: `${config.CDK_APP_NAME}-plan-agent`,
-      foundationModel: CLAUDE_SONNET_4_6_MODEL_ID,
+      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
       agentResourceRoleArn: agentRole.roleArn,
       instruction: PLAN_GENERATION_SYSTEM_PROMPT,
       actionGroups: [readJdActionGroup, writePlanActionGroup],
@@ -214,10 +210,6 @@ export class AgentStack extends cdk.Stack {
     });
 
     // Grant the Bedrock service principal permission to invoke the read-jd-action Lambda.
-    // CfnPermission is created directly in the AgentStack (not via addPermission) to avoid a
-    // cross-stack cyclic dependency: addPermission would place the resource in BackendStack and
-    // reference this stack's agent ARN, creating a BackendStack → AgentStack dependency that
-    // conflicts with the existing AgentStack → BackendStack dependency.
     new lambda.CfnPermission(this, 'BedrockInvokeReadJdAction', {
       functionName: this.readJdActionLambda.functionArn,
       principal: 'bedrock.amazonaws.com',

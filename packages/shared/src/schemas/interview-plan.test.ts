@@ -110,10 +110,10 @@ describe('QuestionSchema', () => {
   });
 
   describe('invalid payloads', () => {
-    it('should reject question with invalid UUID', () => {
+    it('should reject question with invalid questionId', () => {
       // Arrange
       const invalidQuestion = {
-        questionId: 'not-a-uuid',
+        questionId: '',
         text: 'Valid question text',
         type: 'BEHAVIORAL' as const,
       };
@@ -291,7 +291,7 @@ describe('CompetencySchema', () => {
         evaluationCriteria: 'Demonstrates vision and decision-making',
         questions: [
           {
-            questionId: 'invalid-uuid',
+            questionId: '',
             text: 'Leadership question',
             type: 'BEHAVIORAL' as const,
           },
@@ -465,10 +465,10 @@ describe('InterviewPlanSchema', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject plan with invalid planId UUID', () => {
+    it('should reject plan with invalid planId', () => {
       // Arrange
       const invalidPlan = {
-        planId: 'invalid-uuid',
+        planId: '',
         competencies: [
           {
             competencyId: '223e4567-e89b-12d3-a456-426614174000',

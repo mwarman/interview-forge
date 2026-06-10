@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { JobDescription } from '@interview-forge/shared';
 import { Badge } from '@/common/components/shadcn/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/common/components/shadcn/card';
-import { useGetSessions } from '@/pages/jd/sessions/api/useGetSessions';
+import { useGetSessions } from '@/pages/jd/sessions/list/api/useGetSessions';
 
 interface JDCardProps {
   jd: JobDescription;
