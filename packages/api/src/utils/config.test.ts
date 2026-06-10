@@ -21,6 +21,7 @@ describe('config', () => {
       process.env.JD_BUCKET_NAME = 'test-bucket';
       process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
+      process.env.PLAN_WORKER_FUNCTION_NAME = 'test-plan-worker-function';
 
       // Act
       const { config } = await import('./config');
@@ -32,6 +33,7 @@ describe('config', () => {
       expect(config.JD_BUCKET_NAME).toBe('test-bucket');
       expect(config.PLAN_AGENT_ID).toBe('test-agent-id');
       expect(config.PLAN_AGENT_ALIAS_ID).toBe('test-agent-alias');
+      expect(config.PLAN_WORKER_FUNCTION_NAME).toBe('test-plan-worker-function');
     });
 
     it('should use default LOG_LEVEL if not set', async () => {
@@ -41,6 +43,7 @@ describe('config', () => {
       process.env.JD_BUCKET_NAME = 'test-bucket';
       process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
+      process.env.PLAN_WORKER_FUNCTION_NAME = 'test-plan-worker-function';
 
       // Act
       const { config } = await import('./config');
@@ -56,6 +59,7 @@ describe('config', () => {
       process.env.JD_BUCKET_NAME = 'test-bucket';
       process.env.PLAN_AGENT_ID = 'test-agent-id';
       process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias';
+      process.env.PLAN_WORKER_FUNCTION_NAME = 'test-plan-worker-function';
 
       // Act
       const { config } = await import('./config');

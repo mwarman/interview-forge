@@ -25,6 +25,10 @@ const ConfigSchema = z.object({
     .string()
     .min(1)
     .describe('PLAN_AGENT_ALIAS_ID - Bedrock Agent alias ID for plan generation (required)'),
+  PLAN_WORKER_FUNCTION_NAME: z
+    .string()
+    .min(1)
+    .describe('PLAN_WORKER_FUNCTION_NAME - Lambda function name for async plan worker (required)'),
 });
 
 /**
