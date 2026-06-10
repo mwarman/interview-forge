@@ -103,6 +103,7 @@ Definition of Done)       coverage floors)         or unified scripts)
 - **No Barrel Files:** Never create or maintain `index.ts` files for re-exporting within feature folders or lambda submodules. Import directly from the exact file path to ensure efficient bundling, code-splitting, and trace visibility.
 - **Co-location Principle:** Always place unit tests (`*.test.ts`, `*.test.tsx`) in the exact same directory as the module, function, handler, or component they are testing.
 - **Centralized Base Configs:** Shared configurations (e.g., `tsconfig.base.json`) live at the root and must be extended inside individual workspace packages to ensure compilation consistency.
+- **Coding Principles:** All source code should follow the Single Responsibility Principle (SRP) and Don't Repeat Yourself (DRY). Do not add unnecessary or unrequested source members, You Aint Gonna Need It (YAGNI).
 
 ---
 
