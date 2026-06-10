@@ -47,6 +47,7 @@ export class BackendStack extends cdk.Stack {
       JD_BUCKET_NAME: bucket.bucketName,
       PLAN_AGENT_ID: planAgentId,
       PLAN_AGENT_ALIAS_ID: planAgentAliasId,
+      PLAN_WORKER_FUNCTION_NAME: 'placeholder', // will be overridden in PlanKickoffLambda environment to avoid circular dependency
     };
 
     // Create the API Gateway REST API with CORS enabled
