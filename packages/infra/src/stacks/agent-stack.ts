@@ -46,6 +46,7 @@ export class AgentStack extends cdk.Stack {
       JD_BUCKET_NAME: bucket.bucketName,
       PLAN_AGENT_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
       PLAN_AGENT_ALIAS_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
+      PLAN_WORKER_FUNCTION_NAME: 'placeholder', // Not used in the Action Lambdas, but included for validation
     };
 
     // Read JD Action Lambda Function (Bedrock Agent action group handler)

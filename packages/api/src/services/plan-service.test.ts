@@ -299,7 +299,7 @@ describe('PlanService', () => {
         sessionId,
         jdId,
         candidateName: 'Test Candidate',
-        status: 'PLAN_GENERATING',
+        status: 'PLAN_PENDING',
         createdAt: '2026-06-07T00:00:00Z',
         TTL: 1234567890,
       };
@@ -334,7 +334,7 @@ describe('PlanService', () => {
         sessionId,
         jdId,
         candidateName: 'Test Candidate',
-        status: 'PLAN_GENERATING',
+        status: 'PLAN_PENDING',
         createdAt: '2026-06-07T00:00:00Z',
         TTL: 1234567890,
       };
@@ -353,7 +353,7 @@ describe('PlanService', () => {
       await expect(planService.kickoffPlanGeneration(jdId, sessionId)).rejects.toThrow('Initial DynamoDB write failed');
     });
 
-    it('should allow kickoff from PLAN_GENERATING status (re-kickoff)', async () => {
+    it('should allow kickoff from PLAN_PENDING status (re-kickoff)', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
@@ -362,7 +362,7 @@ describe('PlanService', () => {
         sessionId,
         jdId,
         candidateName: 'Test Candidate',
-        status: 'PLAN_GENERATING',
+        status: 'PLAN_PENDING',
         createdAt: '2026-06-07T00:00:00Z',
         TTL: 1234567890,
       };
