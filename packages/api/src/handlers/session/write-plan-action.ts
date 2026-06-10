@@ -16,7 +16,7 @@ import { sessionService } from '@/services/session-service';
  * Write Plan Action - Bedrock Agents action group Lambda handler
  *
  * Invoked by Bedrock Agents to write an interview plan to a session.
- * Validates the plan against InterviewPlanSchema and updates the session with the plan and status=PLAN_PENDING.
+ * Validates the plan against InterviewPlanSchema and updates the session with the plan and status=PLAN_GENERATED.
  *
  * Event contract: { actionGroup, function, parameters }
  * Response contract: { actionGroup, function, functionResponse: { responseBody: { TEXT: { body: JSON string } } } }
@@ -31,7 +31,7 @@ import { sessionService } from '@/services/session-service';
  * - Extract and validate required parameters using schemas
  * - Parse plan JSON string
  * - Validate plan against InterviewPlanSchema
- * - Update session with plan and status=PLAN_PENDING
+ * - Update session with plan and status=PLAN_GENERATED
  * - Return structured Bedrock response with success or validation error
  */
 export const handle = async (event: unknown): Promise<BedrockActionResponse> => {
@@ -98,7 +98,7 @@ export const handle = async (event: unknown): Promise<BedrockActionResponse> => 
     logger.debug({ sessionId, jdId }, '[WritePlanAction] - Updating session with plan');
     const updatedSession = await sessionService.updateSession(jdId, sessionId, {
       plan,
-      status: 'PLAN_PENDING',
+      status: 'PLAN_GENERATED',
     });
 
     logger.info({ sessionId, jdId }, '[WritePlanAction] - Session updated successfully');

@@ -8,6 +8,7 @@ type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   PLAN_PENDING: 'outline',
+  PLAN_GENERATED: 'outline',
   PLAN_APPROVED: 'secondary',
   SCORED: 'secondary',
   ASSESSED: 'default',
@@ -16,6 +17,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
 
 const STATUS_LABEL: Record<string, string> = {
   PLAN_PENDING: 'Plan Pending',
+  PLAN_GENERATED: 'Plan Generated',
   PLAN_APPROVED: 'Plan Approved',
   SCORED: 'Scored',
   ASSESSED: 'Assessed',

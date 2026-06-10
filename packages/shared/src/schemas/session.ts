@@ -9,6 +9,7 @@ export const SessionStatusSchema = z.enum([
   'PLAN_GENERATING',
   'PLAN_ERROR',
   'PLAN_PENDING',
+  'PLAN_GENERATED',
   'PLAN_APPROVED',
   'SCORED',
   'ASSESS_GENERATING',
