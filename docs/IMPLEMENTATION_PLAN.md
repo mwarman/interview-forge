@@ -1,22 +1,22 @@
 # Implementation Plan: interview-forge
 
-**Version:** 0.1  
-**Date:** 2026-06-02  
-**Source Document:** Project Overview v1.0  
-**Status:** Draft
+**Version:** 1.1  
+**Date:** 2026-06-10  
+**Source Document:** Project Overview v1.2  
+**Status:** In Progress
 
 ---
 
 ## Milestone Summary
 
-| #   | Milestone                         | Description                                                                                                                     | Issues | Depends On |
-| --- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------- |
-| M1  | Foundation & CI/CD                | Deploy/Teardown workflows, DynamoDB table, S3 bucket, API Gateway, base Lambda wiring, shared Zod schemas                       | 6      | —          |
-| M2  | JD Ingestion & Session Management | JD ingest Lambda (paste + PDF), JD list UI, session creation, CRUD Lambda, session list UI                                      | 7      | M1         |
-| M3  | Plan Generation Agent             | Bedrock Agent (plan), action group Lambdas, plan-handler Lambda, plan review/edit UI (Checkpoint 1), approve-plan Lambda        | 8      | M2         |
-| M4  | Scorecard                         | Scorecard schema, score-handler Lambda, scorecard entry UI                                                                      | 4      | M3         |
-| M5  | Reconciliation Agent & Assessment | Bedrock Agent (assess), action group Lambdas, assess-handler Lambda, assessment review UI (Checkpoint 2), approve-assess Lambda | 7      | M4         |
-| M6  | PDF Export & Polish               | Client-side pdfmake export, UI polish, error state handling, README + demo walkthrough                                          | 5      | M5         |
+| #   | Milestone                         | Description                                                                                                                                           | Issues | Depends On |
+| --- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------- |
+| M1  | Foundation & CI/CD                | Deploy/Teardown workflows, DynamoDB table, S3 bucket, API Gateway, base Lambda wiring, shared Zod schemas                                             | 6      | —          |
+| M2  | JD Ingestion & Session Management | JD ingest Lambda (paste + PDF), JD list UI, session creation, CRUD Lambda, session list UI                                                            | 7      | M1         |
+| M3  | Plan Generation Agent             | Bedrock Agent (plan), action group Lambdas, plan-kickoff + plan-worker Lambdas, polling hook, plan review/edit UI (Checkpoint 1), approve-plan Lambda | 9      | M2         |
+| M4  | Scorecard                         | Scorecard schema, score-handler Lambda, scorecard entry UI                                                                                            | 4      | M3         |
+| M5  | Reconciliation Agent & Assessment | Bedrock Agent (assess), action group Lambdas, assess-kickoff + assess-worker Lambdas, assessment review UI (Checkpoint 2), approve-assess Lambda      | 7      | M4         |
+| M6  | PDF Export & Polish               | Client-side pdfmake export, UI polish, error state handling, README + demo walkthrough                                                                | 5      | M5         |
 
 ---
 
@@ -107,22 +107,22 @@ Implement the S3 bucket CDK construct for JD file upload staging and the API Gat
 
 ---
 
-### Issue M1-05: Define Shared Zod Schemas for JD and Session Entities
+### Issue M1-05: Define Shared Zod Schemas for JD and Session Entities ⚠️ MODIFIED
 
 **Description:**  
-Implement the canonical Zod schemas for the `JD` and `Session` entities in `packages/shared/src/schemas/`. These schemas are the single source of truth consumed symmetrically by Lambda handlers (input validation) and the React frontend (form validation and type inference). Derive TypeScript types from the schemas using `z.infer`. Include the `status` enum for session lifecycle states.
+Implement the canonical Zod schemas for the `JD` and `Session` entities in `packages/shared/src/schemas/`. These schemas are the single source of truth consumed symmetrically by Lambda handlers (input validation) and the React frontend (form validation and type inference). Derive TypeScript types from the schemas using `z.infer`. Include the full `status` enum for session lifecycle states, including the async generation and error states introduced by the kickoff/worker pattern.
 
 **Acceptance Criteria:**
 
 - AC-01: `JdSchema` validates all JD entity attributes defined in the Project Overview data model; optional fields (`s3Key`) are correctly typed as optional
 - AC-02: `SessionSchema` validates all Session entity attributes; optional fields (`plan`, `scorecard`, `assessment`) are correctly typed as optional Maps
-- AC-03: `SessionStatus` enum is defined as a Zod enum with values: `PLAN_PENDING`, `PLAN_APPROVED`, `SCORED`, `ASSESSED`, `COMPLETE`
+- AC-03: `SessionStatus` enum is defined as a Zod enum with values: `PLAN_GENERATING`, `PLAN_ERROR`, `PLAN_PENDING`, `PLAN_APPROVED`, `SCORED`, `ASSESS_GENERATING`, `ASSESS_ERROR`, `ASSESSED`, `COMPLETE`
 - AC-04: TypeScript types `Jd`, `Session`, and `SessionStatus` are inferred from schemas using `z.infer` and exported
 - AC-05: Schemas are importable from `@monorepo/shared` in both `packages/api` and `packages/web` without relative path imports
 - AC-06: Unit tests cover valid payloads, missing required fields, and invalid enum values for both schemas
 
 **Effort:** M  
-**Notes:** No barrel files — import directly from the schema file path per the technology guidelines. The `plan`, `scorecard`, and `assessment` Map schemas will be stubs at this stage and deepened in M3–M5 as their structures are finalized.
+**Notes:** The `PLAN_GENERATING` and `ASSESS_GENERATING` statuses are the stable polling targets — the frontend polls until status exits these values. `PLAN_ERROR` and `ASSESS_ERROR` are terminal failure states that surface a retry affordance in the UI. No barrel files — import directly from the schema file path per the technology guidelines.
 
 ---
 
@@ -175,14 +175,14 @@ Implement the `ingest-handler` Lambda in `packages/api/src/handlers/ingest/`. Th
 - AC-08: Unit tests cover paste mode write, file upload mode (mocked S3 + `unpdf`), validation failure, and `unpdf` extraction failure
 
 **Effort:** M  
-**Notes:** Pre-signed S3 URL generation for direct browser → S3 upload should be a separate lightweight Lambda or part of `session-handler` (see M2-02). Do not generate pre-signed URLs inside `ingest-handler`; keep concerns separated.
+**Notes:** Pre-signed S3 URL generation for direct browser → S3 upload is handled in `session-handler` (see M2-02). Do not generate pre-signed URLs inside `ingest-handler`; keep concerns separated.
 
 ---
 
 ### Issue M2-02: Implement Session & JD CRUD Lambda (`session-handler`)
 
 **Description:**  
-Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `POST /jds/upload-url` sub-route that generates a pre-signed S3 PUT URL for file uploads (used by the frontend before calling `ingest-handler`).
+Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `POST /jds/upload-url` route that generates a pre-assigned `jdId` and a pre-signed S3 PUT URL for file uploads.
 
 **Acceptance Criteria:**
 
@@ -191,7 +191,7 @@ Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` t
 - AC-03: `POST /jds/{jdId}/sessions` creates a SESSION item; `TTL` is read from the parent JD record and copied to the new session; returns 404 if the parent JD does not exist
 - AC-04: `GET /jds/{jdId}/sessions` returns all sessions for the JD sorted by `createdAt` ascending (GSI1 query)
 - AC-05: `GET /jds/{jdId}/sessions/{sessionId}` returns a single session or 404
-- AC-06: `POST /jds/upload-url` creates and returns a pre-signed S3 PUT URL valid for 5 minutes, with the `s3Key` value included in the response for use by the frontend
+- AC-06: `POST /jds/upload-url` generates a UUID `jdId`, constructs an S3 key (`uploads/{jdId}/{filename}`), and returns a pre-signed S3 PUT URL valid for 5 minutes along with `jdId` and `s3Key`
 - AC-07: All DynamoDB operations use AWS SDK v3 (`@aws-sdk/client-dynamodb` + `@aws-sdk/util-dynamodb`); no full SDK import
 - AC-08: Unit tests cover each operation with mocked DynamoDB client; 404 paths are explicitly tested
 
@@ -297,23 +297,25 @@ Create a higher-order function `withErrorHandler` in `packages/api/src/utils/err
 
 ## Milestone M3: Plan Generation Agent
 
-**Goal:** Agent generates a structured interview plan from the JD; recruiter can review, edit, and approve it at Checkpoint 1. The plan is locked in DynamoDB on approval and the session status transitions to `PLAN_APPROVED`.
+**Goal:** Agent generates a structured interview plan from the JD asynchronously; recruiter sees a "Generating…" state while the agent runs, then can review, edit, and approve the plan at Checkpoint 1. The plan is locked in DynamoDB on approval and the session status transitions to `PLAN_APPROVED`.
 
 **Deliverables:**
 
 - Bedrock Agent (`interview-forge-plan-agent`) with action group and system prompt
 - Action group Lambda functions: `read-jd-action`, `write-plan-action`
-- `plan-handler` Lambda invoking the agent and returning the draft plan
+- `plan-kickoff-handler` Lambda: validates request, updates status to `PLAN_GENERATING`, fires async worker invocation, returns 202 immediately
+- `plan-worker` Lambda: invokes Bedrock Agent, writes result or error status to DynamoDB; no API Gateway exposure
 - `approve-plan-handler` Lambda locking the plan and transitioning session status
-- Plan Review & Edit UI (Checkpoint 1) with deep editing capability (Option B)
-- CDK constructs for agent, action group, and new Lambda routes
+- `usePollSessionStatus` shared hook driving async generation UX across plan and assessment pages
+- Plan Review & Edit UI (Checkpoint 1) with deep editing capability and polling-driven generation state
+- CDK constructs for all new resources
 
 ---
 
 ### Issue M3-01: Define Interview Plan Zod Schema
 
 **Description:**  
-Finalize and implement the `InterviewPlanSchema` in `packages/shared/src/schemas/`. The plan structure must support: an array of competency areas, each with a name, description, evaluation criteria, and an ordered array of questions. Each question has a text, a type (behavioral/situational/technical), and a follow-up prompt. This schema is used by the plan-generation agent output validation, the plan-handler Lambda, and the plan edit UI.
+Finalize and implement the `InterviewPlanSchema` in `packages/shared/src/schemas/`. The plan structure must support: an array of competency areas, each with a name, description, evaluation criteria, and an ordered array of questions. Each question has a text, a type (behavioral/situational/technical), and a follow-up prompt. This schema is used by the plan-generation agent output validation, the plan-worker Lambda, and the plan edit UI.
 
 **Acceptance Criteria:**
 
@@ -353,15 +355,15 @@ Implement two Lambda functions that serve as the action group for the plan gener
 ### Issue M3-03: Configure Bedrock Plan Agent and Action Group in CDK
 
 **Description:**  
-Define the `interview-forge-plan-agent` Bedrock Agent in CDK using `CfnAgent` and `CfnAgentAlias`. Configure the agent with: Claude Sonnet 4.6 as the foundation model, the plan generation system prompt (see Notes), the action group referencing the `read-jd-action` and `write-plan-action` Lambda ARNs, and an `DRAFT` alias for development. Grant Bedrock the `lambda:InvokeFunction` permission on both action group Lambdas. Grant the agent IAM role `bedrock:InvokeModel` on the Claude Sonnet 4.6 model ARN.
+Define the `interview-forge-plan-agent` Bedrock Agent in CDK using `CfnAgent` and `CfnAgentAlias`. Configure the agent with: Claude Haiku 4.5 as the foundation model, the plan generation system prompt (see Notes), the action group referencing the `read-jd-action` and `write-plan-action` Lambda ARNs, and a `dev` alias. Grant Bedrock the `lambda:InvokeFunction` permission on both action group Lambdas. Grant the agent IAM role `bedrock:InvokeModel` on the Claude Haiku 4.5 model ARN.
 
 **Acceptance Criteria:**
 
-- AC-01: `CfnAgent` is defined with `foundationModel: "anthropic.claude-sonnet-4-6"`, `agentName: "interview-forge-plan-agent"`, and the system prompt specified in the CDK construct
+- AC-01: `CfnAgent` is defined with `foundationModel: "anthropic.claude-haiku-4-5"`, `agentName: "interview-forge-plan-agent"`, and the system prompt specified in the CDK construct
 - AC-02: Action group is defined with `actionGroupName: "interview-forge-plan-actions"`, referencing both action Lambda ARNs with function schemas (OpenAPI-style) defined inline in CDK
 - AC-03: `CfnAgentAlias` is defined with alias name `dev` pointing to the `DRAFT` agent version
 - AC-04: Bedrock service principal (`bedrock.amazonaws.com`) has `lambda:InvokeFunction` permission on both action Lambdas via resource-based policy
-- AC-05: Agent execution IAM role has `bedrock:InvokeModel` scoped to the Claude Sonnet 4.6 model ARN
+- AC-05: Agent execution IAM role has `bedrock:InvokeModel` scoped to the Claude Haiku 4.5 model ARN
 - AC-06: All CDK resources carry the four required organizational tags
 - AC-07: `cdk synth` produces valid CloudFormation for the agent resources
 
@@ -370,22 +372,29 @@ Define the `interview-forge-plan-agent` Bedrock Agent in CDK using `CfnAgent` an
 
 ---
 
-### Issue M3-04: Implement Plan Handler Lambda (`plan-handler`)
+### Issue M3-04: Implement Plan Kickoff and Worker Lambdas ⚠️ MODIFIED
 
 **Description:**  
-Implement the `plan-handler` Lambda in `packages/api/src/handlers/plan/`. This handler is invoked by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/plan`). It invokes the Bedrock Agent (`interview-forge-plan-agent`) using the AWS SDK `BedrockAgentRuntimeClient` with `InvokeAgentCommand`, passing `jdId` and `sessionId` as the initial user message. The agent runs its ReAct loop autonomously (reads JD, generates plan, writes to DynamoDB). The handler streams or polls the agent response and returns the completed plan to the frontend by reading the SESSION record from DynamoDB after the agent loop completes.
+Replace the original single `plan-handler` with two Lambdas that implement the async kickoff/worker pattern to work within the 29-second API Gateway timeout:
+
+**`plan-kickoff-handler`** (`packages/api/src/handlers/plan-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/plan`). Validates path parameters, verifies the session exists and is in a valid pre-generation state, updates session `status` to `PLAN_GENERATING` in DynamoDB, then invokes `plan-worker` asynchronously using `InvokeCommand` with `InvocationType: 'Event'`. Returns HTTP 202 immediately — the client must poll for completion.
+
+**`plan-worker`** (`packages/api/src/handlers/plan-worker/`): Invoked asynchronously by `plan-kickoff-handler` — never directly by API Gateway. Invokes the `interview-forge-plan-agent` via `BedrockAgentRuntimeClient`. On agent success, the `write-plan-action` action Lambda (M3-02) writes the plan and transitions status to `PLAN_PENDING` — the worker reads the completed session record and logs completion. On any unhandled exception, the worker catches the error and writes `status = PLAN_ERROR` with an `errorMessage` attribute to the session record so the frontend can surface a retry affordance rather than polling indefinitely.
 
 **Acceptance Criteria:**
 
-- AC-01: Handler accepts `POST /jds/{jdId}/sessions/{sessionId}/plan`; validates path parameters with Zod
-- AC-02: Handler invokes the Bedrock Agent using `BedrockAgentRuntimeClient` with `InvokeAgentCommand`; `sessionId` is passed as the Bedrock Agent `sessionId` for session continuity
-- AC-03: Handler reads the updated SESSION record from DynamoDB after agent completion and returns the `plan` attribute in the response body with HTTP 200
-- AC-04: If the agent returns a completion event without a plan written (agent loop failure), handler returns 502 with a descriptive error message
-- AC-05: Handler uses structured logger; agent invocation duration is logged at `info` level for cost monitoring
-- AC-06: Unit tests mock `BedrockAgentRuntimeClient` and DynamoDB; cover successful agent invocation, agent failure (no plan written), and path parameter validation failure
+- AC-01: `plan-kickoff-handler` validates path parameters with Zod; returns 400 on invalid parameters
+- AC-02: `plan-kickoff-handler` reads the session record; returns 404 if session does not exist; returns 409 if `status` is not in `[PLAN_GENERATING, PLAN_ERROR]` — i.e., prevents re-triggering generation on an already-approved or complete session
+- AC-03: `plan-kickoff-handler` performs a DynamoDB `UpdateItem` setting `status = PLAN_GENERATING`; on success, invokes `plan-worker` with `InvocationType: 'Event'` using `LambdaClient` and `InvokeCommand` from `@aws-sdk/client-lambda`
+- AC-04: `plan-kickoff-handler` returns HTTP 202 with body `{ sessionId, status: "PLAN_GENERATING" }` after firing the async invocation; the response does not wait for worker completion
+- AC-05: `plan-worker` invokes the Bedrock Agent using `BedrockAgentRuntimeClient` with `InvokeAgentCommand`; `sessionId` is passed as the Bedrock Agent `sessionId`
+- AC-06: `plan-worker` logs agent invocation start time and completion time at `info` level for cost monitoring
+- AC-07: `plan-worker` wraps the entire execution in a try/catch; on any caught exception, performs a DynamoDB `UpdateItem` setting `status = PLAN_ERROR` and `planErrorMessage = error.message`; this write must not throw — use a nested try/catch to ensure the error status is always persisted
+- AC-08: Unit tests for `plan-kickoff-handler` cover: valid kickoff returning 202, session not found (404), invalid pre-generation status (409), and DynamoDB write failure
+- AC-09: Unit tests for `plan-worker` mock `BedrockAgentRuntimeClient` and DynamoDB; cover successful agent run and error catch → `PLAN_ERROR` status write
 
 **Effort:** M  
-**Notes:** Bedrock Agent `InvokeAgentCommand` returns a streaming response via `AsyncIterable`. Accumulate the completion event chunks to determine when the agent loop is done. The agent alias ID (from M3-03 CDK output) must be passed as an environment variable to this Lambda.
+**Notes:** Lambda async invocation (`InvocationType: 'Event'`) returns immediately with HTTP 202 from the SDK — it does not wait for the worker to complete. The worker Lambda must be granted `lambda:InvokeFunction` on itself... rather, the kickoff Lambda's execution role must have `lambda:InvokeFunction` on the worker Lambda ARN. This is wired in M3-07. Lambda async invocation has built-in retry (2 attempts by default); add a DLQ on `plan-worker` in CDK for failure visibility beyond the error-status write.
 
 ---
 
@@ -399,52 +408,63 @@ Implement the `approve-plan-handler` Lambda in `packages/api/src/handlers/approv
 - AC-01: Handler accepts `PUT /jds/{jdId}/sessions/{sessionId}/plan/approve`; validates path parameters
 - AC-02: If request body contains a `plan` field, validates it against `InterviewPlanSchema`; returns 400 if validation fails
 - AC-03: DynamoDB `UpdateItem` sets `plan` (if modified plan provided) and `status = PLAN_APPROVED` atomically using a single update expression
-- AC-04: A condition expression prevents the update if `status` is already `PLAN_APPROVED` or beyond (idempotency guard); returns 409 if condition fails
+- AC-04: A condition expression prevents the update if `status` is not `PLAN_PENDING` (idempotency guard); returns 409 if condition fails
 - AC-05: Returns the updated session (at minimum `sessionId`, `status`, `plan`) with HTTP 200
 - AC-06: Uses structured logger and `withErrorHandler`
-- AC-07: Unit tests cover: approve with no edit, approve with valid modified plan, approve with invalid plan schema, 409 when already approved
+- AC-07: Unit tests cover: approve with no edit, approve with valid modified plan, approve with invalid plan schema, 409 when status is not `PLAN_PENDING`
 
 **Effort:** M
 
 ---
 
-### Issue M3-06: Implement Plan Review & Edit UI — Checkpoint 1 (React)
+### Issue M3-06: Implement Plan Review & Edit UI — Checkpoint 1 (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the plan review and edit page in `packages/web/src/pages/session/plan/`. This is the Checkpoint 1 UI. On load, it fetches the session (which contains the generated plan) and renders it as an editable structure. The page must support Option B deep editing: edit competency name and description, add/remove/edit individual questions within a competency (text, type, follow-up), reorder questions via drag-and-drop (or up/down buttons), and add/remove competencies. When the recruiter approves, the (potentially modified) plan is sent to `approve-plan-handler`.
+Implement the plan review and edit page in `packages/web/src/pages/session/plan/`. This page handles three distinct states driven by session `status`:
+
+1. **Generating state** (`PLAN_GENERATING`): Shows an animated "Generating your interview plan…" indicator. Uses the `usePollSessionStatus` hook (M3-09) to re-fetch the session on a 4-second interval until status exits `PLAN_GENERATING`.
+2. **Error state** (`PLAN_ERROR`): Shows an error message with the `planErrorMessage` surfaced from the session record and a "Retry" button that calls `POST .../plan` again to re-trigger the kickoff.
+3. **Ready state** (`PLAN_PENDING`): Renders the full plan editing UI (deep Option B editing). Recruiter can edit competency name and description, add/remove/edit individual questions (text, type, follow-up), reorder via up/down buttons, and add/remove competencies. "Approve Plan" sends the (potentially modified) plan to `approve-plan-handler`.
 
 **Acceptance Criteria:**
 
-- AC-01: Page loads the session via `useGetSession`; shows loading skeleton during fetch; shows error state on failure
-- AC-02: Each competency is rendered as a collapsible section (shadcn/ui `Accordion`) showing competency name, description, and question list
-- AC-03: Competency name and description are inline-editable (click-to-edit or always-editable inputs); changes update local React state
-- AC-04: Each question displays text, type badge, and follow-up prompt; each is inline-editable
-- AC-05: "Add Question" button within a competency appends a new blank question; "Remove" button on a question removes it from local state (with a confirmation affordance)
-- AC-06: "Add Competency" button appends a blank competency with one empty question; "Remove Competency" removes the entire section with a confirmation dialog
-- AC-07: "Approve Plan" button is enabled only when the plan has at least 1 competency and each competency has at least 1 question; calls `PUT .../plan/approve` with the current local plan state
-- AC-08: On successful approval, session status updates to `PLAN_APPROVED` and the page transitions to a read-only confirmation view with a "Return to Sessions" link
-- AC-09: Component tests cover: plan render from session data, competency edit, question add/remove, approve button disabled state, successful approval transition
+- AC-01: On mount, page calls `POST .../plan` to trigger plan kickoff (only if session status is not already `PLAN_GENERATING`, `PLAN_PENDING`, or `PLAN_APPROVED`); this prevents re-triggering generation on a page refresh when generation is already in flight or complete
+- AC-02: When session `status` is `PLAN_GENERATING`, page renders a non-blocking loading indicator (shadcn/ui `Skeleton` or spinner with descriptive label); the `usePollSessionStatus` hook polls `GET .../sessions/{sessionId}` every 4 seconds
+- AC-03: Polling stops automatically when status exits `PLAN_GENERATING` (i.e., transitions to `PLAN_PENDING` or `PLAN_ERROR`); no manual cleanup required from the page component
+- AC-04: When session `status` is `PLAN_ERROR`, page renders the error message from `session.planErrorMessage` and a "Retry Generation" button; clicking retry calls `POST .../plan` and transitions back to the generating state
+- AC-05: When session `status` is `PLAN_PENDING`, each competency is rendered as a collapsible section (shadcn/ui `Accordion`) showing competency name, description, and question list
+- AC-06: Competency name and description are inline-editable; changes update local React state
+- AC-07: Each question displays text, type badge, and follow-up prompt; each is inline-editable
+- AC-08: "Add Question" button within a competency appends a new blank question; "Remove" button on a question removes it from local state (with a confirmation affordance)
+- AC-09: "Add Competency" button appends a blank competency with one empty question; "Remove Competency" removes the entire section with a confirmation dialog
+- AC-10: "Approve Plan" button is enabled only when the plan has at least 1 competency and each competency has at least 1 question; calls `PUT .../plan/approve` with the current local plan state
+- AC-11: On successful approval, session status updates to `PLAN_APPROVED` and the page transitions to a read-only confirmation view with a "Return to Sessions" link
+- AC-12: Component tests cover: generating state render, polling transition to ready state (mocked status progression), error state render and retry action, plan render from session data, competency edit, question add/remove, approve button disabled state, successful approval transition
 
 **Effort:** L  
-**Notes:** All edits are local React state until "Approve Plan" is submitted — there is no auto-save. Make this explicit in the UI (e.g., "Changes are saved when you approve"). For drag-and-drop reordering, prefer simple up/down arrow buttons over a DnD library to keep scope contained.
+**Notes:** All plan edits are local React state until "Approve Plan" is submitted — no auto-save. Make this explicit in the UI (e.g., "Changes are saved when you approve"). The `usePollSessionStatus` hook is implemented in M3-09 and must be available before this component can be fully tested.
 
 ---
 
-### Issue M3-07: Add Plan Agent Lambda Routes and CDK Wiring
+### Issue M3-07: Add Plan Agent Lambda Routes and CDK Wiring ⚠️ MODIFIED
 
 **Description:**  
-Add CDK Lambda function constructs and API Gateway integrations for `plan-handler` and `approve-plan-handler`. Pass required environment variables: `TABLE_NAME`, `BEDROCK_PLAN_AGENT_ID`, `BEDROCK_PLAN_AGENT_ALIAS_ID`. Grant the plan-handler Lambda `bedrock:InvokeAgent` permission on the plan agent ARN.
+Add CDK Lambda function constructs and API Gateway integrations for `plan-kickoff-handler`, `plan-worker`, and `approve-plan-handler`. The `plan-worker` Lambda is not exposed via API Gateway — it is invoked asynchronously by `plan-kickoff-handler` only. Configure a Dead Letter Queue (DLQ) on `plan-worker` for failure visibility. Pass required environment variables. Grant `plan-kickoff-handler` permission to invoke `plan-worker` asynchronously.
 
 **Acceptance Criteria:**
 
-- AC-01: `plan-handler` and `approve-plan-handler` Lambda constructs are defined with the shared execution role and required environment variables
-- AC-02: `POST /jds/{jdId}/sessions/{sessionId}/plan` is wired to `plan-handler`
-- AC-03: `PUT /jds/{jdId}/sessions/{sessionId}/plan/approve` is wired to `approve-plan-handler`
-- AC-04: `plan-handler` Lambda execution role includes `bedrock:InvokeAgent` scoped to the plan agent ARN
-- AC-05: Agent ID and alias ID CDK outputs from M3-03 are referenced as cross-stack values or environment variable inputs; no hardcoded ARNs
-- AC-06: `cdk synth` produces valid CloudFormation for all new resources with required tags
+- AC-01: `plan-kickoff-handler` Lambda construct is defined with the shared execution role, environment variables `TABLE_NAME` and `PLAN_WORKER_FUNCTION_NAME`, and a timeout of 10 seconds (sufficient for DynamoDB write + async Lambda invoke)
+- AC-02: `plan-worker` Lambda construct is defined with the shared execution role, environment variables `TABLE_NAME`, `BEDROCK_PLAN_AGENT_ID`, `BEDROCK_PLAN_AGENT_ALIAS_ID`, and a timeout of 300 seconds (5 minutes, covering worst-case Bedrock Agent execution)
+- AC-03: An SQS Dead Letter Queue is defined and attached to `plan-worker` as its DLQ (`onFailure` destination); DLQ carries required resource tags
+- AC-04: `plan-kickoff-handler` execution role has `lambda:InvokeFunction` permission scoped to the `plan-worker` Lambda ARN
+- AC-05: `plan-worker` execution role has `bedrock:InvokeAgent` scoped to the plan agent ARN
+- AC-06: `approve-plan-handler` Lambda construct is defined with shared execution role and `TABLE_NAME`
+- AC-07: API Gateway routes: `POST /jds/{jdId}/sessions/{sessionId}/plan` → `plan-kickoff-handler`; `PUT /jds/{jdId}/sessions/{sessionId}/plan/approve` → `approve-plan-handler`; `plan-worker` has no API Gateway route
+- AC-08: Agent ID and alias ID CDK outputs from M3-03 are referenced without hardcoded ARNs
+- AC-09: `cdk synth` produces valid CloudFormation for all new resources with required tags
 
-**Effort:** S
+**Effort:** M  
+**Notes:** The `plan-worker` Lambda timeout of 300 seconds is set defensively. Haiku 4.5 agent runs complete in 30–45 seconds; 300 seconds provides headroom for retries within the agent loop and worst-case cold starts. Lambda's maximum timeout is 15 minutes (900 seconds) — 300 is well within that limit and well above the observed execution time.
 
 ---
 
@@ -463,6 +483,25 @@ Validate and iterate the plan generation agent system prompt established in M3-0
 
 **Effort:** M  
 **Notes:** This is the highest-risk item in M3 (Medium/High risk per the Project Overview). Allocate time for 2–3 iteration cycles. If the agent consistently fails schema validation, add a few-shot example of a well-formed plan to the system prompt.
+
+---
+
+### Issue M3-09: Implement Shared Session Polling Hook (`usePollSessionStatus`) ⚠️ NEW
+
+**Description:**  
+Implement a reusable TanStack Query polling hook in `packages/web/src/common/hooks/usePollSessionStatus.ts`. This hook is consumed by both the Plan Review UI (M3-06) and the Assessment Review UI (M5-06) to drive async generation UX without duplicating polling logic. The hook wraps `useQuery` with a `refetchInterval` that is active only while the session is in a generating state, and stops automatically on terminal status transitions.
+
+**Acceptance Criteria:**
+
+- AC-01: Hook signature: `usePollSessionStatus({ jdId, sessionId, pollingStatuses, intervalMs? })` where `pollingStatuses` is an array of `SessionStatus` values that should keep polling active (e.g., `['PLAN_GENERATING']` or `['ASSESS_GENERATING']`), and `intervalMs` defaults to 4000
+- AC-02: Hook uses TanStack Query `useQuery` with `refetchInterval` set to `intervalMs` when the current session `status` is in `pollingStatuses`; `refetchInterval` is `false` when status is outside `pollingStatuses`
+- AC-03: Hook returns `{ session, isPolling, isError, error }` where `isPolling` is `true` when `refetchInterval` is active
+- AC-04: Hook stops polling and does not re-fetch after status transitions to a non-polling value (e.g., `PLAN_PENDING`, `PLAN_ERROR`) — verified by TanStack Query's `refetchInterval` returning `false`
+- AC-05: Hook is importable from `@monorepo/web` common hooks without relative path imports from page-level components
+- AC-06: Unit tests cover: polling active when status is in `pollingStatuses`, polling stops when status transitions out, `isPolling` reflects current state accurately
+
+**Effort:** S  
+**Notes:** TanStack Query's `refetchInterval` accepts a function `(data) => number | false` — use this to inspect the current session status in the query result and return `false` to stop polling. This is cleaner than managing a separate `enabled` flag. This hook must be implemented before M3-06 and M5-06 component tests can cover polling behavior.
 
 ---
 
@@ -503,7 +542,7 @@ Implement the `score-handler` Lambda in `packages/api/src/handlers/score/`. Invo
 **Acceptance Criteria:**
 
 - AC-01: Handler validates path parameters and request body (against `ScorecardSchema`); returns 400 on validation failure
-- AC-02: DynamoDB `UpdateItem` sets `scorecard` and `status = SCORED`; condition expression guards against overwriting in terminal states
+- AC-02: DynamoDB `UpdateItem` sets `scorecard` and `status = SCORED`; condition expression guards against overwriting in terminal states (`ASSESSED`, `COMPLETE`)
 - AC-03: Returns the updated session summary (`sessionId`, `status`) with HTTP 200
 - AC-04: Handler uses structured logger and `withErrorHandler`
 - AC-05: CDK Lambda construct and `POST /jds/{jdId}/sessions/{sessionId}/scorecard` API Gateway route are added (can be a sub-issue or included here)
@@ -513,23 +552,24 @@ Implement the `score-handler` Lambda in `packages/api/src/handlers/score/`. Invo
 
 ---
 
-### Issue M4-03: Implement Scorecard Entry UI (React)
+### Issue M4-03: Implement Scorecard Entry UI (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the scorecard entry page in `packages/web/src/pages/session/scorecard/`. The page renders the approved interview plan as a structured scoring form. For each competency, display: competency name, a `Textarea` for overall competency notes, and each question with its text and a 5-point Likert rating control (radio buttons or segmented control) plus an optional per-question notes field. All ratings default to unrated. A "Submit Scorecard" button is enabled only when all questions have a rating.
+Implement the scorecard entry page in `packages/web/src/pages/session/scorecard/`. The page renders the approved interview plan as a structured scoring form. Before rendering the form, the page must guard against the session being in an unexpected state: if `status` is not `PLAN_APPROVED`, the page should redirect to the appropriate page for the current status (e.g., back to the plan page if still `PLAN_PENDING`). For each competency, display: competency name, a `Textarea` for overall competency notes, and each question with its text and a 5-point Likert rating control plus an optional per-question notes field. A "Submit Scorecard" button is enabled only when all questions have a rating.
 
 **Acceptance Criteria:**
 
-- AC-01: Page loads the session (which contains the approved `plan`) via `useGetSession`; renders loading and error states
-- AC-02: Each competency section shows competency name, overall notes textarea, and a list of questions
-- AC-03: Each question shows: question text, question type badge, 5-point Likert rating control (1–5; all required), optional notes textarea
-- AC-04: "Submit Scorecard" button is disabled until all questions have a rating value set
-- AC-05: On submit, sends `POST .../scorecard` with the constructed scorecard payload; shows loading state on button
-- AC-06: On success, navigates to a confirmation page or the session detail page showing `status: SCORED` with a "Generate Assessment" call-to-action
-- AC-07: Component tests cover: plan-to-form rendering, rating interaction, submit disabled until all rated, successful submission navigation
+- AC-01: Page loads the session via `useGetSession`; renders loading and error states
+- AC-02: If session `status` is not `PLAN_APPROVED`, page redirects to the correct page for that status rather than rendering a broken form; status-to-route mapping handles all `SessionStatus` values including `PLAN_GENERATING` and `PLAN_ERROR`
+- AC-03: Each competency section shows competency name, overall notes textarea, and a list of questions
+- AC-04: Each question shows: question text, question type badge, 5-point Likert rating control (1–5; all required), optional notes textarea
+- AC-05: "Submit Scorecard" button is disabled until all questions have a rating value set
+- AC-06: On submit, sends `POST .../scorecard` with the constructed scorecard payload; shows loading state on button
+- AC-07: On success, navigates to the session detail page showing `status: SCORED` with a "Generate Assessment" call-to-action
+- AC-08: Component tests cover: status guard redirect, plan-to-form rendering, rating interaction, submit disabled until all rated, successful submission navigation
 
 **Effort:** M  
-**Notes:** The Likert control should be keyboard-accessible. Use `shadcn/ui RadioGroup` styled as a 1–5 scale.
+**Notes:** The status guard in AC-02 is necessary because the new `PLAN_GENERATING` and `PLAN_ERROR` statuses mean a user could navigate directly to the scorecard URL while the plan is still being generated. The Likert control should be keyboard-accessible — use `shadcn/ui RadioGroup` styled as a 1–5 scale.
 
 ---
 
@@ -550,16 +590,17 @@ Implement the `useSubmitScorecard` mutation hook in `packages/web/src/pages/sess
 
 ## Milestone M5: Reconciliation Agent & Assessment
 
-**Goal:** Agent synthesizes the approved plan and completed scorecard into a final candidate assessment with hire/no-hire recommendation. Recruiter reviews and approves at Checkpoint 2. Assessment is locked in DynamoDB and session status transitions to `COMPLETE`.
+**Goal:** Agent synthesizes the approved plan and completed scorecard into a final candidate assessment with hire/no-hire recommendation asynchronously. Recruiter sees a "Generating…" state while the agent runs, then reviews and approves at Checkpoint 2. Assessment is locked in DynamoDB and session status transitions to `COMPLETE`.
 
 **Deliverables:**
 
 - `AssessmentSchema` in `packages/shared`
 - Bedrock Agent (`interview-forge-assess-agent`) with action group and system prompt
 - Action group Lambdas: `read-plan-action`, `read-scorecard-action`, `write-assessment-action`
-- `assess-handler` Lambda invoking the reconciliation agent
+- `assess-kickoff-handler` Lambda: validates request, updates status to `ASSESS_GENERATING`, fires async worker, returns 202
+- `assess-worker` Lambda: invokes Bedrock reconciliation agent, writes result or error status to DynamoDB
 - `approve-assess-handler` Lambda locking the assessment
-- Assessment Review UI (Checkpoint 2)
+- Assessment Review UI (Checkpoint 2) with polling-driven generation state
 - CDK constructs for all new resources
 
 ---
@@ -605,11 +646,11 @@ Implement three Lambda functions for the reconciliation agent action group: `rea
 ### Issue M5-03: Configure Bedrock Reconciliation Agent and Action Group in CDK
 
 **Description:**  
-Define the `interview-forge-assess-agent` Bedrock Agent in CDK using `CfnAgent` and `CfnAgentAlias`. Follows the same pattern as M3-03. Configure with: Claude Sonnet 4.6, the reconciliation system prompt (see Notes), the action group referencing all three action Lambda ARNs, and a `dev` alias.
+Define the `interview-forge-assess-agent` Bedrock Agent in CDK using `CfnAgent` and `CfnAgentAlias`. Follows the same pattern as M3-03. Configure with: Claude Haiku 4.5, the reconciliation system prompt (see Notes), the action group referencing all three action Lambda ARNs, and a `dev` alias.
 
 **Acceptance Criteria:**
 
-- AC-01–AC-07: Mirror the acceptance criteria from M3-03, substituting the reconciliation agent name, system prompt, and action group Lambda ARNs
+- AC-01–AC-07: Mirror the acceptance criteria from M3-03, substituting the reconciliation agent name (`interview-forge-assess-agent`), system prompt, action group Lambda ARNs, and `foundationModel: "anthropic.claude-haiku-4-5"`
 - AC-08: Action group function schemas precisely describe all three tools with parameter names, types, and descriptions sufficient to drive reliable agent tool selection
 
 **Effort:** M  
@@ -617,16 +658,28 @@ Define the `interview-forge-assess-agent` Bedrock Agent in CDK using `CfnAgent` 
 
 ---
 
-### Issue M5-04: Implement Assess Handler Lambda (`assess-handler`)
+### Issue M5-04: Implement Assess Kickoff and Worker Lambdas ⚠️ MODIFIED
 
 **Description:**  
-Implement the `assess-handler` Lambda in `packages/api/src/handlers/assess/`. Invoked by `POST /jds/{jdId}/sessions/{sessionId}/assessment`. Follows the same invocation pattern as `plan-handler` (M3-04): invokes the `interview-forge-assess-agent` via `BedrockAgentRuntimeClient`, uses `sessionId` as the Bedrock session ID, and reads the completed SESSION record from DynamoDB after the agent loop completes to return the `assessment` attribute.
+Implement the async kickoff/worker pair for assessment generation, applying the identical pattern established in M3-04.
+
+**`assess-kickoff-handler`** (`packages/api/src/handlers/assess-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/assessment`). Validates path parameters, verifies session is in `SCORED` status, updates `status` to `ASSESS_GENERATING`, invokes `assess-worker` with `InvocationType: 'Event'`, returns HTTP 202 immediately.
+
+**`assess-worker`** (`packages/api/src/handlers/assess-worker/`): Invoked asynchronously by `assess-kickoff-handler`. Invokes the `interview-forge-assess-agent` via `BedrockAgentRuntimeClient`. On any unhandled exception, writes `status = ASSESS_ERROR` and `assessErrorMessage` to the session record.
 
 **Acceptance Criteria:**
 
-- AC-01–AC-06: Mirror the acceptance criteria from M3-04, substituting reconciliation agent configuration and `assessment` attribute
+- AC-01: `assess-kickoff-handler` validates path parameters with Zod; returns 400 on invalid parameters
+- AC-02: `assess-kickoff-handler` reads the session; returns 404 if not found; returns 409 if `status` is not `SCORED` (prevents re-triggering on an already-assessed or complete session; `ASSESS_ERROR` is also a valid re-trigger state — include it alongside `SCORED` as permitted pre-generation statuses)
+- AC-03: `assess-kickoff-handler` updates `status = ASSESS_GENERATING`, invokes `assess-worker` with `InvocationType: 'Event'`, returns HTTP 202 with `{ sessionId, status: "ASSESS_GENERATING" }`
+- AC-04: `assess-worker` invokes the Bedrock reconciliation agent; `sessionId` is passed as the Bedrock Agent `sessionId`
+- AC-05: `assess-worker` logs agent invocation start and completion times at `info` level
+- AC-06: `assess-worker` wraps execution in try/catch; on exception, writes `status = ASSESS_ERROR` and `assessErrorMessage` to DynamoDB; the error-status write uses a nested try/catch to ensure it always completes
+- AC-07: Unit tests for `assess-kickoff-handler`: valid kickoff (202), not found (404), invalid pre-generation status (409)
+- AC-08: Unit tests for `assess-worker`: successful run, error catch → `ASSESS_ERROR` write
 
-**Effort:** M
+**Effort:** M  
+**Notes:** The permitted pre-generation statuses for `assess-kickoff-handler` are `SCORED` and `ASSESS_ERROR` — the recruiter should be able to retry after an error. This mirrors the `plan-kickoff-handler` pattern where `PLAN_ERROR` is also a valid re-trigger state.
 
 ---
 
@@ -649,52 +702,61 @@ Implement the `approve-assess-handler` Lambda in `packages/api/src/handlers/appr
 
 ---
 
-### Issue M5-06: Implement Assessment Review UI — Checkpoint 2 (React)
+### Issue M5-06: Implement Assessment Review UI — Checkpoint 2 (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the assessment review page in `packages/web/src/pages/session/assessment/`. Displays the generated assessment in a structured read-only view: overall recommendation badge (color-coded by recommendation strength), confidence level, reasoning narrative, and per-competency assessment cards showing strengths, concerns, and any identified conflicts. Provides two actions: "Approve Assessment" (straight approval) and "Approve with Override" (opens a dialog requiring override reason text). Both call `approve-assess-handler`.
+Implement the assessment review page in `packages/web/src/pages/session/assessment/`. This page handles three states mirroring the plan review page pattern:
+
+1. **Generating state** (`ASSESS_GENERATING`): Shows an animated "Generating assessment…" indicator. Uses `usePollSessionStatus` with `pollingStatuses: ['ASSESS_GENERATING']` to poll every 4 seconds until status exits `ASSESS_GENERATING`.
+2. **Error state** (`ASSESS_ERROR`): Shows the `assessErrorMessage` from the session record and a "Retry" button that calls `POST .../assessment` again.
+3. **Ready state** (`ASSESSED`): Renders the full assessment review UI: recommendation badge, confidence, reasoning, per-competency assessment cards, and approval actions.
 
 **Acceptance Criteria:**
 
-- AC-01: Page loads the session via `useGetSession`; renders loading and error states
-- AC-02: Overall recommendation is displayed as a prominent badge with color coding: `STRONG_HIRE` (green), `HIRE` (teal), `NO_HIRE` (orange), `STRONG_NO_HIRE` (red)
-- AC-03: Confidence level and reasoning narrative are displayed below the recommendation badge
-- AC-04: Per-competency assessment cards show: competency name, strengths text, concerns text, and any identified conflicts (highlighted distinctly if present)
-- AC-05: "Approve Assessment" button calls `PUT .../assessment/approve` with no override; on success, transitions to `COMPLETE` state view with PDF export button
-- AC-06: "Approve with Override" opens a shadcn/ui `Dialog` with a required textarea (min 20 chars); on confirm, calls `PUT .../assessment/approve` with `{ override: true, overrideReason }`
-- AC-07: On session `status = COMPLETE`, the page renders in read-only mode with approval actions hidden and PDF export button visible
-- AC-08: Component tests cover: assessment render, conflict highlighting, approve flow, override dialog validation, read-only state when complete
+- AC-01: On mount, page calls `POST .../assessment` to trigger assessment kickoff (only if session `status` is `SCORED` — not if already generating, assessed, or complete)
+- AC-02: When `status` is `ASSESS_GENERATING`, renders a loading indicator; `usePollSessionStatus` polls every 4 seconds; polling stops when status exits `ASSESS_GENERATING`
+- AC-03: When `status` is `ASSESS_ERROR`, renders the `assessErrorMessage` and a "Retry Generation" button; clicking retry calls `POST .../assessment` and transitions back to generating state
+- AC-04: When `status` is `ASSESSED`, overall recommendation is displayed as a prominent badge with color coding: `STRONG_HIRE` (green), `HIRE` (teal), `NO_HIRE` (orange), `STRONG_NO_HIRE` (red)
+- AC-05: Confidence level and reasoning narrative are displayed below the recommendation badge
+- AC-06: Per-competency assessment cards show: competency name, strengths text, concerns text, and any identified conflicts (highlighted distinctly if present)
+- AC-07: "Approve Assessment" button calls `PUT .../assessment/approve` with no override; on success, transitions to `COMPLETE` state view with PDF export button
+- AC-08: "Approve with Override" opens a shadcn/ui `Dialog` with a required textarea (min 20 chars); on confirm, calls `PUT .../assessment/approve` with `{ override: true, overrideReason }`
+- AC-09: When `status = COMPLETE`, page renders in read-only mode with approval actions hidden and PDF export button visible
+- AC-10: Component tests cover: generating state render, polling transition to assessed state, error state render and retry, assessment render, conflict highlighting, approve flow, override dialog validation, read-only state when complete
 
 **Effort:** L
 
 ---
 
-### Issue M5-07: Add Assessment Lambda Routes and CDK Wiring
+### Issue M5-07: Add Assessment Lambda Routes and CDK Wiring ⚠️ MODIFIED
 
 **Description:**  
-Add CDK Lambda function constructs and API Gateway integrations for `assess-handler`, `approve-assess-handler`, and all three reconciliation agent action Lambdas. Wire API Gateway routes. Grant `assess-handler` Lambda `bedrock:InvokeAgent` permission on the reconciliation agent ARN.
+Add CDK Lambda function constructs and API Gateway integrations for `assess-kickoff-handler`, `assess-worker`, `approve-assess-handler`, and all three reconciliation agent action Lambdas. The `assess-worker` is not exposed via API Gateway. Configure a DLQ on `assess-worker`. Grant `assess-kickoff-handler` permission to invoke `assess-worker` asynchronously.
 
 **Acceptance Criteria:**
 
-- AC-01: All five new Lambda constructs are defined with shared execution role and required environment variables
-- AC-02: `POST /jds/{jdId}/sessions/{sessionId}/assessment` → `assess-handler`
-- AC-03: `PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve` → `approve-assess-handler`
-- AC-04: `assess-handler` execution role includes `bedrock:InvokeAgent` scoped to the reconciliation agent ARN
-- AC-05: Bedrock service principal has `lambda:InvokeFunction` on all three action group Lambdas
-- AC-06: `cdk synth` produces valid CloudFormation for all resources with required tags
+- AC-01: `assess-kickoff-handler` Lambda construct is defined with shared execution role, environment variables `TABLE_NAME` and `ASSESS_WORKER_FUNCTION_NAME`, and a timeout of 10 seconds
+- AC-02: `assess-worker` Lambda construct is defined with shared execution role, environment variables `TABLE_NAME`, `BEDROCK_ASSESS_AGENT_ID`, `BEDROCK_ASSESS_AGENT_ALIAS_ID`, and a timeout of 300 seconds
+- AC-03: An SQS DLQ is defined and attached to `assess-worker`; DLQ carries required resource tags
+- AC-04: `assess-kickoff-handler` execution role has `lambda:InvokeFunction` scoped to the `assess-worker` Lambda ARN
+- AC-05: `assess-worker` execution role has `bedrock:InvokeAgent` scoped to the reconciliation agent ARN
+- AC-06: `approve-assess-handler` Lambda construct is defined with shared execution role and `TABLE_NAME`
+- AC-07: All three reconciliation action group Lambda constructs (`read-plan-action`, `read-scorecard-action`, `write-assessment-action`) are defined; Bedrock service principal has `lambda:InvokeFunction` on all three
+- AC-08: API Gateway routes: `POST /jds/{jdId}/sessions/{sessionId}/assessment` → `assess-kickoff-handler`; `PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve` → `approve-assess-handler`; `assess-worker` has no API Gateway route
+- AC-09: `cdk synth` produces valid CloudFormation for all resources with required tags
 
-**Effort:** S
+**Effort:** M
 
 ---
 
 ## Milestone M6: PDF Export, Polish & Documentation
 
-**Goal:** Recruiter can download the final assessment as a PDF. The application handles all error states gracefully, UI is polished end-to-end, and the repository is documented for portfolio reviewers.
+**Goal:** Recruiter can download the final assessment as a PDF. The application handles all error states gracefully (including async generation failures), UI is polished end-to-end, and the repository is documented for portfolio reviewers.
 
 **Deliverables:**
 
 - Client-side PDF export via `pdfmake`
-- Comprehensive error state handling across all pages
+- Comprehensive error state handling across all pages including `PLAN_ERROR` and `ASSESS_ERROR`
 - README with architecture summary, setup instructions, and demo walkthrough
 - Environment variable documentation
 
@@ -718,19 +780,20 @@ Implement the PDF export feature in `packages/web/src/pages/session/assessment/`
 
 ---
 
-### Issue M6-02: Implement Comprehensive Error State Handling
+### Issue M6-02: Implement Comprehensive Error State Handling ⚠️ MODIFIED
 
 **Description:**  
-Audit all pages and API hooks for missing error states and implement consistent error UI patterns across the application. Error scenarios to cover: API Gateway 4xx/5xx responses, network timeouts, agent invocation failures (502 from plan/assess handlers), DynamoDB conditional check failures (409 conflicts), and empty/expired session states (TTL-expired records returning 404).
+Audit all pages and API hooks for missing error states and implement consistent error UI patterns across the application. In addition to standard API error patterns, this issue must address the async generation error states introduced by the kickoff/worker pattern: `PLAN_ERROR` and `ASSESS_ERROR`.
 
 **Acceptance Criteria:**
 
 - AC-01: All `useQuery` and `useMutation` hooks have `onError` handlers that surface user-readable messages; no silent error swallowing
 - AC-02: API 404 responses for expired sessions display a specific "This session has expired" message with a link to the JD list — distinct from generic not-found errors
-- AC-03: 502 responses from plan/assess handlers (agent failure) display a retry affordance; retry re-invokes the same API call
+- AC-03: `PLAN_ERROR` state on the plan page displays the `planErrorMessage` with a "Retry Generation" button; `ASSESS_ERROR` state on the assessment page displays `assessErrorMessage` with a "Retry Generation" button (these are implemented in M3-06 and M5-06; this issue audits that both are correctly covered and adds any missing coverage)
 - AC-04: 409 conflict responses (double-approve) display a message indicating the action was already completed and refresh the session state
 - AC-05: A global Axios response interceptor handles unexpected 500 responses with a generic fallback toast; no unhandled promise rejections reach the browser console
-- AC-06: All error states are covered in component tests using mocked API error responses
+- AC-06: `usePollSessionStatus` hook correctly surfaces `isError` when the underlying `useQuery` fails due to a network error during polling (distinct from `PLAN_ERROR` / `ASSESS_ERROR` status values, which are application-level errors reflected in the session record)
+- AC-07: All error states are covered in component tests using mocked API error responses
 
 **Effort:** M
 
@@ -754,7 +817,7 @@ Conduct a focused UI polish pass across all pages: consistent spacing and typogr
 
 ---
 
-### Issue M6-04: Write Repository README and Architecture Documentation
+### Issue M6-04: Write Repository README and Architecture Documentation ⚠️ MODIFIED
 
 **Description:**  
 Write a comprehensive `README.md` at the monorepo root covering: project concept and portfolio context, architecture summary with the Mermaid diagram from the Project Overview, technology stack table, prerequisites and setup instructions (AWS account, GitHub secrets, env vars), workflow instructions (how to run CI, deploy, teardown), and a demo walkthrough narrative describing the end-to-end recruiter workflow.
@@ -762,10 +825,10 @@ Write a comprehensive `README.md` at the monorepo root covering: project concept
 **Acceptance Criteria:**
 
 - AC-01: README opens with a concise one-paragraph project summary and the target portfolio signal (HITL agent pattern)
-- AC-02: Architecture section includes the Mermaid flowchart from the Project Overview (adapted if needed for README rendering)
+- AC-02: Architecture section includes the Mermaid flowchart from the Project Overview adapted to reflect the kickoff/worker Lambda split for plan and assessment generation
 - AC-03: Setup section documents all required GitHub secrets, AWS prerequisites (account ID, region, CDK bootstrap), and environment variables with example values
-- AC-04: Demo walkthrough section describes all 8 workflow steps from the Project Overview in recruiter-facing language (not developer language)
-- AC-05: A `KNOWN_LIMITATIONS.md` file documents: `unpdf` limitation with scanned PDFs, 72-hour TTL non-extensibility, no authentication, single-recruiter session model
+- AC-04: Demo walkthrough section describes all workflow steps in recruiter-facing language, including the async generation UX ("plan generation takes 30–45 seconds; the page will update automatically")
+- AC-05: A `KNOWN_LIMITATIONS.md` file documents: `unpdf` limitation with scanned PDFs, 72-hour TTL non-extensibility, no authentication, single-recruiter session model, and the async generation pattern (plan/assessment generation is fire-and-poll; closing the browser during generation does not cancel the agent run)
 
 **Effort:** M
 
@@ -791,21 +854,22 @@ Validate and iterate the reconciliation agent system prompt from M5-03 against r
 
 ## Appendix A: Cross-Cutting Concerns Checklist
 
-The following concerns are addressed by explicit issues rather than assumed:
-
-| Concern                                  | Issue(s)                   |
-| ---------------------------------------- | -------------------------- |
-| CI/CD: Deploy workflow                   | M1-01                      |
-| CI/CD: Teardown workflow                 | M1-02                      |
-| Structured logging (all Lambdas)         | M1-06                      |
-| Centralized error handling (all Lambdas) | M2-07                      |
-| Shared type contracts (Zod schemas)      | M1-05, M3-01, M4-01, M5-01 |
-| DynamoDB TTL strategy                    | M1-03                      |
-| S3 lifecycle alignment                   | M1-04                      |
-| IAM least-privilege                      | M1-04, M3-07, M5-07        |
-| Bedrock Agent system prompt quality      | M3-08, M6-05               |
-| Error state UI (all pages)               | M6-02                      |
-| Repository documentation                 | M6-04                      |
+| Concern                                                     | Issue(s)                   |
+| ----------------------------------------------------------- | -------------------------- |
+| CI/CD: Deploy workflow                                      | M1-01                      |
+| CI/CD: Teardown workflow                                    | M1-02                      |
+| Structured logging (all Lambdas)                            | M1-06                      |
+| Centralized error handling (all Lambdas)                    | M2-07                      |
+| Shared type contracts (Zod schemas)                         | M1-05, M3-01, M4-01, M5-01 |
+| DynamoDB TTL strategy                                       | M1-03                      |
+| S3 lifecycle alignment                                      | M1-04                      |
+| IAM least-privilege                                         | M1-04, M3-07, M5-07        |
+| Async generation pattern (kickoff/worker)                   | M3-04, M3-07, M5-04, M5-07 |
+| Worker failure visibility (DLQ)                             | M3-07, M5-07               |
+| Session polling hook                                        | M3-09                      |
+| Bedrock Agent system prompt quality                         | M3-08, M6-05               |
+| Error state UI (all pages, incl. PLAN_ERROR / ASSESS_ERROR) | M3-06, M5-06, M6-02        |
+| Repository documentation                                    | M6-04                      |
 
 ---
 
@@ -816,10 +880,12 @@ The following concerns are addressed by explicit issues rather than assumed:
 | `VITE_API_BASE_URL`             | `packages/web`                                       | API Gateway base URL (from CDK output)     |
 | `TABLE_NAME`                    | `packages/api` (all Lambdas)                         | DynamoDB table name                        |
 | `BUCKET_NAME`                   | `packages/api` (`ingest-handler`, `session-handler`) | S3 bucket name                             |
-| `BEDROCK_PLAN_AGENT_ID`         | `packages/api` (`plan-handler`)                      | Bedrock plan agent ID                      |
-| `BEDROCK_PLAN_AGENT_ALIAS_ID`   | `packages/api` (`plan-handler`)                      | Bedrock plan agent alias ID                |
-| `BEDROCK_ASSESS_AGENT_ID`       | `packages/api` (`assess-handler`)                    | Bedrock reconciliation agent ID            |
-| `BEDROCK_ASSESS_AGENT_ALIAS_ID` | `packages/api` (`assess-handler`)                    | Bedrock reconciliation agent alias ID      |
+| `PLAN_WORKER_FUNCTION_NAME`     | `packages/api` (`plan-kickoff-handler`)              | Lambda function name of `plan-worker`      |
+| `BEDROCK_PLAN_AGENT_ID`         | `packages/api` (`plan-worker`)                       | Bedrock plan agent ID                      |
+| `BEDROCK_PLAN_AGENT_ALIAS_ID`   | `packages/api` (`plan-worker`)                       | Bedrock plan agent alias ID                |
+| `ASSESS_WORKER_FUNCTION_NAME`   | `packages/api` (`assess-kickoff-handler`)            | Lambda function name of `assess-worker`    |
+| `BEDROCK_ASSESS_AGENT_ID`       | `packages/api` (`assess-worker`)                     | Bedrock reconciliation agent ID            |
+| `BEDROCK_ASSESS_AGENT_ALIAS_ID` | `packages/api` (`assess-worker`)                     | Bedrock reconciliation agent alias ID      |
 | `CDK_APP`                       | `packages/infra`                                     | Resource tag value for `App`               |
 | `CDK_ENV`                       | `packages/infra`                                     | Resource tag value for `Env` (e.g., `dev`) |
 | `CDK_OU`                        | `packages/infra`                                     | Resource tag value for `OU`                |
@@ -827,8 +893,27 @@ The following concerns are addressed by explicit issues rather than assumed:
 
 ---
 
+## Appendix C: Modified Issues Index (v0.1 → v1.1)
+
+| Issue | Change Type | Summary                                                                                                                                   |
+| ----- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| M1-05 | Modified    | `SessionStatus` enum extended with `PLAN_GENERATING`, `PLAN_ERROR`, `ASSESS_GENERATING`, `ASSESS_ERROR`                                   |
+| M3-04 | Modified    | Replaced single `plan-handler` with `plan-kickoff-handler` (sync, 202) + `plan-worker` (async, no API GW exposure)                        |
+| M3-06 | Modified    | Added generating state (polling via `usePollSessionStatus`), error state with retry, and page-mount kickoff guard to plan review UI       |
+| M3-07 | Modified    | CDK wiring updated for kickoff/worker split; added worker timeout (300s), DLQ, and `lambda:InvokeFunction` grant from kickoff to worker   |
+| M3-09 | New         | `usePollSessionStatus` shared hook — reusable TanStack Query polling hook consumed by M3-06 and M5-06                                     |
+| M4-03 | Modified    | Added status guard redirect for new `PLAN_GENERATING` / `PLAN_ERROR` states to prevent rendering scorecard form in invalid session states |
+| M5-04 | Modified    | Replaced single `assess-handler` with `assess-kickoff-handler` + `assess-worker` using identical kickoff/worker pattern                   |
+| M5-06 | Modified    | Added generating state (polling), error state with retry, and page-mount kickoff guard to assessment review UI                            |
+| M5-07 | Modified    | CDK wiring updated for assess kickoff/worker split; added worker timeout, DLQ, and `lambda:InvokeFunction` grant                          |
+| M6-02 | Modified    | Added explicit coverage of `PLAN_ERROR`, `ASSESS_ERROR`, and polling network error states                                                 |
+| M6-04 | Modified    | README and `KNOWN_LIMITATIONS.md` updated to document async generation pattern and UX expectations                                        |
+
+---
+
 ## Revision History
 
-| Version | Date       | Changes                                           |
-| ------- | ---------- | ------------------------------------------------- |
-| 0.1     | 2026-06-02 | Initial draft — all milestones and issues defined |
+| Version | Date       | Changes                                                                                                                                                                                                                                                                                                      |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0.1     | 2026-06-02 | Initial draft — all milestones and issues defined                                                                                                                                                                                                                                                            |
+| 1.1     | 2026-06-10 | Async kickoff/worker pattern applied to plan and assess handlers to work within 29s API Gateway timeout; `SessionStatus` extended with generating and error states; shared polling hook extracted; all dependent frontend issues updated; model updated to Claude Haiku 4.5 per confirmed performance parity |
