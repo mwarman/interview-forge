@@ -5,7 +5,17 @@ import { InterviewPlanSchema } from './interview-plan';
 /**
  * SessionStatus - Zod enum for Session lifecycle states
  */
-export const SessionStatusSchema = z.enum(['PLAN_PENDING', 'PLAN_APPROVED', 'SCORED', 'ASSESSED', 'COMPLETE']);
+export const SessionStatusSchema = z.enum([
+  'PLAN_GENERATING',
+  'PLAN_ERROR',
+  'PLAN_PENDING',
+  'PLAN_APPROVED',
+  'SCORED',
+  'ASSESS_GENERATING',
+  'ASSESS_ERROR',
+  'ASSESSED',
+  'COMPLETE',
+]);
 
 /**
  * SessionStatus - TypeScript type inferred from SessionStatusSchema

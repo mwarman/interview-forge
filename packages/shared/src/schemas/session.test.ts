@@ -3,6 +3,22 @@ import { SessionSchema, SessionStatusSchema, type Session, type SessionStatus } 
 
 describe('SessionStatusSchema', () => {
   describe('valid enum values', () => {
+    it('should accept PLAN_GENERATING', () => {
+      // Arrange & Act
+      const result = SessionStatusSchema.safeParse('PLAN_GENERATING');
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept PLAN_ERROR', () => {
+      // Arrange & Act
+      const result = SessionStatusSchema.safeParse('PLAN_ERROR');
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
     it('should accept PLAN_PENDING', () => {
       // Arrange & Act
       const result = SessionStatusSchema.safeParse('PLAN_PENDING');
@@ -22,6 +38,22 @@ describe('SessionStatusSchema', () => {
     it('should accept SCORED', () => {
       // Arrange & Act
       const result = SessionStatusSchema.safeParse('SCORED');
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept ASSESS_GENERATING', () => {
+      // Arrange & Act
+      const result = SessionStatusSchema.safeParse('ASSESS_GENERATING');
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept ASSESS_ERROR', () => {
+      // Arrange & Act
+      const result = SessionStatusSchema.safeParse('ASSESS_ERROR');
 
       // Assert
       expect(result.success).toBe(true);
