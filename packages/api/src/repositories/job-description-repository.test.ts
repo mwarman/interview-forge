@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { jobDescriptionRepository, JobDescriptionItem } from './job-description-repository';
 import { dynamoClient } from '../utils/dynamo-client';
+import { GetCommandInput } from '@aws-sdk/lib-dynamodb';
 
 // Mock DynamoDB client
 vi.mock('../utils/dynamo-client', () => ({
@@ -125,7 +126,7 @@ describe('JobDescriptionRepository', () => {
         TTL: 1234567890,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       await jobDescriptionRepository.put(item);
@@ -155,7 +156,7 @@ describe('JobDescriptionRepository', () => {
         TTL: 1234567890,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       await jobDescriptionRepository.put(item);
@@ -208,7 +209,7 @@ describe('JobDescriptionRepository', () => {
         TTL: 1751590800,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       await jobDescriptionRepository.put(item);
@@ -265,7 +266,7 @@ describe('JobDescriptionRepository', () => {
 
       vi.mocked(dynamoClient.send).mockResolvedValue({
         Items: mockItems,
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.queryAll();
@@ -291,7 +292,7 @@ describe('JobDescriptionRepository', () => {
       // Arrange
       vi.mocked(dynamoClient.send).mockResolvedValue({
         Items: [],
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.queryAll();
@@ -303,7 +304,7 @@ describe('JobDescriptionRepository', () => {
 
     it('should return empty array when Items is undefined', async () => {
       // Arrange
-      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.queryAll();
@@ -341,7 +342,7 @@ describe('JobDescriptionRepository', () => {
 
       vi.mocked(dynamoClient.send).mockResolvedValue({
         Items: mockItems,
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.queryAll();
@@ -376,7 +377,7 @@ describe('JobDescriptionRepository', () => {
 
       vi.mocked(dynamoClient.send).mockResolvedValue({
         Item: mockItem,
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.getById(jdId);
@@ -421,7 +422,7 @@ describe('JobDescriptionRepository', () => {
 
       vi.mocked(dynamoClient.send).mockResolvedValue({
         Item: mockItem,
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.getById(jdId);
@@ -441,7 +442,7 @@ describe('JobDescriptionRepository', () => {
     it('should return null when item is not found', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
-      vi.mocked(dynamoClient.send).mockResolvedValue({} as Record<string, unknown>);
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       const result = await jobDescriptionRepository.getById(jdId);
@@ -476,14 +477,15 @@ describe('JobDescriptionRepository', () => {
           createdAt: '2026-06-03T12:00:00.000Z',
           TTL: 1234567890,
         },
-      } as Record<string, unknown>);
+      } as unknown as void);
 
       // Act
       await jobDescriptionRepository.getById(jdId);
 
       // Assert
       const callArgs = vi.mocked(dynamoClient.send).mock.calls[0][0];
-      expect(callArgs.input.Key).toEqual({
+      const input = callArgs.input as GetCommandInput;
+      expect(input.Key).toEqual({
         PK: `JD#${jdId}`,
         SK: 'METADATA',
       });
