@@ -34,6 +34,7 @@ export const SessionSchema = z.object({
   candidateName: z.string().min(1, 'candidateName is required'),
   status: SessionStatusSchema,
   plan: z.record(z.string(), z.unknown()).optional(),
+  planErrorMessage: z.string().optional(),
   scorecard: z.record(z.string(), z.unknown()).optional(),
   assessment: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.iso.datetime('createdAt must be a valid ISO 8601 datetime'),

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { Session, ApprovePlanRequest } from '@interview-forge/shared';
+import { Session, InterviewPlan } from '@interview-forge/shared';
 
 import { logger } from '@/utils/logger';
 import { jobDescriptionRepository } from '@/repositories/job-description-repository';
@@ -132,25 +132,16 @@ export class SessionService {
    * Uses a condition expression to ensure idempotency (prevents updating if already approved)
    * @param jdId - The unique identifier of the parent job description
    * @param sessionId - The unique identifier of the session
-   * @param request - The approve plan request (may contain optional modified plan)
+   * @param [plan] - Optional. The modified plan to save with the session. If not provided, the existing plan is approved as-is.
    * @returns The updated session with status set to PLAN_APPROVED
-   * @throws Error if repository update fails, session not found, or status is already beyond PLAN_PENDING
+   * @throws Error if repository update fails, session not found, or status is already beyond PLAN_GENERATED
    */
-  async approvePlan(jdId: string, sessionId: string, request: ApprovePlanRequest): Promise<Session> {
-    logger.info({ jdId, sessionId, hasPlan: !!request.plan }, '[SessionService.approvePlan] > approvePlan');
+  async approvePlan(jdId: string, sessionId: string, plan?: InterviewPlan): Promise<Session> {
+    logger.info({ jdId, sessionId, hasPlan: !!plan }, '[SessionService.approvePlan] > approvePlan');
 
     try {
-      if (request.plan) {
-        logger.debug({ jdId, sessionId }, '[SessionService.approvePlan] - Updating with modified plan');
-      } else {
-        logger.debug(
-          { jdId, sessionId },
-          '[SessionService.approvePlan] - Approving existing plan without modification',
-        );
-      }
-
       // Delegate to repository with optional modified plan
-      const session = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, request.plan);
+      const session = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, plan);
 
       logger.info({ jdId, sessionId }, '[SessionService.approvePlan] < approvePlan');
       return session;

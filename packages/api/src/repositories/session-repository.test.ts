@@ -510,15 +510,16 @@ describe('SessionRepository', () => {
                 PK: `JD#${jdId}`,
                 SK: `SESSION#${sessionId}`,
               },
-              UpdateExpression: 'SET #s = :approved',
+              UpdateExpression: 'SET #status = :approved',
               ExpressionAttributeNames: {
-                '#s': 'status',
+                '#plan': 'plan',
+                '#status': 'status',
               },
               ExpressionAttributeValues: {
                 ':approved': 'PLAN_APPROVED',
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
               },
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ReturnValues: 'ALL_NEW',
             },
           }),
@@ -586,17 +587,18 @@ describe('SessionRepository', () => {
                 PK: `JD#${jdId}`,
                 SK: `SESSION#${sessionId}`,
               },
-              UpdateExpression: expect.stringContaining('#s = :approved'),
-              UpdateExpression: expect.stringContaining('plan = :plan'),
+              UpdateExpression: expect.stringContaining('#status = :approved'),
+              UpdateExpression: expect.stringContaining('#plan = :plan'),
               ExpressionAttributeNames: {
-                '#s': 'status',
+                '#status': 'status',
+                '#plan': 'plan',
               },
               ExpressionAttributeValues: {
                 ':approved': 'PLAN_APPROVED',
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
                 ':plan': modifiedPlan,
               },
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ReturnValues: 'ALL_NEW',
             },
           }),
@@ -748,9 +750,9 @@ describe('SessionRepository', () => {
         expect(dynamoClient.send).toHaveBeenCalledWith(
           expect.objectContaining({
             input: expect.objectContaining({
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ExpressionAttributeValues: expect.objectContaining({
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
                 ':approved': 'PLAN_APPROVED',
               }),
             }),

@@ -365,7 +365,7 @@ export class BackendStack extends cdk.Stack {
     // Approve Plan Handler Lambda Function (approves an interview plan)
     const approvePlanLambda = new NodejsFunction(this, 'ApprovePlanFunction', {
       functionName: `${config.CDK_APP_NAME}-approve-plan-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/approve-plan-handler.ts'),
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/approve-plan-handler.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
       memorySize: 128,
