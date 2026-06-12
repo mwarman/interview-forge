@@ -1,4 +1,5 @@
 import { JSX } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Session } from '@interview-forge/shared';
 import { Badge } from '@/common/components/shadcn/badge';
@@ -35,8 +36,19 @@ interface SessionCardProps {
  * @returns {JSX.Element} The SessionCard component
  */
 export const SessionCard = ({ session }: SessionCardProps): JSX.Element => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+  };
+
   return (
-    <Card size="sm" data-testid="session-card">
+    <Card
+      size="sm"
+      className="hover:ring-primary/30 cursor-pointer transition-shadow"
+      data-testid="session-card"
+      onClick={handleCardClick}
+    >
       <CardContent className="flex items-center justify-between">
         <span data-testid="session-candidate-name" className="truncate font-medium">
           {session.candidateName}
