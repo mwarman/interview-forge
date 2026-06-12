@@ -129,7 +129,7 @@ export const PlanReadyState = ({
       const competencyValues = getValues(`competencies.${removeItemIndex.competencyIndex}.questions`);
       if (competencyValues && competencyValues.length > 1) {
         // If there's more than one question, we can remove it
-        // This is a placeholder - actual removal would require additional state management
+        // TODO: This is a placeholder - need to implement the removal of the question
         toast.success('Question removed');
       } else {
         toast.error('Cannot remove the last question in a competency');

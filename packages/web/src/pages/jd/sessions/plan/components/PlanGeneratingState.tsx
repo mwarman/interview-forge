@@ -1,5 +1,4 @@
 import { JSX } from 'react';
-import { AlertCircleIcon } from 'lucide-react';
 
 import { Skeleton } from '@/common/components/shadcn/skeleton';
 
@@ -20,19 +19,18 @@ interface PlanGeneratingStateProps {
  */
 export const PlanGeneratingState = ({ testId = 'plan-generating-state' }: PlanGeneratingStateProps): JSX.Element => {
   return (
-    <div data-testid={testId} className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
-      <div className="flex items-center gap-3">
-        <AlertCircleIcon className="h-5 w-5 animate-pulse text-blue-600" />
-        <h2 className="text-foreground text-lg font-semibold">Generating your interview plan…</h2>
+    <div data-testid={testId} className="mt-6 space-y-6">
+      <div>
+        <h2 className="text-xl font-bold">Generating your interview plan…</h2>
+        <p className="text-muted-foreground mt-2 text-sm">This may take a few moments. Please wait.</p>
       </div>
 
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
-        ))}
-      </div>
+      <Skeleton className="h-72 rounded-lg" />
 
-      <p className="text-muted-foreground text-sm">This may take a few moments. Please wait.</p>
+      <div className="flex justify-between">
+        <Skeleton className="h-8 w-40 rounded-lg" />
+        <Skeleton className="h-8 w-28 rounded-lg" />
+      </div>
     </div>
   );
 };
