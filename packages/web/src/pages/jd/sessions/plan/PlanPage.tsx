@@ -88,8 +88,8 @@ export const PlanPage = (): JSX.Element => {
   // Loading state
   if (isSessionLoading) {
     return (
-      <div data-testid="plan-page-loading" className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
-        <div className="bg-muted h-8 w-32 animate-pulse rounded-lg" />
+      <div data-testid="plan-page-loading" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
+        <div className="bg-muted h-8 max-w-96 animate-pulse rounded-lg" />
       </div>
     );
   }
