@@ -4,6 +4,7 @@ import { getConfig, getEnvironmentConfig, getTags } from './utils/config.js';
 import { DataStack } from './stacks/data-stack.js';
 import { BackendStack } from './stacks/backend-stack.js';
 import { AgentStack } from './stacks/agent-stack.js';
+import { FrontendStack } from './stacks/frontend-stack.js';
 
 /**
  * Main CDK application entry point
@@ -60,6 +61,20 @@ const backendStack = new BackendStack(app, 'BackendStack', {
 // Set stack dependencies (backend depends on data and agent)
 backendStack.addDependency(dataStack);
 backendStack.addDependency(agentStack);
+
+// Instantiate the frontend stack (CloudFront, S3 for React frontend)
+const frontendStack = new FrontendStack(app, 'FrontendStack', {
+  stackName: `${config.CDK_APP_NAME}-frontend-stack-${config.CDK_ENV_NAME}`,
+  description: `Frontend hosting layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
+  appName: config.CDK_APP_NAME,
+  envName: config.CDK_ENV_NAME,
+  config,
+  env,
+  tags,
+});
+
+// Set stack dependencies (frontend depends on backend for stack ordering)
+frontendStack.addDependency(backendStack);
 
 // Synthesize the CloudFormation templates
 app.synth();
