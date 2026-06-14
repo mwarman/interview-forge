@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { CreateJobDescriptionRequest, JobDescription } from '@interview-forge/shared';
 import { apiClient } from '@/common/utils/api-client';
@@ -13,10 +13,15 @@ import { ApiError } from '@/common/utils/errors/api-error';
  * @returns useMutation hook for creating a job description
  */
 export const useCreateJobDescription = () => {
+  const queryClient = useQueryClient();
+
   return useMutation<JobDescription, ApiError, CreateJobDescriptionRequest>({
     mutationFn: async (request) => {
       const response = await apiClient.post<JobDescription>('/jds', request);
       return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobDescriptions'] });
     },
   });
 };
