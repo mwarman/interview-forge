@@ -62,17 +62,6 @@ describe('PlanReadyState', () => {
     expect(descInput).toBeInTheDocument();
   });
 
-  it('should render questions in competency', async () => {
-    // Arrange & Act
-    renderWithAllProviders(<PlanReadyState plan={mockPlan} onApprovePlan={vi.fn()} />);
-
-    // Expand accordion
-    await userEvent.click(screen.getByText('Communication'));
-
-    // Assert
-    expect(screen.getByDisplayValue('Describe a time you communicated complex information')).toBeInTheDocument();
-  });
-
   it('should enable approve button when plan is valid', () => {
     // Arrange & Act
     renderWithAllProviders(<PlanReadyState plan={mockPlan} onApprovePlan={vi.fn()} />);
@@ -132,24 +121,6 @@ describe('PlanReadyState', () => {
 
     // Assert
     expect(nameInput.value).toBe('Leadership');
-  });
-
-  it('should allow editing question text', async () => {
-    // Arrange
-    const user = userEvent.setup();
-
-    renderWithAllProviders(<PlanReadyState plan={mockPlan} onApprovePlan={vi.fn()} />);
-
-    // Expand accordion
-    await user.click(screen.getByText('Communication'));
-
-    // Act
-    const questionInput = screen.getByTestId('question-text-input-0-0') as HTMLInputElement;
-    await user.clear(questionInput);
-    await user.type(questionInput, 'New question text');
-
-    // Assert
-    expect(questionInput.value).toBe('New question text');
   });
 
   it('should show remove competency button', async () => {

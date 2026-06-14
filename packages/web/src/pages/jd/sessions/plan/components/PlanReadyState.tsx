@@ -1,21 +1,27 @@
 import { JSX, useState } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { PlusIcon, TrashIcon } from 'lucide-react';
 
-import { InterviewPlan, Competency } from '@interview-forge/shared';
+import { InterviewPlan, InterviewPlanSchema, Competency } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
 import { Input } from '@/common/components/shadcn/input';
 import { Textarea } from '@/common/components/shadcn/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/common/components/shadcn/accordion';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/common/components/shadcn/select';
 import { Field, FieldLabel, FieldError } from '@/common/components/shadcn/field';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/common/components/shadcn/card';
 import { ButtonGroup } from '@/common/components/shadcn/button-group';
 import { Separator } from '@/common/components/shadcn/separator';
 import { RemoveConfirmDialog } from './RemoveConfirmDialog';
-import { InterviewPlanSchema } from '@interview-forge/shared';
+import { QuestionsFormFields } from './QuestionsFormFields';
+
+/**
+ * Plan form values type - defines the shape of the form data for editing the interview plan
+ */
+export type PlanFormValues = {
+  competencies: Competency[];
+};
 
 interface PlanReadyStateProps {
   /**
@@ -57,19 +63,9 @@ export const PlanReadyState = ({
   testId = 'plan-ready-state',
 }: PlanReadyStateProps): JSX.Element => {
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
-  const [removeItemType, setRemoveItemType] = useState<'question' | 'competency'>('question');
-  const [removeItemIndex, setRemoveItemIndex] = useState<{ competencyIndex: number; questionIndex?: number } | null>(
-    null,
-  );
+  const [removeCompetencyIndex, setRemoveCompetencyIndex] = useState<number | null>(null);
 
-  const {
-    register,
-    watch,
-    getValues,
-    setValue,
-    formState: { errors },
-    control,
-  } = useForm<{ competencies: Competency[] }>({
+  const { control, handleSubmit } = useForm<PlanFormValues>({
     resolver: zodResolver(InterviewPlanSchema.pick({ competencies: true })),
     defaultValues: {
       competencies: plan.competencies || [],
@@ -85,7 +81,6 @@ export const PlanReadyState = ({
     name: 'competencies',
   });
 
-  const competencies = watch('competencies');
   const canAddCompetency = competencyFields.length < 8;
   const canApprove =
     competencyFields.length > 0 && competencyFields.every((c) => c.questions && c.questions.length > 0);
@@ -113,37 +108,21 @@ export const PlanReadyState = ({
   };
 
   const handleRemoveCompetency = (index: number) => {
-    setRemoveItemType('competency');
-    setRemoveItemIndex({ competencyIndex: index });
+    setRemoveCompetencyIndex(index);
     setRemoveConfirmOpen(true);
   };
 
   const handleConfirmRemoveCompetency = () => {
-    if (removeItemIndex === null) return;
+    if (removeCompetencyIndex === null) return;
 
-    if (removeItemType === 'competency') {
-      removeCompetency(removeItemIndex.competencyIndex);
-      toast.success('Competency removed');
-    } else if (removeItemType === 'question' && removeItemIndex.questionIndex !== undefined) {
-      // Get the current field array for the competency
-      const competencyValues = getValues(`competencies.${removeItemIndex.competencyIndex}.questions`);
-      if (competencyValues && competencyValues.length > 1) {
-        // If there's more than one question, we can remove it
-        // TODO: This is a placeholder - need to implement the removal of the question
-        toast.success('Question removed');
-      } else {
-        toast.error('Cannot remove the last question in a competency');
-        setRemoveConfirmOpen(false);
-        setRemoveItemIndex(null);
-        return;
-      }
-    }
+    removeCompetency(removeCompetencyIndex);
+    toast.success('Competency removed');
 
     setRemoveConfirmOpen(false);
-    setRemoveItemIndex(null);
+    setRemoveCompetencyIndex(null);
   };
 
-  const handleApprovePlan = () => {
+  const handleApprovePlan = (data: PlanFormValues) => {
     if (!canApprove) {
       toast.error('Plan must have at least 1 competency with 1 question each');
       return;
@@ -151,7 +130,7 @@ export const PlanReadyState = ({
 
     const editedPlan: InterviewPlan = {
       ...plan,
-      competencies: getValues('competencies'),
+      competencies: data.competencies,
     };
 
     onApprovePlan(editedPlan);
@@ -166,21 +145,19 @@ export const PlanReadyState = ({
         </p>
       </div>
 
-      <Card data-testid="plan-card">
-        <CardHeader>
-          <CardTitle>Competencies</CardTitle>
-          <CardDescription>
-            Define the competencies to evaluate the candidate on, along with their evaluation criteria.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="single" collapsible data-testid="competencies-accordion">
-            {competencyFields.map((competencyField, competencyIndex) => {
-              const competency = competencies[competencyIndex];
-
-              return (
+      <form onSubmit={handleSubmit(handleApprovePlan)} className="space-y-6">
+        <Card data-testid="plan-card">
+          <CardHeader>
+            <CardTitle>Competencies</CardTitle>
+            <CardDescription>
+              Define the competencies to evaluate the candidate on, along with their evaluation criteria.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible data-testid="competencies-accordion">
+              {competencyFields.map((competency, competencyIndex) => (
                 <AccordionItem
-                  key={competencyField.id}
+                  key={competency.id}
                   value={`competency-${competencyIndex}`}
                   data-testid={`competency-item-${competencyIndex}`}
                 >
@@ -196,50 +173,65 @@ export const PlanReadyState = ({
                       </CardHeader>
                       <CardContent className="space-y-4">
                         {/* Competency Name */}
-                        <Field>
-                          <FieldLabel htmlFor={`competency-name-${competencyIndex}`}>Competency Name</FieldLabel>
-                          <Input
-                            id={`competency-name-${competencyIndex}`}
-                            {...register(`competencies.${competencyIndex}.name`)}
-                            placeholder="e.g., Communication"
-                            data-testid={`competency-name-input-${competencyIndex}`}
-                          />
-                          {errors.competencies?.[competencyIndex]?.name && (
-                            <FieldError>{errors.competencies[competencyIndex]?.name?.message}</FieldError>
+                        <Controller
+                          control={control}
+                          name={`competencies.${competencyIndex}.name`}
+                          render={({ field, fieldState }) => (
+                            <Field>
+                              <FieldLabel htmlFor={`competency-name-${competencyIndex}`}>Competency Name</FieldLabel>
+                              <Input
+                                {...field}
+                                id={`competency-name-${competencyIndex}`}
+                                placeholder="e.g., Communication"
+                                data-testid={`competency-name-input-${competencyIndex}`}
+                                aria-invalid={!!fieldState.error}
+                              />
+                              {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                            </Field>
                           )}
-                        </Field>
+                        />
 
                         {/* Competency Description */}
-                        <Field>
-                          <FieldLabel htmlFor={`competency-description-${competencyIndex}`}>Description</FieldLabel>
-                          <Textarea
-                            id={`competency-description-${competencyIndex}`}
-                            {...register(`competencies.${competencyIndex}.description`)}
-                            placeholder="Describe this competency…"
-                            data-testid={`competency-description-input-${competencyIndex}`}
-                            rows={3}
-                          />
-                          {errors.competencies?.[competencyIndex]?.description && (
-                            <FieldError>{errors.competencies[competencyIndex]?.description?.message}</FieldError>
+                        <Controller
+                          control={control}
+                          name={`competencies.${competencyIndex}.description`}
+                          render={({ field, fieldState }) => (
+                            <Field>
+                              <FieldLabel htmlFor={`competency-description-${competencyIndex}`}>Description</FieldLabel>
+                              <Textarea
+                                {...field}
+                                id={`competency-description-${competencyIndex}`}
+                                placeholder="Describe this competency…"
+                                data-testid={`competency-description-input-${competencyIndex}`}
+                                rows={3}
+                                aria-invalid={!!fieldState.error}
+                              />
+                              {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                            </Field>
                           )}
-                        </Field>
+                        />
 
                         {/* Competency Evaluation Criteria */}
-                        <Field>
-                          <FieldLabel htmlFor={`competency-criteria-${competencyIndex}`}>
-                            Evaluation Criteria
-                          </FieldLabel>
-                          <Textarea
-                            id={`competency-criteria-${competencyIndex}`}
-                            {...register(`competencies.${competencyIndex}.evaluationCriteria`)}
-                            placeholder="How will this competency be evaluated?…"
-                            data-testid={`competency-criteria-input-${competencyIndex}`}
-                            rows={3}
-                          />
-                          {errors.competencies?.[competencyIndex]?.evaluationCriteria && (
-                            <FieldError>{errors.competencies[competencyIndex]?.evaluationCriteria?.message}</FieldError>
+                        <Controller
+                          control={control}
+                          name={`competencies.${competencyIndex}.evaluationCriteria`}
+                          render={({ field, fieldState }) => (
+                            <Field>
+                              <FieldLabel htmlFor={`competency-criteria-${competencyIndex}`}>
+                                Evaluation Criteria
+                              </FieldLabel>
+                              <Textarea
+                                {...field}
+                                id={`competency-criteria-${competencyIndex}`}
+                                placeholder="How will this competency be evaluated?…"
+                                data-testid={`competency-criteria-input-${competencyIndex}`}
+                                rows={3}
+                                aria-invalid={!!fieldState.error}
+                              />
+                              {fieldState.error && <FieldError errors={[fieldState.error]} />}
+                            </Field>
                           )}
-                        </Field>
+                        />
                       </CardContent>
                       <CardFooter>
                         <Button
@@ -258,160 +250,40 @@ export const PlanReadyState = ({
                     <Separator />
 
                     {/* Questions */}
-                    <Card className="bg-muted">
-                      <CardHeader>
-                        <CardTitle>Interview Questions</CardTitle>
-                        <CardDescription>
-                          Define the interview questions for this competency. At least one question is required.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4 p-4">
-                        {competency?.questions?.map((question, questionIndex) => (
-                          <Card
-                            key={question.questionId}
-                            data-testid={`question-card-${competencyIndex}-${questionIndex}`}
-                          >
-                            <CardHeader>
-                              <CardTitle className="text-sm">Question {questionIndex + 1}</CardTitle>
-                              <CardDescription>
-                                Define the question text, type, and optional follow-up prompt.
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                              <Field>
-                                <FieldLabel htmlFor={`question-text-${competencyIndex}-${questionIndex}`}>
-                                  Question
-                                </FieldLabel>
-                                <Textarea
-                                  id={`question-text-${competencyIndex}-${questionIndex}`}
-                                  {...register(`competencies.${competencyIndex}.questions.${questionIndex}.text`)}
-                                  placeholder="Enter the interview question…"
-                                  data-testid={`question-text-input-${competencyIndex}-${questionIndex}`}
-                                  rows={3}
-                                />
-                                {errors.competencies?.[competencyIndex]?.questions?.[questionIndex]?.text && (
-                                  <FieldError>
-                                    {errors.competencies[competencyIndex]?.questions?.[questionIndex]?.text?.message}
-                                  </FieldError>
-                                )}
-                              </Field>
-
-                              <Field>
-                                <FieldLabel htmlFor={`question-type-${competencyIndex}-${questionIndex}`}>
-                                  Type
-                                </FieldLabel>
-                                <Select
-                                  defaultValue={question.type}
-                                  onValueChange={(value) => {
-                                    setValue(
-                                      `competencies.${competencyIndex}.questions.${questionIndex}.type`,
-                                      value as 'BEHAVIORAL' | 'SITUATIONAL' | 'TECHNICAL',
-                                    );
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    id={`question-type-${competencyIndex}-${questionIndex}`}
-                                    data-testid={`question-type-select-${competencyIndex}-${questionIndex}`}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="BEHAVIORAL">Behavioral</SelectItem>
-                                    <SelectItem value="SITUATIONAL">Situational</SelectItem>
-                                    <SelectItem value="TECHNICAL">Technical</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                {errors.competencies?.[competencyIndex]?.questions?.[questionIndex]?.type && (
-                                  <FieldError>
-                                    {errors.competencies[competencyIndex]?.questions?.[questionIndex]?.type?.message}
-                                  </FieldError>
-                                )}
-                              </Field>
-
-                              <Field>
-                                <FieldLabel htmlFor={`question-followup-${competencyIndex}-${questionIndex}`}>
-                                  Follow-up Prompt (Optional)
-                                </FieldLabel>
-                                <Textarea
-                                  id={`question-followup-${competencyIndex}-${questionIndex}`}
-                                  {...register(
-                                    `competencies.${competencyIndex}.questions.${questionIndex}.followUpPrompt`,
-                                  )}
-                                  placeholder="Optional follow-up prompt…"
-                                  data-testid={`question-followup-input-${competencyIndex}-${questionIndex}`}
-                                  rows={2}
-                                />
-                                {errors.competencies?.[competencyIndex]?.questions?.[questionIndex]?.followUpPrompt && (
-                                  <FieldError>
-                                    {
-                                      errors.competencies[competencyIndex]?.questions?.[questionIndex]?.followUpPrompt
-                                        ?.message
-                                    }
-                                  </FieldError>
-                                )}
-                              </Field>
-                            </CardContent>
-                            <CardFooter>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  setRemoveItemType('question');
-                                  setRemoveItemIndex({
-                                    competencyIndex,
-                                    questionIndex,
-                                  });
-                                  setRemoveConfirmOpen(true);
-                                }}
-                                data-testid={`remove-question-button-${competencyIndex}-${questionIndex}`}
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                                <span>Delete</span>
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))}
-                      </CardContent>
-                    </Card>
+                    <QuestionsFormFields control={control} competencyIndex={competencyIndex} />
                   </AccordionContent>
                 </AccordionItem>
-              );
-            })}
-          </Accordion>
-        </CardContent>
-      </Card>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
 
-      <ButtonGroup className="w-full">
-        <ButtonGroup>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleAddCompetency}
-            disabled={!canAddCompetency}
-            data-testid="add-competency-button"
-          >
-            <PlusIcon className="mr-1 h-4 w-4" />
-            Add Competency
-          </Button>
+        <ButtonGroup className="w-full">
+          <ButtonGroup>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddCompetency}
+              disabled={!canAddCompetency || isApproving}
+              data-testid="add-competency-button"
+            >
+              <PlusIcon className="mr-1 h-4 w-4" />
+              Add Competency
+            </Button>
+          </ButtonGroup>
+          <ButtonGroup className="ml-auto">
+            <Button type="submit" disabled={!canApprove || isApproving} data-testid="approve-plan-button">
+              {isApproving ? 'Approving…' : 'Approve Plan'}
+            </Button>
+          </ButtonGroup>
         </ButtonGroup>
-        <ButtonGroup className="ml-auto">
-          <Button onClick={handleApprovePlan} disabled={!canApprove || isApproving} data-testid="approve-plan-button">
-            {isApproving ? 'Approving…' : 'Approve Plan'}
-          </Button>
-        </ButtonGroup>
-      </ButtonGroup>
+      </form>
 
       <RemoveConfirmDialog
         open={removeConfirmOpen}
         onOpenChange={setRemoveConfirmOpen}
-        itemType={removeItemType}
-        itemName={
-          removeItemType === 'competency'
-            ? competencies[removeItemIndex?.competencyIndex || 0]?.name
-            : competencies[removeItemIndex?.competencyIndex || 0]?.questions?.[removeItemIndex?.questionIndex || 0]
-                ?.text
-        }
+        itemType={'competency'}
+        itemName={competencyFields[removeCompetencyIndex || 0]?.name}
         onConfirm={handleConfirmRemoveCompetency}
       />
     </div>
