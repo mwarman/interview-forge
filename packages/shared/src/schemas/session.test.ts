@@ -27,6 +27,14 @@ describe('SessionStatusSchema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should accept PLAN_GENERATED', () => {
+      // Arrange & Act
+      const result = SessionStatusSchema.safeParse('PLAN_GENERATED');
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
     it('should accept PLAN_APPROVED', () => {
       // Arrange & Act
       const result = SessionStatusSchema.safeParse('PLAN_APPROVED');

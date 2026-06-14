@@ -118,7 +118,7 @@ describe('approve-plan-handler', () => {
       expect(result.statusCode).toBe(200);
       const body = JSON.parse(result.body || '{}');
       expect(body.status).toBe('PLAN_APPROVED');
-      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, mockApprovalRequest);
+      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
     });
   });
 
@@ -160,7 +160,7 @@ describe('approve-plan-handler', () => {
       const body = JSON.parse(result.body || '{}');
       expect(body.status).toBe('PLAN_APPROVED');
       expect(body.plan).toEqual(modifiedPlan);
-      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, requestBody);
+      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, modifiedPlan);
     });
   });
 
@@ -266,7 +266,7 @@ describe('approve-plan-handler', () => {
 
       // Assert
       expect(result.statusCode).toBe(200);
-      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, mockRequest);
+      expect(sessionService.approvePlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
     });
   });
 

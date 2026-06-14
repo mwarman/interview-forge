@@ -105,7 +105,7 @@ describe('SessionRepository', () => {
         TTL: 1751590800,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({});
+      vi.mocked(dynamoClient.send).mockResolvedValue(undefined);
 
       // Act
       await sessionRepository.put(item);
@@ -161,7 +161,7 @@ describe('SessionRepository', () => {
         TTL: 1751590800,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({ Item: item });
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Item: item } as unknown as void);
 
       // Act
       const result = await sessionRepository.getById(jdId, sessionId);
@@ -194,7 +194,7 @@ describe('SessionRepository', () => {
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({});
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       const result = await sessionRepository.getById(jdId, sessionId);
@@ -246,7 +246,7 @@ describe('SessionRepository', () => {
         },
       ];
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: items });
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: items } as unknown as void);
 
       // Act
       const result = await sessionRepository.queryByJdId(jdId);
@@ -290,7 +290,7 @@ describe('SessionRepository', () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: [] });
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Items: [] } as unknown as void);
 
       // Act
       const result = await sessionRepository.queryByJdId(jdId);
@@ -318,7 +318,7 @@ describe('SessionRepository', () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({});
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act
       const result = await sessionRepository.queryByJdId(jdId);
@@ -362,7 +362,7 @@ describe('SessionRepository', () => {
         TTL: 1751590800,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
       // Act
       const result = await sessionRepository.updateById(jdId, sessionId, updates);
@@ -426,7 +426,7 @@ describe('SessionRepository', () => {
         TTL: 1751590800,
       };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+      vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
       // Act
       const result = await sessionRepository.updateById(jdId, sessionId, updates);
@@ -455,7 +455,7 @@ describe('SessionRepository', () => {
       const sessionId = '660f9411-f30c-42e5-b827-557766551111';
       const updates = { status: 'PLAN_APPROVED' };
 
-      vi.mocked(dynamoClient.send).mockResolvedValue({});
+      vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
       // Act & Assert
       await expect(sessionRepository.updateById(jdId, sessionId, updates)).rejects.toThrow(
@@ -485,7 +485,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         const result = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, undefined);
@@ -510,15 +510,16 @@ describe('SessionRepository', () => {
                 PK: `JD#${jdId}`,
                 SK: `SESSION#${sessionId}`,
               },
-              UpdateExpression: 'SET #s = :approved',
+              UpdateExpression: 'SET #status = :approved',
               ExpressionAttributeNames: {
-                '#s': 'status',
+                '#plan': 'plan',
+                '#status': 'status',
               },
               ExpressionAttributeValues: {
                 ':approved': 'PLAN_APPROVED',
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
               },
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ReturnValues: 'ALL_NEW',
             },
           }),
@@ -560,7 +561,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         const result = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, modifiedPlan);
@@ -586,17 +587,17 @@ describe('SessionRepository', () => {
                 PK: `JD#${jdId}`,
                 SK: `SESSION#${sessionId}`,
               },
-              UpdateExpression: expect.stringContaining('#s = :approved'),
-              UpdateExpression: expect.stringContaining('plan = :plan'),
+              UpdateExpression: expect.stringContaining('#status = :approved, #plan = :plan'),
               ExpressionAttributeNames: {
-                '#s': 'status',
+                '#status': 'status',
+                '#plan': 'plan',
               },
               ExpressionAttributeValues: {
                 ':approved': 'PLAN_APPROVED',
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
                 ':plan': modifiedPlan,
               },
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ReturnValues: 'ALL_NEW',
             },
           }),
@@ -607,7 +608,7 @@ describe('SessionRepository', () => {
         // Arrange
         const complexPlan = {
           rounds: 3,
-          stages: [
+          competencies: [
             {
               name: 'Technical Round 1',
               duration: 60,
@@ -639,15 +640,15 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         const result = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, complexPlan);
 
         // Assert
         expect(result.plan).toEqual(complexPlan);
-        expect(result.plan).toHaveProperty('stages');
-        expect((result.plan as InterviewPlan).stages).toHaveLength(2);
+        expect(result.plan).toHaveProperty('competencies');
+        expect((result.plan as InterviewPlan).competencies).toHaveLength(2);
       });
 
       it('should handle empty plan object', async () => {
@@ -668,7 +669,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         const result = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, emptyPlan);
@@ -691,7 +692,7 @@ describe('SessionRepository', () => {
 
       it('should throw error when Attributes are not returned', async () => {
         // Arrange
-        vi.mocked(dynamoClient.send).mockResolvedValue({});
+        vi.mocked(dynamoClient.send).mockResolvedValue({} as unknown as void);
 
         // Act & Assert
         await expect(sessionRepository.updateWithApprovedPlan(jdId, sessionId, undefined)).rejects.toThrow(
@@ -739,7 +740,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         await sessionRepository.updateWithApprovedPlan(jdId, sessionId, undefined);
@@ -748,9 +749,9 @@ describe('SessionRepository', () => {
         expect(dynamoClient.send).toHaveBeenCalledWith(
           expect.objectContaining({
             input: expect.objectContaining({
-              ConditionExpression: '#s = :pending',
+              ConditionExpression: '#status = :generated',
               ExpressionAttributeValues: expect.objectContaining({
-                ':pending': 'PLAN_PENDING',
+                ':generated': 'PLAN_GENERATED',
                 ':approved': 'PLAN_APPROVED',
               }),
             }),
@@ -776,7 +777,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         const result = await sessionRepository.updateWithApprovedPlan(jdId, sessionId, undefined);
@@ -809,7 +810,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         await sessionRepository.updateWithApprovedPlan(customJdId, customSessionId, undefined);
@@ -848,7 +849,7 @@ describe('SessionRepository', () => {
           TTL: 1751590800,
         };
 
-        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem });
+        vi.mocked(dynamoClient.send).mockResolvedValue({ Attributes: updatedItem } as unknown as void);
 
         // Act
         await sessionRepository.updateWithApprovedPlan(jdId, sessionId, undefined);

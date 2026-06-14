@@ -56,7 +56,7 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
     logger.debug({ jdId, sessionId, hasPlan: !!request.plan }, '[ApprovePlanHandler] - Approving plan');
 
     // Delegate to service to approve plan
-    const updatedSession = await sessionService.approvePlan(jdId, sessionId, request);
+    const updatedSession = await sessionService.approvePlan(jdId, sessionId, request.plan);
 
     logger.info({ jdId, sessionId }, '[ApprovePlanHandler] < handle');
     return response.ok(updatedSession);

@@ -75,7 +75,7 @@ describe('write-plan-action', () => {
         sessionId,
         jdId,
         candidateName: 'John Doe',
-        status: 'PLAN_PENDING',
+        status: 'PLAN_GENERATED',
         plan: validPlan,
         createdAt: '2026-06-03T12:00:00.000Z',
         TTL: 1751590800,
@@ -93,12 +93,12 @@ describe('write-plan-action', () => {
 
       const responseBody = JSON.parse(result.response.functionResponse.responseBody.TEXT.body);
       expect(responseBody).toHaveProperty('sessionId', sessionId);
-      expect(responseBody).toHaveProperty('status', 'PLAN_PENDING');
+      expect(responseBody).toHaveProperty('status', 'PLAN_GENERATED');
       expect(responseBody).toHaveProperty('message', 'Plan written successfully');
 
       expect(sessionService.updateSession).toHaveBeenCalledWith(jdId, sessionId, {
         plan: validPlan,
-        status: 'PLAN_PENDING',
+        status: 'PLAN_GENERATED',
       });
     });
   });

@@ -202,12 +202,12 @@ export class SessionRepository {
   /**
    * Update a Session's plan with approval status using conditional expression
    * Atomically updates plan and status to PLAN_APPROVED
-   * Uses a condition expression to ensure status is PLAN_PENDING (idempotency guard)
+   * Uses a condition expression to ensure status is PLAN_GENERATED (idempotency guard)
    * @param jdId - The unique identifier of the parent job description
    * @param sessionId - The unique identifier of the session
    * @param plan - Optional modified plan to overwrite existing plan
    * @returns The updated Session entity
-   * @throws ConditionalCheckFailedException if status is not PLAN_PENDING
+   * @throws ConditionalCheckFailedException if status is not PLAN_GENERATED
    * @throws Error if DynamoDB update fails or item not found
    */
   async updateWithApprovedPlan(jdId: string, sessionId: string, plan?: Record<string, unknown>): Promise<Session> {
@@ -220,14 +220,14 @@ export class SessionRepository {
       // Build update expression for status and optionally plan
       const updateExpressionParts: string[] = [];
       const expressionAttributeValues: Record<string, unknown> = {
-        ':pending': 'PLAN_PENDING',
+        ':generated': 'PLAN_GENERATED',
         ':approved': 'PLAN_APPROVED',
       };
 
-      updateExpressionParts.push('#s = :approved');
+      updateExpressionParts.push('#status = :approved');
 
       if (plan) {
-        updateExpressionParts.push('plan = :plan');
+        updateExpressionParts.push('#plan = :plan');
         expressionAttributeValues[':plan'] = plan;
       }
 
@@ -242,10 +242,11 @@ export class SessionRepository {
           },
           UpdateExpression: updateExpression,
           ExpressionAttributeNames: {
-            '#s': 'status',
+            '#status': 'status',
+            '#plan': 'plan',
           },
           ExpressionAttributeValues: expressionAttributeValues,
-          ConditionExpression: '#s = :pending',
+          ConditionExpression: '#status = :generated',
           ReturnValues: 'ALL_NEW',
         }),
       );

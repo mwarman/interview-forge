@@ -20,8 +20,8 @@
   },
   "devDependencies": {
     "aws-cdk": "2.1126.0",
-    "aws-cdk-lib": "2.258.0",
+    "aws-cdk-lib": "2.259.0",
     "constructs": "10.6.0",
-    "esbuild": "0.28.0"
+    "esbuild": "0.28.1"
   }
 }

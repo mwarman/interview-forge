@@ -403,10 +403,6 @@ describe('SessionService', () => {
     describe('happy path - approving without modified plan', () => {
       it('should approve an existing plan and return updated session', async () => {
         // Arrange
-        const request = {
-          plan: undefined,
-        };
-
         const mockSession = {
           sessionId,
           jdId,
@@ -420,7 +416,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        const result = await sessionService.approvePlan(jdId, sessionId, request);
+        const result = await sessionService.approvePlan(jdId, sessionId, undefined);
 
         // Assert
         expect(result).toEqual(mockSession);
@@ -431,10 +427,6 @@ describe('SessionService', () => {
 
       it('should log appropriately when approving without modification', async () => {
         // Arrange
-        const request = {
-          plan: undefined,
-        };
-
         const mockSession = {
           sessionId,
           jdId,
@@ -448,7 +440,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        await sessionService.approvePlan(jdId, sessionId, request);
+        await sessionService.approvePlan(jdId, sessionId, undefined);
 
         // Assert
         expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
@@ -464,10 +456,6 @@ describe('SessionService', () => {
           interviewers: ['Alice', 'Bob'],
         };
 
-        const request = {
-          plan: modifiedPlan,
-        };
-
         const mockSession = {
           sessionId,
           jdId,
@@ -481,7 +469,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        const result = await sessionService.approvePlan(jdId, sessionId, request);
+        const result = await sessionService.approvePlan(jdId, sessionId, modifiedPlan);
 
         // Assert
         expect(result).toEqual(mockSession);
@@ -507,10 +495,6 @@ describe('SessionService', () => {
           ],
         };
 
-        const request = {
-          plan: modifiedPlan,
-        };
-
         const mockSession = {
           sessionId,
           jdId,
@@ -524,7 +508,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        await sessionService.approvePlan(jdId, sessionId, request);
+        await sessionService.approvePlan(jdId, sessionId, modifiedPlan);
 
         // Assert
         expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, modifiedPlan);
@@ -534,17 +518,13 @@ describe('SessionService', () => {
     describe('error cases', () => {
       it('should propagate ConditionalCheckFailedException from repository', async () => {
         // Arrange
-        const request = {
-          plan: undefined,
-        };
-
         const conditionalError = new Error('ConditionalCheckFailedException');
         conditionalError.name = 'ConditionalCheckFailedException';
 
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockRejectedValue(conditionalError);
 
         // Act & Assert
-        await expect(sessionService.approvePlan(jdId, sessionId, request)).rejects.toThrow(
+        await expect(sessionService.approvePlan(jdId, sessionId, undefined)).rejects.toThrow(
           'ConditionalCheckFailedException',
         );
         expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, undefined);
@@ -641,9 +621,6 @@ describe('SessionService', () => {
         // Arrange
         const customJdId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
         const customSessionId = 'ffffffff-1111-2222-3333-444444444444';
-        const request = {
-          plan: undefined,
-        };
 
         const mockSession = {
           sessionId: customSessionId,
@@ -657,7 +634,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        await sessionService.approvePlan(customJdId, customSessionId, request);
+        await sessionService.approvePlan(customJdId, customSessionId, undefined);
 
         // Assert
         expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(customJdId, customSessionId, undefined);
@@ -682,7 +659,7 @@ describe('SessionService', () => {
         vi.mocked(sessionRepository.updateWithApprovedPlan).mockResolvedValue(mockSession);
 
         // Act
-        await sessionService.approvePlan(jdId, sessionId, request);
+        await sessionService.approvePlan(jdId, sessionId, request.plan);
 
         // Assert
         expect(sessionRepository.updateWithApprovedPlan).toHaveBeenCalledWith(jdId, sessionId, {});

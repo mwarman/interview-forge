@@ -33,6 +33,11 @@ describe('SessionCard', () => {
     expect(screen.getByTestId('session-status-badge')).toHaveTextContent('Plan Pending');
   });
 
+  it('should render "Plan Generated" for PLAN_GENERATED status', () => {
+    renderWithAllProviders(<SessionCard session={makeSession({ status: 'PLAN_GENERATED' })} />);
+    expect(screen.getByTestId('session-status-badge')).toHaveTextContent('Plan Generated');
+  });
+
   it('should render "Plan Approved" for PLAN_APPROVED status', () => {
     renderWithAllProviders(<SessionCard session={makeSession({ status: 'PLAN_APPROVED' })} />);
     expect(screen.getByTestId('session-status-badge')).toHaveTextContent('Plan Approved');
