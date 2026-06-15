@@ -12,6 +12,7 @@ export {
   ApprovePlanRequestSchema,
 } from './schemas/session';
 export { InterviewPlanSchema, CompetencySchema, QuestionSchema, QuestionTypeSchema } from './schemas/interview-plan';
+export { ScorecardSchema, CompetencyNotesSchema, QuestionRatingSchema } from './schemas/scorecard';
 export {
   BedrockActionEventSchema,
   BedrockActionResponseSchema,
@@ -28,6 +29,7 @@ export type {
 } from './schemas/job-description';
 export type { Session, SessionStatus, CreateSessionRequest, ApprovePlanRequest } from './schemas/session';
 export type { InterviewPlan, Competency, Question, QuestionType } from './schemas/interview-plan';
+export type { Scorecard, CompetencyNotes, QuestionRating } from './schemas/scorecard';
 export type {
   BedrockParameter,
   BedrockActionEvent,
