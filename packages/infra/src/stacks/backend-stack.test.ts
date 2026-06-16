@@ -135,7 +135,7 @@ describe('BackendStack', () => {
 
     // Assert
     const template = Template.fromStack(stack);
-    template.resourceCountIs('AWS::Lambda::Function', 11);
+    template.resourceCountIs('AWS::Lambda::Function', 12);
 
     // Health Lambda: 128MB, 6s
     template.hasResourceProperties('AWS::Lambda::Function', {
@@ -213,6 +213,13 @@ describe('BackendStack', () => {
       MemorySize: 128,
       Timeout: 15,
     });
+
+    // Score Lambda: 128MB, 15s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-score-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 15,
+    });
   });
 
   it('should wire all Lambda functions to API Gateway with proxy integration', () => {
@@ -285,7 +292,7 @@ describe('BackendStack', () => {
     });
 
     // Additionally verify that JD_TABLE_NAME and JD_BUCKET_NAME are present
-    template.resourceCountIs('AWS::Lambda::Function', 11);
+    template.resourceCountIs('AWS::Lambda::Function', 12);
     const allResources = template.findResources('AWS::Lambda::Function') as Record<
       string,
       Record<string, Record<string, Record<string, unknown>>>
@@ -322,7 +329,7 @@ describe('BackendStack', () => {
     const template = Template.fromStack(stack);
 
     // Verify CloudWatch Log Groups are created
-    template.resourceCountIs('AWS::Logs::LogGroup', 11);
+    template.resourceCountIs('AWS::Logs::LogGroup', 12);
 
     // Verify retention is set to ONE_WEEK
     template.hasResourceProperties('AWS::Logs::LogGroup', {
