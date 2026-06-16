@@ -25,6 +25,7 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
 
   try {
     logger.info('[ScoreHandler] > handle');
+    logger.debug({ event }, '[ScoreHandler] - Incoming event');
 
     // Extract jdId and sessionId from path parameters
     const jdId = event.pathParameters?.jdId;

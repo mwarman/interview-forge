@@ -303,7 +303,7 @@ export class SessionRepository {
             ':assessed': 'ASSESSED',
             ':complete': 'COMPLETE',
           },
-          ConditionExpression: '#status NOT IN (:assessed, :complete)',
+          ConditionExpression: 'NOT #status IN (:assessed, :complete)',
           ReturnValues: 'ALL_NEW',
         }),
       );
