@@ -267,6 +267,63 @@ export class SessionRepository {
       throw error;
     }
   }
+
+  /**
+   * Update a Session with a scorecard using conditional expression
+   * Atomically updates scorecard and status to SCORED
+   * Uses a condition expression to prevent overwriting scorecards in terminal states
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param scorecard - The scorecard object to save to the session
+   * @returns The updated Session entity
+   * @throws ConditionalCheckFailedException if status is ASSESSED or COMPLETE
+   * @throws Error if DynamoDB update fails or item not found
+   */
+  async updateWithScorecard(jdId: string, sessionId: string, scorecard: Record<string, unknown>): Promise<Session> {
+    logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithScorecard] > updateWithScorecard');
+
+    try {
+      const updateExpression = 'SET #scorecard = :scorecard, #status = :scored';
+
+      const result = await dynamoClient.send(
+        new UpdateCommand({
+          TableName: config.JD_TABLE_NAME,
+          Key: {
+            PK: `JD#${jdId}`,
+            SK: `SESSION#${sessionId}`,
+          },
+          UpdateExpression: updateExpression,
+          ExpressionAttributeNames: {
+            '#scorecard': 'scorecard',
+            '#status': 'status',
+          },
+          ExpressionAttributeValues: {
+            ':scorecard': scorecard,
+            ':scored': 'SCORED',
+            ':assessed': 'ASSESSED',
+            ':complete': 'COMPLETE',
+          },
+          ConditionExpression: 'NOT #status IN (:assessed, :complete)',
+          ReturnValues: 'ALL_NEW',
+        }),
+      );
+
+      if (!result.Attributes) {
+        logger.error({ jdId, sessionId }, '[SessionRepository.updateWithScorecard] - Updated item not returned');
+        throw new Error('Updated item not returned from DynamoDB');
+      }
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithScorecard] - Item updated in DynamoDB');
+
+      const session = this.toSession(result.Attributes as SessionItem);
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithScorecard] < updateWithScorecard');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionRepository.updateWithScorecard] - DynamoDB update failed');
+      throw error;
+    }
+  }
 }
 
 /**

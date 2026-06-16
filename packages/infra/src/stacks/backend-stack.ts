@@ -389,6 +389,33 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to ApprovePlanLambda
     table.grantReadWriteData(approvePlanLambda);
 
+    // Score Handler Lambda Function (records a scorecard for a session)
+    const scoreLambda = new NodejsFunction(this, 'ScoreFunction', {
+      functionName: `${config.CDK_APP_NAME}-score-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/scorecard/score-handler.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'ScoreFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-score-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to ScoreLambda
+    table.grantReadWriteData(scoreLambda);
+
     // Wire API Gateway routes
     // GET /health
     const healthResource = this.api.root.addResource('health');
@@ -426,6 +453,10 @@ export class BackendStack extends cdk.Stack {
     // PUT /jds/{jdId}/sessions/{sessionId}/plan/approve
     const approvePlanResource = planResource.addResource('approve');
     approvePlanResource.addMethod('PUT', new apigateway.LambdaIntegration(approvePlanLambda));
+
+    // POST /jds/{jdId}/sessions/{sessionId}/scorecard
+    const scorecardResource = sessionIdResource.addResource('scorecard');
+    scorecardResource.addMethod('POST', new apigateway.LambdaIntegration(scoreLambda));
 
     // Export the API Gateway URL as a stack output
     new cdk.CfnOutput(this, 'APIGatewayUrl', {

@@ -150,6 +150,32 @@ export class SessionService {
       throw error;
     }
   }
+
+  /**
+   * Update a session with a scorecard
+   * Writes the scorecard to the session and transitions status to SCORED
+   * Uses a condition expression to prevent overwriting in terminal states (ASSESSED, COMPLETE)
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param scorecard - The scorecard object to save
+   * @returns The updated session with status set to SCORED
+   * @throws ConditionalCheckFailedException if session status is ASSESSED or COMPLETE
+   * @throws Error if repository update fails or session not found
+   */
+  async updateScorecard(jdId: string, sessionId: string, scorecard: Record<string, unknown>): Promise<Session> {
+    logger.info({ jdId, sessionId }, '[SessionService.updateScorecard] > updateScorecard');
+
+    try {
+      // Delegate to repository to perform conditional update
+      const session = await sessionRepository.updateWithScorecard(jdId, sessionId, scorecard);
+
+      logger.info({ jdId, sessionId }, '[SessionService.updateScorecard] < updateScorecard');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionService.updateScorecard] - Failed to update scorecard');
+      throw error;
+    }
+  }
 }
 
 /**
