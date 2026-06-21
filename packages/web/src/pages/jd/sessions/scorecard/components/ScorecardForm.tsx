@@ -160,8 +160,8 @@ export const ScorecardForm = ({ session }: ScorecardFormProps): JSX.Element => {
                         rows={3}
                       />
                       <FieldDescription className="flex items-center justify-between">
-                        <div>Optional overall notes for this competency.</div>
-                        <div className="text-xs">{(field.value || '').length}/2000 characters</div>
+                        <span>Optional overall notes for this competency.</span>
+                        <span className="text-xs">{(field.value || '').length}/2000 characters</span>
                       </FieldDescription>
                       {fieldState.error && <FieldError errors={[fieldState.error]} />}
                     </Field>
@@ -231,8 +231,8 @@ export const ScorecardForm = ({ session }: ScorecardFormProps): JSX.Element => {
                                 rows={3}
                               />
                               <FieldDescription className="flex items-center justify-between">
-                                <div>Optional notes for this question.</div>
-                                <div className="text-xs">{(field.value || '').length}/1000 characters</div>
+                                <span>Optional notes for this question.</span>
+                                <span className="text-xs">{(field.value || '').length}/1000 characters</span>
                               </FieldDescription>
                               {fieldState.error && <FieldError errors={[fieldState.error]} />}
                             </Field>
