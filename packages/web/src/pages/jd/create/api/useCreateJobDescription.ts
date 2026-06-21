@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreateJobDescriptionRequest, JobDescription } from '@interview-forge/shared';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/errors/api-error';
+import { queryKeys } from '@/common/utils/query-client';
 
 /**
  * Hook to create a job description via paste or upload mode.
@@ -21,7 +22,7 @@ export const useCreateJobDescription = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobDescriptions'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobDescriptions(), exact: true });
     },
   });
 };

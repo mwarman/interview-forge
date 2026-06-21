@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApprovePlanRequest, Session } from '@interview-forge/shared';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/errors/api-error';
+import { queryKeys } from '@/common/utils/query-client';
 
 /**
  * Hook to approve and save a plan via PUT /jds/:jdId/sessions/:sessionId/plan/approve.
@@ -22,7 +23,8 @@ export const useApprovePlan = (jdId: string, sessionId: string) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sessions', jdId, sessionId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions(jdId), exact: true });
+      queryClient.invalidateQueries({ queryKey: queryKeys.session(jdId, sessionId) });
     },
   });
 };
