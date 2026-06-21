@@ -1,10 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { renderWithAllProviders } from '@/test/test-utils';
 import { Session } from '@interview-forge/shared';
 
 import { SessionCard } from './SessionCard';
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 const makeSession = (overrides: Partial<Session> = {}): Session => ({
   sessionId: '660e8400-e29b-41d4-a716-446655440001',
@@ -17,6 +27,10 @@ const makeSession = (overrides: Partial<Session> = {}): Session => ({
 });
 
 describe('SessionCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should render the candidate name', () => {
     // Arrange & Act
     renderWithAllProviders(<SessionCard session={makeSession()} />);
@@ -56,5 +70,137 @@ describe('SessionCard', () => {
   it('should render "Complete" for COMPLETE status', () => {
     renderWithAllProviders(<SessionCard session={makeSession({ status: 'COMPLETE' })} />);
     expect(screen.getByTestId('session-status-badge')).toHaveTextContent('Complete');
+  });
+
+  describe('routing behavior', () => {
+    it('should navigate to plan page for PLAN_PENDING status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'PLAN_PENDING' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for PLAN_GENERATING status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'PLAN_GENERATING' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for PLAN_ERROR status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'PLAN_ERROR' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for PLAN_GENERATED status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'PLAN_GENERATED' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to scorecard page for PLAN_APPROVED status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'PLAN_APPROVED' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/scorecard`);
+    });
+
+    it('should navigate to detail page for SCORED status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'SCORED' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/detail`);
+    });
+
+    it('should navigate to plan page for ASSESS_GENERATING status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'ASSESS_GENERATING' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for ASSESS_ERROR status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'ASSESS_ERROR' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for ASSESSED status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'ASSESSED' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
+
+    it('should navigate to plan page for COMPLETE status', async () => {
+      // Arrange
+      const user = userEvent.setup();
+      const session = makeSession({ status: 'COMPLETE' });
+      renderWithAllProviders(<SessionCard session={session} />);
+
+      // Act
+      await user.click(screen.getByTestId('session-card'));
+
+      // Assert
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    });
   });
 });

@@ -65,8 +65,7 @@ export const PlanPage = (): JSX.Element => {
   useEffect(() => {
     if (approvePlanMutation?.isSuccess) {
       toast.success('Plan approved successfully!');
-      // Navigate to confirmation view (future enhancement)
-      // For now, just show success
+      navigate(`/jds/${jdId}/sessions`, { replace: true });
     }
   }, [approvePlanMutation?.isSuccess]);
 
