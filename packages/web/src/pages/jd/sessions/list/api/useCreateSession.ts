@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreateSessionRequest, Session } from '@interview-forge/shared';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/errors/api-error';
+import { queryKeys } from '@/common/utils/query-client';
 
 /**
  * Hook to create a new session under a given JD via POST /jds/:jdId/sessions.
@@ -20,7 +21,7 @@ export const useCreateSession = (jdId: string) => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sessions', jdId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions(jdId) });
     },
   });
 };

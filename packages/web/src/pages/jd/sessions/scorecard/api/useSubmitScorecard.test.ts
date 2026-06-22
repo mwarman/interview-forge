@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiClient } from '@/common/utils/api-client';
 import { renderHookWithAllProviders, waitFor } from '@/test/test-utils';
 import { ApiError } from '@/common/utils/errors/api-error';
+import { Scorecard } from '@interview-forge/shared';
 
 import { useSubmitScorecard } from './useSubmitScorecard';
 
@@ -31,18 +32,30 @@ describe('useSubmitScorecard', () => {
 
   it('should successfully trigger scorecard submission', async () => {
     // Arrange
+    const mockScorecard: Scorecard = {
+      scorecardId: 'scorecard-123',
+      completedAt: '2026-06-01T12:00:00Z',
+      competencyScores: [
+        {
+          competencyId: 'comp-1',
+          overallNotes: 'Good leadership',
+          questionRatings: [{ questionId: 'q-1', rating: 4, notes: 'Excellent' }],
+        },
+      ],
+    };
+
     vi.mocked(apiClient.post).mockResolvedValue({ data: mockSession } as never);
 
     // Act
     const { result } = renderHookWithAllProviders(() => useSubmitScorecard(JD_ID, SESSION_ID));
-    await result.current.mutateAsync();
+    await result.current.mutateAsync(mockScorecard);
 
     // Assert
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toEqual(mockSession);
-    expect(apiClient.post).toHaveBeenCalledWith(`/jds/${JD_ID}/sessions/${SESSION_ID}/scorecard`);
+    expect(apiClient.post).toHaveBeenCalledWith(`/jds/${JD_ID}/sessions/${SESSION_ID}/scorecard`, mockScorecard);
   });
 
   it('should handle API errors', async () => {

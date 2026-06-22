@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Session, SessionStatus } from '@interview-forge/shared';
 import { apiClient } from '@/common/utils/api-client';
 import { ApiError } from '@/common/utils/errors/api-error';
+import { queryKeys } from '../utils/query-client';
 
 /**
  * Options for controlling session polling behavior
@@ -48,7 +49,7 @@ export const useGetSession = (jdId: string, sessionId: string, options?: UseGetS
   const refetchIntervalMs = options?.refetchIntervalMs ?? 10000;
 
   return useQuery<Session, ApiError>({
-    queryKey: ['sessions', jdId, sessionId],
+    queryKey: queryKeys.session(jdId, sessionId),
     queryFn: async () => {
       const response = await apiClient.get<Session>(`/jds/${jdId}/sessions/${sessionId}`);
       return response.data;

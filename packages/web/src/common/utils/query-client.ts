@@ -13,3 +13,16 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Centralized query key definitions for consistent cache management.
+ * Functions that generate query keys based on parameters to avoid hardcoding strings throughout the app.
+ */
+export const queryKeys = {
+  jobDescriptions: () => ['jobDescriptions'],
+  jobDescription: (jdId: string) => ['jobDescription', jdId],
+  sessions: (jdId: string) => ['sessions', jdId],
+  session: (jdId: string, sessionId: string) => ['sessions', jdId, sessionId],
+  plan: (jdId: string, sessionId: string) => ['plan', jdId, sessionId],
+  scorecard: (jdId: string, sessionId: string) => ['scorecard', jdId, sessionId],
+};

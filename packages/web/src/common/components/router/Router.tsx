@@ -6,6 +6,8 @@ import { JDListPage } from '@/pages/jd/list/JDListPage';
 import { JDCreatePage } from '@/pages/jd/create/JDCreatePage';
 import { JDSessionsPage } from '@/pages/jd/sessions/list/JDSessionsPage';
 import { PlanPage } from '@/pages/jd/sessions/plan/PlanPage';
+import { ScorecardPage } from '@/pages/jd/sessions/scorecard/ScorecardPage';
+import { SessionDetailPage } from '@/pages/jd/sessions/detail/SessionDetailPage';
 
 /**
  * The Router component defines the routing structure of the application using React Router.
@@ -24,6 +26,8 @@ export const Router = (): JSX.Element => {
           <Route path="/jds/create" element={<JDCreatePage />} />
           <Route path="/jds/:jdId/sessions" element={<JDSessionsPage />} />
           <Route path="/jds/:jdId/sessions/:sessionId/plan" element={<PlanPage />} />
+          <Route path="/jds/:jdId/sessions/:sessionId/scorecard" element={<ScorecardPage />} />
+          <Route path="/jds/:jdId/sessions/:sessionId/detail" element={<SessionDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

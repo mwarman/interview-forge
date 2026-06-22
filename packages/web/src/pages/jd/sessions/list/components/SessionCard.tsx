@@ -2,27 +2,24 @@ import { JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Session } from '@interview-forge/shared';
-import { Badge } from '@/common/components/shadcn/badge';
 import { Card, CardContent } from '@/common/components/shadcn/card';
+import { SessionStatusBadge } from '@/common/components/session-status/SessionStatusBadge';
 
-type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
-
-const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  PLAN_PENDING: 'outline',
-  PLAN_GENERATED: 'outline',
-  PLAN_APPROVED: 'secondary',
-  SCORED: 'secondary',
-  ASSESSED: 'default',
-  COMPLETE: 'default',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  PLAN_PENDING: 'Plan Pending',
-  PLAN_GENERATED: 'Plan Generated',
-  PLAN_APPROVED: 'Plan Approved',
-  SCORED: 'Scored',
-  ASSESSED: 'Assessed',
-  COMPLETE: 'Complete',
+/**
+ * Determines the target route based on session status.
+ * - SCORED → detail page
+ * - PLAN_APPROVED → scorecard page
+ * - All other statuses → plan page (default)
+ */
+const getRouteForStatus = (jdId: string, sessionId: string, status: string): string => {
+  switch (status) {
+    case 'SCORED':
+      return `/jds/${jdId}/sessions/${sessionId}/detail`;
+    case 'PLAN_APPROVED':
+      return `/jds/${jdId}/sessions/${sessionId}/scorecard`;
+    default:
+      return `/jds/${jdId}/sessions/${sessionId}/plan`;
+  }
 };
 
 interface SessionCardProps {
@@ -31,6 +28,10 @@ interface SessionCardProps {
 
 /**
  * SessionCard component - displays a single session with candidate name and status badge.
+ * Navigation behavior depends on session status:
+ * - SCORED: navigate to detail page
+ * - PLAN_APPROVED: navigate to scorecard page
+ * - Other statuses: navigate to plan page
  *
  * @param session - The Session object to display
  * @returns {JSX.Element} The SessionCard component
@@ -39,7 +40,8 @@ export const SessionCard = ({ session }: SessionCardProps): JSX.Element => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    navigate(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+    const route = getRouteForStatus(session.jdId, session.sessionId, session.status);
+    navigate(route);
   };
 
   return (
@@ -53,9 +55,7 @@ export const SessionCard = ({ session }: SessionCardProps): JSX.Element => {
         <span data-testid="session-candidate-name" className="truncate font-medium">
           {session.candidateName}
         </span>
-        <Badge variant={STATUS_VARIANT[session.status] ?? 'outline'} data-testid="session-status-badge">
-          {STATUS_LABEL[session.status] ?? session.status}
-        </Badge>
+        <SessionStatusBadge status={session.status} />
       </CardContent>
     </Card>
   );
