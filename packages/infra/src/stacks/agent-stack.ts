@@ -79,7 +79,7 @@ export class AgentStack extends cdk.Stack {
     // Write Plan Action Lambda Function (Bedrock Agent action group handler)
     this.writePlanActionLambda = new NodejsFunction(this, 'WritePlanActionFunction', {
       functionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/session/write-plan-action.ts'),
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/write-plan-action.ts'),
       handler: 'handle',
       runtime: lambda.Runtime.NODEJS_24_X,
       memorySize: 512,
