@@ -63,8 +63,16 @@ describe('AgentStack', () => {
     const template = Template.fromStack(stack);
     const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
     const agentValues = Object.values(agents);
-    expect(agentValues.length).toBe(1);
-    const instruction = (agentValues[0].Properties as Record<string, unknown>).Instruction as string;
+    expect(agentValues.length).toBe(2); // Plan agent + Assessment agent
+
+    // Find and verify the plan agent (by looking for plan-specific action groups)
+    const planAgent = agentValues.find((agent) => {
+      const actionGroups = (agent.Properties as Record<string, unknown>).ActionGroups as Array<Record<string, unknown>>;
+      return actionGroups.some((ag) => ag.ActionGroupName === 'interview-forge-read-jd');
+    });
+
+    expect(planAgent).toBeDefined();
+    const instruction = (planAgent!.Properties as Record<string, unknown>).Instruction as string;
     expect(typeof instruction).toBe('string');
     expect(instruction.length).toBeGreaterThan(0);
     // Verify the prompt references both action functions and action group names
@@ -89,9 +97,16 @@ describe('AgentStack', () => {
     const template = Template.fromStack(stack);
     const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
     const agentValues = Object.values(agents);
-    expect(agentValues.length).toBe(1);
+    expect(agentValues.length).toBe(2); // Plan agent + Assessment agent
 
-    const actionGroups = (agentValues[0].Properties as Record<string, unknown>).ActionGroups as Array<
+    // Find the plan agent
+    const planAgent = agentValues.find((agent) => {
+      const actionGroups = (agent.Properties as Record<string, unknown>).ActionGroups as Array<Record<string, unknown>>;
+      return actionGroups.some((ag) => ag.ActionGroupName === 'interview-forge-read-jd');
+    });
+
+    expect(planAgent).toBeDefined();
+    const actionGroups = (planAgent!.Properties as Record<string, unknown>).ActionGroups as Array<
       Record<string, unknown>
     >;
     expect(actionGroups).toBeDefined();
@@ -266,14 +281,14 @@ describe('AgentStack', () => {
     // Assert
     const template = Template.fromStack(stack);
 
-    // Verify two Lambda permission resources are created for Bedrock
+    // Verify five Lambda permission resources are created for Bedrock (2 for plan agent + 3 for assessment agent)
     const allPermissions = template.findResources('AWS::Lambda::Permission') as Record<string, Record<string, unknown>>;
     const bedrockPermissions = Object.values(allPermissions).filter(
       (permission: Record<string, unknown>) =>
         (permission.Properties as Record<string, unknown>)?.Principal === 'bedrock.amazonaws.com' &&
         (permission.Properties as Record<string, unknown>)?.Action === 'lambda:InvokeFunction',
     );
-    expect(bedrockPermissions.length).toBe(2);
+    expect(bedrockPermissions.length).toBe(5); // 2 for plan agent (read-jd, write-plan) + 3 for assessment agent (read-plan, read-scorecard, write-assessment)
   });
 
   it('should expose planAgent and planAgentAlias as public properties', () => {
