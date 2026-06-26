@@ -29,6 +29,18 @@ const ConfigSchema = z.object({
     .string()
     .min(1)
     .describe('PLAN_WORKER_FUNCTION_NAME - Lambda function name for async plan worker (required)'),
+  ASSESS_AGENT_ID: z
+    .string()
+    .min(1)
+    .describe('ASSESS_AGENT_ID - Bedrock Agent ID for assessment generation (required)'),
+  ASSESS_AGENT_ALIAS_ID: z
+    .string()
+    .min(1)
+    .describe('ASSESS_AGENT_ALIAS_ID - Bedrock Agent alias ID for assessment generation (required)'),
+  ASSESS_WORKER_FUNCTION_NAME: z
+    .string()
+    .min(1)
+    .describe('ASSESS_WORKER_FUNCTION_NAME - Lambda function name for async assessment worker (required)'),
 });
 
 /**

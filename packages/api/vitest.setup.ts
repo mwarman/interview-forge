@@ -6,3 +6,6 @@ process.env.JD_BUCKET_NAME = 'test-bucket';
 process.env.PLAN_AGENT_ID = 'test-agent-id';
 process.env.PLAN_AGENT_ALIAS_ID = 'test-agent-alias-id';
 process.env.PLAN_WORKER_FUNCTION_NAME = 'test-plan-worker-function';
+process.env.ASSESS_AGENT_ID = 'test-assess-agent-id';
+process.env.ASSESS_AGENT_ALIAS_ID = 'test-assess-agent-alias-id';
+process.env.ASSESS_WORKER_FUNCTION_NAME = 'test-assess-worker-function';
