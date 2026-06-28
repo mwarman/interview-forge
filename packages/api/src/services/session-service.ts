@@ -176,6 +176,39 @@ export class SessionService {
       throw error;
     }
   }
+
+  /**
+   * Approve a session's assessment with optional overrides
+   * Accepts optional recommendation and overrideReason values to merge into existing assessment
+   * Updates status to COMPLETE and prevents double-approval via condition expression
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param overrides - Optional object with fields to merge into assessment { recommendation?, overrideReason? }
+   * @returns The updated session with status set to COMPLETE
+   * @throws ConditionalCheckFailedException if status is not ASSESSED
+   * @throws Error if repository update fails or session not found
+   */
+  async approveAssessment(
+    jdId: string,
+    sessionId: string,
+    overrides?: { recommendation?: string; overrideReason?: string },
+  ): Promise<Session> {
+    logger.info(
+      { jdId, sessionId, hasOverrides: !!overrides },
+      '[SessionService.approveAssessment] > approveAssessment',
+    );
+
+    try {
+      // Delegate to repository with optional overrides
+      const session = await sessionRepository.updateWithApprovedAssessment(jdId, sessionId, overrides);
+
+      logger.info({ jdId, sessionId }, '[SessionService.approveAssessment] < approveAssessment');
+      return session;
+    } catch (error) {
+      logger.error({ error, jdId, sessionId }, '[SessionService.approveAssessment] - Failed to approve assessment');
+      throw error;
+    }
+  }
 }
 
 /**

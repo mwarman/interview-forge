@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { InterviewPlanSchema } from './interview-plan';
+import { RecommendationSchema } from './assessment';
 
 /**
  * SessionStatus - Zod enum for Session lifecycle states
@@ -73,3 +74,22 @@ export const ApprovePlanRequestSchema = z.object({
  * ApprovePlanRequest - TypeScript type inferred from ApprovePlanRequestSchema
  */
 export type ApprovePlanRequest = z.infer<typeof ApprovePlanRequestSchema>;
+
+/**
+ * ApproveAssessmentRequestSchema - Zod schema for approve assessment request
+ * Accepts optional recommendation override and override reason
+ * Both fields are independent and optional, allowing:
+ * - Approve as-is (no fields provided)
+ * - Override only recommendation
+ * - Add only override reason
+ * - Override both recommendation and reason
+ */
+export const ApproveAssessmentRequestSchema = z.object({
+  recommendation: RecommendationSchema.optional(),
+  overrideReason: z.string().optional(),
+});
+
+/**
+ * ApproveAssessmentRequest - TypeScript type inferred from ApproveAssessmentRequestSchema
+ */
+export type ApproveAssessmentRequest = z.infer<typeof ApproveAssessmentRequestSchema>;
