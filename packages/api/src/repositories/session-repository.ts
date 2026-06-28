@@ -324,6 +324,118 @@ export class SessionRepository {
       throw error;
     }
   }
+
+  /**
+   * Update a Session with approved assessment using conditional expression
+   * Fetches current session, merges override values into existing assessment, then updates status to COMPLETE
+   * Uses a condition expression to ensure status is ASSESSED (idempotency guard)
+   * @param jdId - The unique identifier of the parent job description
+   * @param sessionId - The unique identifier of the session
+   * @param overrides - Optional object with fields to merge into existing assessment { recommendation?, overrideReason? }
+   * @returns The updated Session entity
+   * @throws ConditionalCheckFailedException if status is not ASSESSED
+   * @throws Error if DynamoDB operations fail or item not found
+   */
+  async updateWithApprovedAssessment(
+    jdId: string,
+    sessionId: string,
+    overrides?: { recommendation?: string; overrideReason?: string },
+  ): Promise<Session> {
+    logger.debug(
+      { jdId, sessionId, hasOverrides: !!overrides },
+      '[SessionRepository.updateWithApprovedAssessment] > updateWithApprovedAssessment',
+    );
+
+    try {
+      // Fetch current session to get existing assessment
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedAssessment] - Fetching current session');
+
+      const session = await this.getById(jdId, sessionId);
+
+      if (!session) {
+        logger.error({ jdId, sessionId }, '[SessionRepository.updateWithApprovedAssessment] - Session not found');
+        throw new Error(`Session not found: ${sessionId}`);
+      }
+
+      if (!session.assessment) {
+        logger.error(
+          { jdId, sessionId },
+          '[SessionRepository.updateWithApprovedAssessment] - Assessment not found in session',
+        );
+        throw new Error(`Assessment not found in session: ${sessionId}`);
+      }
+
+      // Merge overrides into existing assessment
+      const mergedAssessment = { ...session.assessment };
+
+      if (overrides?.recommendation) {
+        logger.debug(
+          { jdId, sessionId },
+          '[SessionRepository.updateWithApprovedAssessment] - Merging recommendation override',
+        );
+        mergedAssessment.recommendation = overrides.recommendation;
+      }
+
+      if (overrides?.overrideReason) {
+        logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedAssessment] - Merging override reason');
+        mergedAssessment.overrideReason = overrides.overrideReason;
+      }
+
+      logger.debug(
+        { jdId, sessionId },
+        '[SessionRepository.updateWithApprovedAssessment] - Updating session with merged assessment and COMPLETE status',
+      );
+
+      // Update session with merged assessment and status COMPLETE
+      const updateExpression = 'SET #assessment = :assessment, #status = :complete';
+
+      const result = await dynamoClient.send(
+        new UpdateCommand({
+          TableName: config.JD_TABLE_NAME,
+          Key: {
+            PK: `JD#${jdId}`,
+            SK: `SESSION#${sessionId}`,
+          },
+          UpdateExpression: updateExpression,
+          ExpressionAttributeNames: {
+            '#assessment': 'assessment',
+            '#status': 'status',
+          },
+          ExpressionAttributeValues: {
+            ':assessment': mergedAssessment,
+            ':complete': 'COMPLETE',
+            ':assessed': 'ASSESSED',
+          },
+          ConditionExpression: '#status = :assessed',
+          ReturnValues: 'ALL_NEW',
+        }),
+      );
+
+      if (!result.Attributes) {
+        logger.error(
+          { jdId, sessionId },
+          '[SessionRepository.updateWithApprovedAssessment] - Updated item not returned',
+        );
+        throw new Error('Updated item not returned from DynamoDB');
+      }
+
+      logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedAssessment] - Item updated in DynamoDB');
+
+      const updatedSession = this.toSession(result.Attributes as SessionItem);
+
+      logger.debug(
+        { jdId, sessionId },
+        '[SessionRepository.updateWithApprovedAssessment] < updateWithApprovedAssessment',
+      );
+      return updatedSession;
+    } catch (error) {
+      logger.error(
+        { error, jdId, sessionId },
+        '[SessionRepository.updateWithApprovedAssessment] - DynamoDB update failed',
+      );
+      throw error;
+    }
+  }
 }
 
 /**
