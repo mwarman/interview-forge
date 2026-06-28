@@ -56,6 +56,9 @@ const backendStack = new BackendStack(app, 'BackendStack', {
   planAgentAlias: agentStack.planAgentAlias,
   planAgentId: agentStack.planAgent.attrAgentId,
   planAgentAliasId: agentStack.planAgentAlias.attrAgentAliasId,
+  assessAgentAlias: agentStack.assessAgentAlias,
+  assessAgentId: agentStack.assessAgent.attrAgentId,
+  assessAgentAliasId: agentStack.assessAgentAlias.attrAgentAliasId,
 });
 
 // Set stack dependencies (backend depends on data and agent)

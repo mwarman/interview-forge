@@ -11,6 +11,7 @@ describe('BackendStack', () => {
   let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
   let planAgentAlias: bedrock.CfnAgentAlias;
+  let assessAgentAlias: bedrock.CfnAgentAlias;
 
   beforeEach(() => {
     app = new cdk.App({
@@ -19,7 +20,7 @@ describe('BackendStack', () => {
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
 
-    // Create a mock Bedrock Agent and Alias for testing
+    // Create mock Bedrock Agents and Aliases for testing
     const tempStack = new cdk.Stack(app, 'TempAgentStack');
     const planAgent = new bedrock.CfnAgent(tempStack, 'TestPlanAgent', {
       agentName: 'test-plan-agent',
@@ -29,6 +30,17 @@ describe('BackendStack', () => {
     });
     planAgentAlias = new bedrock.CfnAgentAlias(tempStack, 'TestPlanAgentAlias', {
       agentId: planAgent.attrAgentId,
+      agentAliasName: 'test',
+    });
+
+    const assessAgent = new bedrock.CfnAgent(tempStack, 'TestAssessAgent', {
+      agentName: 'test-assess-agent',
+      foundationModel: 'anthropic.claude-sonnet-4-6',
+      agentResourceRoleArn: `arn:aws:iam::123456789012:role/test-agent-role`,
+      instruction: 'Test agent',
+    });
+    assessAgentAlias = new bedrock.CfnAgentAlias(tempStack, 'TestAssessAgentAlias', {
+      agentId: assessAgent.attrAgentId,
       agentAliasName: 'test',
     });
   });
@@ -47,6 +59,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -68,6 +83,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -91,6 +109,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -112,6 +133,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -131,11 +155,14 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
     const template = Template.fromStack(stack);
-    template.resourceCountIs('AWS::Lambda::Function', 12);
+    template.resourceCountIs('AWS::Lambda::Function', 15);
 
     // Health Lambda: 128MB, 6s
     template.hasResourceProperties('AWS::Lambda::Function', {
@@ -220,6 +247,27 @@ describe('BackendStack', () => {
       MemorySize: 128,
       Timeout: 15,
     });
+
+    // Assess Kickoff Lambda: 128MB, 10s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-assess-kickoff-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 10,
+    });
+
+    // Assess Worker Lambda: 256MB, 300s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-assess-worker-${config.CDK_ENV_NAME}`,
+      MemorySize: 256,
+      Timeout: 300,
+    });
+
+    // Approve Assess Lambda: 128MB, 15s
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: `${config.CDK_APP_NAME}-approve-assess-${config.CDK_ENV_NAME}`,
+      MemorySize: 128,
+      Timeout: 15,
+    });
   });
 
   it('should wire all Lambda functions to API Gateway with proxy integration', () => {
@@ -234,6 +282,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -272,6 +323,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -287,12 +341,14 @@ describe('BackendStack', () => {
           LOG_ENABLED: config.CDK_LOG_ENABLED,
           PLAN_AGENT_ID: 'test-agent-id',
           PLAN_AGENT_ALIAS_ID: 'test-alias-id',
+          ASSESS_AGENT_ID: 'test-assess-agent-id',
+          ASSESS_AGENT_ALIAS_ID: 'test-assess-alias-id',
         },
       },
     });
 
     // Additionally verify that JD_TABLE_NAME and JD_BUCKET_NAME are present
-    template.resourceCountIs('AWS::Lambda::Function', 12);
+    template.resourceCountIs('AWS::Lambda::Function', 15);
     const allResources = template.findResources('AWS::Lambda::Function') as Record<
       string,
       Record<string, Record<string, Record<string, unknown>>>
@@ -323,13 +379,16 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
     const template = Template.fromStack(stack);
 
     // Verify CloudWatch Log Groups are created
-    template.resourceCountIs('AWS::Logs::LogGroup', 12);
+    template.resourceCountIs('AWS::Logs::LogGroup', 15);
 
     // Verify retention is set to ONE_WEEK
     template.hasResourceProperties('AWS::Logs::LogGroup', {
@@ -349,6 +408,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -414,6 +476,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
@@ -438,6 +503,9 @@ describe('BackendStack', () => {
       planAgentAlias,
       planAgentId: 'test-agent-id',
       planAgentAliasId: 'test-alias-id',
+      assessAgentAlias,
+      assessAgentId: 'test-assess-agent-id',
+      assessAgentAliasId: 'test-assess-alias-id',
     });
 
     // Assert
