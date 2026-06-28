@@ -24,6 +24,9 @@ interface BackendStackProps extends cdk.StackProps {
   planAgentAlias: bedrock.CfnAgentAlias;
   planAgentId: string;
   planAgentAliasId: string;
+  assessAgentAlias: bedrock.CfnAgentAlias;
+  assessAgentId: string;
+  assessAgentAliasId: string;
 }
 
 /**
@@ -36,7 +39,17 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
-    const { config, table, bucket, planAgentAlias, planAgentId, planAgentAliasId } = props;
+    const {
+      config,
+      table,
+      bucket,
+      planAgentAlias,
+      planAgentId,
+      planAgentAliasId,
+      assessAgentAlias,
+      assessAgentId,
+      assessAgentAliasId,
+    } = props;
 
     // Create shared Lambda environment variables
     const lambdaEnvironment = {
@@ -48,6 +61,9 @@ export class BackendStack extends cdk.Stack {
       PLAN_AGENT_ID: planAgentId,
       PLAN_AGENT_ALIAS_ID: planAgentAliasId,
       PLAN_WORKER_FUNCTION_NAME: 'placeholder', // will be overridden in PlanKickoffLambda environment to avoid circular dependency
+      ASSESS_AGENT_ID: assessAgentId,
+      ASSESS_AGENT_ALIAS_ID: assessAgentAliasId,
+      ASSESS_WORKER_FUNCTION_NAME: 'placeholder', // will be overridden in AssessKickoffLambda environment to avoid circular dependency
     };
 
     // Create the API Gateway REST API with CORS enabled
@@ -416,6 +432,118 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to ScoreLambda
     table.grantReadWriteData(scoreLambda);
 
+    // Create SQS Dead Letter Queue for assess-worker Lambda
+    const assessWorkerDLQ = new sqs.Queue(this, 'AssessWorkerDLQ', {
+      queueName: `${config.CDK_APP_NAME}-assess-worker-dlq-${config.CDK_ENV_NAME}`,
+      retentionPeriod: cdk.Duration.days(1),
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Assess Worker Lambda Function (asynchronously generates assessment using Bedrock Agent)
+    // Invoked only by assess-kickoff-handler, never directly by API Gateway
+    const assessWorkerLambda = new NodejsFunction(this, 'AssessWorkerFunction', {
+      functionName: `${config.CDK_APP_NAME}-assess-worker-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/assessment/assess-worker-handler.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(300),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'AssessWorkerFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-assess-worker-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Configure EventInvokeConfig for async invocations with DLQ and max 1 retry (0 retries = immediate DLQ on first failure)
+    assessWorkerLambda.configureAsyncInvoke({
+      maxEventAge: cdk.Duration.seconds(60),
+      retryAttempts: 0,
+      onFailure: new lambdaDestinations.SqsDestination(assessWorkerDLQ),
+    });
+
+    // Grant permissions to AssessWorkerLambda
+    table.grantReadWriteData(assessWorkerLambda);
+
+    // Grant bedrock:InvokeAgent permission to AssessWorkerLambda on the assessment agent
+    assessWorkerLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['bedrock:InvokeAgent'],
+        resources: [assessAgentAlias.attrAgentAliasArn],
+      }),
+    );
+
+    // Assess Kickoff Handler Lambda Function (initiates async assessment generation)
+    // Receives API Gateway request and asynchronously invokes assess-worker
+    const assessKickoffLambda = new NodejsFunction(this, 'AssessKickoffFunction', {
+      functionName: `${config.CDK_APP_NAME}-assess-kickoff-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/assessment/assess-kickoff-handler.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(10),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'AssessKickoffFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-assess-kickoff-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: {
+        ...lambdaEnvironment,
+        ASSESS_WORKER_FUNCTION_NAME: assessWorkerLambda.functionName,
+      },
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to AssessKickoffLambda
+    table.grantReadWriteData(assessKickoffLambda);
+
+    // Grant lambda:InvokeFunction permission to AssessKickoffLambda to invoke AssessWorkerLambda
+    assessWorkerLambda.grantInvoke(assessKickoffLambda);
+
+    // Approve Assessment Handler Lambda Function (approves an assessment)
+    const approveAssessLambda = new NodejsFunction(this, 'ApproveAssessFunction', {
+      functionName: `${config.CDK_APP_NAME}-approve-assess-${config.CDK_ENV_NAME}`,
+      entry: path.join(import.meta.dirname, '../../../api/src/handlers/assessment/approve-assessment-handler.ts'),
+      handler: 'handle',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(15),
+      loggingFormat: lambda.LoggingFormat.JSON,
+      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+      systemLogLevelV2: lambda.SystemLogLevel.INFO,
+      logGroup: new logs.LogGroup(this, 'ApproveAssessFunctionLogGroup', {
+        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-approve-assess-${config.CDK_ENV_NAME}`,
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      environment: lambdaEnvironment,
+      bundling: {
+        minify: true,
+        target: 'esnext',
+        sourceMap: false,
+      },
+    });
+
+    // Grant permissions to ApproveAssessLambda
+    table.grantReadWriteData(approveAssessLambda);
+
     // Wire API Gateway routes
     // GET /health
     const healthResource = this.api.root.addResource('health');
@@ -457,6 +585,14 @@ export class BackendStack extends cdk.Stack {
     // POST /jds/{jdId}/sessions/{sessionId}/scorecard
     const scorecardResource = sessionIdResource.addResource('scorecard');
     scorecardResource.addMethod('POST', new apigateway.LambdaIntegration(scoreLambda));
+
+    // POST /jds/{jdId}/sessions/{sessionId}/assessment
+    const assessmentResource = sessionIdResource.addResource('assessment');
+    assessmentResource.addMethod('POST', new apigateway.LambdaIntegration(assessKickoffLambda));
+
+    // PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve
+    const approveAssessmentResource = assessmentResource.addResource('approve');
+    approveAssessmentResource.addMethod('PUT', new apigateway.LambdaIntegration(approveAssessLambda));
 
     // Export the API Gateway URL as a stack output
     new cdk.CfnOutput(this, 'APIGatewayUrl', {
