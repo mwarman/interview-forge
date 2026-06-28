@@ -56,8 +56,9 @@ export type CompetencyAssessment = z.infer<typeof CompetencyAssessmentSchema>;
 
 /**
  * AssessmentSchema - Zod schema for Assessment entity
- * Validates assessment attributes: assessmentId, recommendation, confidence, reasoning, competency assessments, and generation timestamp
+ * Validates assessment attributes: assessmentId, recommendation, confidence, reasoning, competency assessments, generation timestamp, and optional override reason
  * Requires minimum 100 character reasoning and at least one competency assessment
+ * overrideReason is optional and can be added when approving an assessment with manual override
  */
 export const AssessmentSchema = z.object({
   assessmentId: z
@@ -77,6 +78,10 @@ export const AssessmentSchema = z.object({
   generatedAt: z.iso.datetime('generatedAt must be a valid ISO 8601 datetime').meta({
     description: 'Timestamp when the assessment was generated',
   }),
+  overrideReason: z
+    .string()
+    .optional()
+    .meta({ description: 'Optional reason provided when manually overriding the assessment recommendation' }),
 });
 
 /**

@@ -10,6 +10,7 @@ export {
   SessionStatusSchema,
   CreateSessionRequestSchema,
   ApprovePlanRequestSchema,
+  ApproveAssessmentRequestSchema,
 } from './schemas/session';
 export { InterviewPlanSchema, CompetencySchema, QuestionSchema, QuestionTypeSchema } from './schemas/interview-plan';
 export { ScorecardSchema, CompetencyNotesSchema, QuestionRatingSchema } from './schemas/scorecard';
@@ -33,7 +34,13 @@ export type {
   CreatePresignedUrlRequest,
   CreatePresignedUrlResponse,
 } from './schemas/job-description';
-export type { Session, SessionStatus, CreateSessionRequest, ApprovePlanRequest } from './schemas/session';
+export type {
+  Session,
+  SessionStatus,
+  CreateSessionRequest,
+  ApprovePlanRequest,
+  ApproveAssessmentRequest,
+} from './schemas/session';
 export type { InterviewPlan, Competency, Question, QuestionType } from './schemas/interview-plan';
 export type { Scorecard, CompetencyNotes, QuestionRating } from './schemas/scorecard';
 export type { Assessment, CompetencyAssessment, Recommendation, Confidence } from './schemas/assessment';
