@@ -111,12 +111,13 @@ export const ScorecardForm = ({ session }: ScorecardFormProps): JSX.Element => {
     submitScorecard(scorecardData, {
       onError: (error) => {
         console.error('Error submitting scorecard:', error);
+        toast.error(`Failed to submit scorecard: ${error?.message}`);
         setError(error.message || 'An unexpected error occurred while submitting the scorecard.');
       },
       onSuccess: () => {
         console.log('Scorecard submitted successfully');
         toast.success('Scorecard submitted successfully!');
-        navigate(`/jds/${session.jdId}/sessions/${session.sessionId}/detail`);
+        navigate(`/jds/${session.jdId}/sessions`);
       },
     });
   };

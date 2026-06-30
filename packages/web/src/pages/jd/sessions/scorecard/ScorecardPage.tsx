@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
-import { useSubmitScorecard } from './api/useSubmitScorecard';
 import { ScorecardForm } from './components/ScorecardForm';
 
 /**
@@ -29,50 +28,15 @@ export const ScorecardPage = (): JSX.Element | null => {
     isError: isSessionError,
   } = useGetSession(jdId ?? '', sessionId ?? '');
 
-  // Submit scorecard mutation
-  const submitMutation = useSubmitScorecard(jdId ?? '', sessionId ?? '');
-
   /**
    * Redirect if session status is not PLAN_APPROVED
    */
   useEffect(() => {
     if (session && session.status !== 'PLAN_APPROVED') {
       toast.info('Scorecard is only available for approved plans. Redirecting...');
-      // Determine redirect target based on status
-      const redirectMap: Record<string, string> = {
-        PLAN_PENDING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_GENERATING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_GENERATED: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_ERROR: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        SCORED: `/jds/${jdId}/sessions/${sessionId}/detail`,
-        ASSESS_GENERATING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        ASSESS_ERROR: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        ASSESSED: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        COMPLETE: `/jds/${jdId}/sessions/${sessionId}/plan`,
-      };
-      const target = redirectMap[session.status] || `/jds/${jdId}/sessions/${sessionId}/plan`;
-      navigate(target, { replace: true });
+      navigate(`/jds/${jdId}/sessions/`, { replace: true });
     }
   }, [session?.status, jdId, sessionId, navigate]);
-
-  /**
-   * Handle successful scorecard submission
-   */
-  useEffect(() => {
-    if (submitMutation.isSuccess) {
-      toast.success('Scorecard submitted successfully!');
-      navigate(`/jds/${jdId}/sessions/${sessionId}/detail`);
-    }
-  }, [submitMutation.isSuccess, jdId, sessionId, navigate]);
-
-  /**
-   * Handle submission errors
-   */
-  useEffect(() => {
-    if (submitMutation.isError) {
-      toast.error(`Failed to submit scorecard: ${submitMutation.error?.message}`);
-    }
-  }, [submitMutation.isError, submitMutation.error?.message]);
 
   // Loading state
   if (isSessionLoading) {

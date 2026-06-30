@@ -13,12 +13,21 @@ import { SessionStatusBadge } from '@/common/components/session-status/SessionSt
  */
 const getRouteForStatus = (jdId: string, sessionId: string, status: string): string => {
   switch (status) {
-    case 'SCORED':
-      return `/jds/${jdId}/sessions/${sessionId}/detail`;
+    case 'PLAN_PENDING':
+    case 'PLAN_GENERATING':
+    case 'PLAN_ERROR':
+    case 'PLAN_GENERATED':
+      return `/jds/${jdId}/sessions/${sessionId}/plan`;
     case 'PLAN_APPROVED':
       return `/jds/${jdId}/sessions/${sessionId}/scorecard`;
+    case 'SCORED':
+    case 'ASSESS_GENERATING':
+    case 'ASSESS_ERROR':
+    case 'ASSESSED':
+    case 'COMPLETE':
+      return `/jds/${jdId}/sessions/${sessionId}/assessment`;
     default:
-      return `/jds/${jdId}/sessions/${sessionId}/plan`;
+      return `/jds/${jdId}/sessions/${sessionId}/detail`;
   }
 };
 
