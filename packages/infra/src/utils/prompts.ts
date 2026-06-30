@@ -135,7 +135,9 @@ Follow these steps precisely:
    - Current ISO 8601 datetime in the generatedAt field
    - Exactly 4-8 competencies, each with 3-5 questions
 
-5. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
+5. Ensure the plan is **valid JSON** and adheres strictly to the schema provided above.
+
+6. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
 
 ## Rules
 
