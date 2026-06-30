@@ -4,32 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Session } from '@interview-forge/shared';
 import { Card, CardContent } from '@/common/components/shadcn/card';
 import { SessionStatusBadge } from '@/common/components/session-status/SessionStatusBadge';
-
-/**
- * Determines the target route based on session status.
- * - SCORED → detail page
- * - PLAN_APPROVED → scorecard page
- * - All other statuses → plan page (default)
- */
-const getRouteForStatus = (jdId: string, sessionId: string, status: string): string => {
-  switch (status) {
-    case 'PLAN_PENDING':
-    case 'PLAN_GENERATING':
-    case 'PLAN_ERROR':
-    case 'PLAN_GENERATED':
-      return `/jds/${jdId}/sessions/${sessionId}/plan`;
-    case 'PLAN_APPROVED':
-      return `/jds/${jdId}/sessions/${sessionId}/scorecard`;
-    case 'SCORED':
-    case 'ASSESS_GENERATING':
-    case 'ASSESS_ERROR':
-    case 'ASSESSED':
-    case 'COMPLETE':
-      return `/jds/${jdId}/sessions/${sessionId}/assessment`;
-    default:
-      return `/jds/${jdId}/sessions/${sessionId}/detail`;
-  }
-};
+import { getSessionRoute } from '@/common/utils/session-routing';
 
 interface SessionCardProps {
   session: Session;
@@ -49,7 +24,7 @@ export const SessionCard = ({ session }: SessionCardProps): JSX.Element => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    const route = getRouteForStatus(session.jdId, session.sessionId, session.status);
+    const route = getSessionRoute(session.jdId, session.sessionId, session.status);
     navigate(route);
   };
 

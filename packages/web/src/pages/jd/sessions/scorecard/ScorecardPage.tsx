@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
+import { getSessionRoute } from '@/common/utils/session-routing';
 import { ScorecardForm } from './components/ScorecardForm';
 
 /**
@@ -34,7 +35,8 @@ export const ScorecardPage = (): JSX.Element | null => {
   useEffect(() => {
     if (session && session.status !== 'PLAN_APPROVED') {
       toast.info('Scorecard is only available for approved plans. Redirecting...');
-      navigate(`/jds/${jdId}/sessions/`, { replace: true });
+      const route = getSessionRoute(jdId ?? '', sessionId ?? '', session.status);
+      navigate(route, { replace: true });
     }
   }, [session?.status, jdId, sessionId, navigate]);
 

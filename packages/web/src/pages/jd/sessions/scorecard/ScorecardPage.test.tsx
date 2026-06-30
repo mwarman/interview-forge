@@ -144,7 +144,7 @@ describe('ScorecardPage', () => {
     );
   });
 
-  it('should redirect to detail page when status is SCORED', async () => {
+  it('should redirect to assessment page when status is SCORED', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -163,7 +163,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/detail',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });
@@ -293,7 +293,7 @@ describe('ScorecardPage', () => {
     );
   });
 
-  it('should redirect for ASSESS_GENERATING status', async () => {
+  it('should redirect to assessment page for ASSESS_GENERATING status', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -312,12 +312,12 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/plan',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });
 
-  it('should redirect for ASSESSED status', async () => {
+  it('should redirect to assessment page for ASSESSED status', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -336,7 +336,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/plan',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });

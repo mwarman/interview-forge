@@ -138,7 +138,7 @@ describe('SessionCard', () => {
       expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/scorecard`);
     });
 
-    it('should navigate to detail page for SCORED status', async () => {
+    it('should navigate to assessment page for SCORED status', async () => {
       // Arrange
       const user = userEvent.setup();
       const session = makeSession({ status: 'SCORED' });
@@ -148,10 +148,10 @@ describe('SessionCard', () => {
       await user.click(screen.getByTestId('session-card'));
 
       // Assert
-      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/detail`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/assessment`);
     });
 
-    it('should navigate to plan page for ASSESS_GENERATING status', async () => {
+    it('should navigate to assessment page for ASSESS_GENERATING status', async () => {
       // Arrange
       const user = userEvent.setup();
       const session = makeSession({ status: 'ASSESS_GENERATING' });
@@ -161,10 +161,10 @@ describe('SessionCard', () => {
       await user.click(screen.getByTestId('session-card'));
 
       // Assert
-      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/assessment`);
     });
 
-    it('should navigate to plan page for ASSESS_ERROR status', async () => {
+    it('should navigate to assessment page for ASSESS_ERROR status', async () => {
       // Arrange
       const user = userEvent.setup();
       const session = makeSession({ status: 'ASSESS_ERROR' });
@@ -174,10 +174,10 @@ describe('SessionCard', () => {
       await user.click(screen.getByTestId('session-card'));
 
       // Assert
-      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/assessment`);
     });
 
-    it('should navigate to plan page for ASSESSED status', async () => {
+    it('should navigate to assessment page for ASSESSED status', async () => {
       // Arrange
       const user = userEvent.setup();
       const session = makeSession({ status: 'ASSESSED' });
@@ -187,10 +187,10 @@ describe('SessionCard', () => {
       await user.click(screen.getByTestId('session-card'));
 
       // Assert
-      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/assessment`);
     });
 
-    it('should navigate to plan page for COMPLETE status', async () => {
+    it('should navigate to assessment page for COMPLETE status', async () => {
       // Arrange
       const user = userEvent.setup();
       const session = makeSession({ status: 'COMPLETE' });
@@ -200,7 +200,7 @@ describe('SessionCard', () => {
       await user.click(screen.getByTestId('session-card'));
 
       // Assert
-      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/plan`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/jds/${session.jdId}/sessions/${session.sessionId}/assessment`);
     });
   });
 });
