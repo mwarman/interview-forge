@@ -1,6 +1,5 @@
 import { JSX, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Assessment, ApproveAssessmentRequest, Recommendation } from '@interview-forge/shared';
@@ -105,22 +104,7 @@ export const AssessmentPage = (): JSX.Element => {
   }
 
   return (
-    <div data-testid="assessment-page" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-      {/* Header with back button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => navigate(-1)}
-          data-testid="back-button"
-          aria-label="Go back"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Go back to sessions</span>
-        </Button>
-        <h1 className="flex-1 text-2xl font-bold">Assessment for {session.candidateName}</h1>
-      </div>
-
+    <div data-testid="assessment-page">
       {/* State-based content */}
       {session.status === 'ASSESS_GENERATING' && <AssessmentGeneratingState />}
 
@@ -153,7 +137,6 @@ export const AssessmentPage = (): JSX.Element => {
       {session.status === 'COMPLETE' && session.assessment && (
         <AssessmentCompleteState
           assessment={session.assessment as Assessment}
-          onBack={() => navigate(`/jds/${jdId}/sessions`, { replace: true })}
           onExportPdf={() => {
             // TODO: Implement PDF export in future story
             toast.info('PDF export coming soon');

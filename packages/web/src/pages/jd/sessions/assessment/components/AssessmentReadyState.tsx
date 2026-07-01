@@ -61,7 +61,7 @@ export const AssessmentReadyState = ({
   const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false);
 
   return (
-    <div data-testid={testId} className="mt-6 space-y-6">
+    <div data-testid={testId} className="space-y-6">
       {/* Recommendation Summary Card */}
       <Card>
         <CardHeader>

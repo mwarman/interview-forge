@@ -94,7 +94,6 @@ describe('AssessmentPage', () => {
     // Assert
     await waitFor(() => {
       expect(screen.getByTestId('assessment-page')).toBeInTheDocument();
-      expect(screen.getByText('Assessment for John Doe')).toBeInTheDocument();
     });
   });
 
@@ -236,7 +235,7 @@ describe('AssessmentPage', () => {
     // Assert
     await waitFor(() => {
       expect(screen.getByTestId('assessment-complete-state')).toBeInTheDocument();
-      expect(screen.getByText('Assessment Complete')).toBeInTheDocument();
+      expect(screen.getByText('Final Assessment')).toBeInTheDocument();
       expect(screen.getByTestId('export-pdf-button')).toBeInTheDocument();
     });
   });

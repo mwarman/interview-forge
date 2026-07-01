@@ -1,5 +1,5 @@
 import { JSX } from 'react';
-import { ArrowLeftIcon, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 import { Assessment, Confidence } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
@@ -12,11 +12,6 @@ interface AssessmentCompleteStateProps {
    * The assessment from session.assessment
    */
   assessment: Assessment;
-
-  /**
-   * Callback fired when back button is clicked
-   */
-  onBack: () => void;
 
   /**
    * Callback fired when PDF export button is clicked (stubbed for future implementation)
@@ -41,34 +36,17 @@ const confidenceLabelMap: Record<Confidence, string> = {
  * No approval actions available in this state.
  *
  * @param assessment - The assessment from session.assessment
- * @param onBack - Callback fired when back button is clicked
  * @param onExportPdf - Callback fired when PDF export button is clicked (optional)
  * @param testId - Optional test ID for testing
  * @returns {JSX.Element} The AssessmentCompleteState component
  */
 export const AssessmentCompleteState = ({
   assessment,
-  onBack,
   onExportPdf,
   testId = 'assessment-complete-state',
 }: AssessmentCompleteStateProps): JSX.Element => {
   return (
-    <div data-testid={testId} className="mt-6 space-y-6">
-      {/* Header with back button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onBack}
-          data-testid="back-button"
-          aria-label="Go back to sessions"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Go back to sessions</span>
-        </Button>
-        <h2 className="flex-1 text-2xl font-bold">Assessment Complete</h2>
-      </div>
-
+    <div data-testid={testId} className="space-y-6">
       {/* Assessment Summary Card (Read-only) */}
       <Card>
         <CardHeader>

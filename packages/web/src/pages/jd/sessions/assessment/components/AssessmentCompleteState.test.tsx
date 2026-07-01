@@ -28,24 +28,9 @@ describe('AssessmentCompleteState', () => {
     vi.clearAllMocks();
   });
 
-  it('should render complete state header', () => {
-    // Arrange
-    const onBack = vi.fn();
-
-    // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
-
-    // Assert
-    expect(screen.getByTestId('assessment-complete-state')).toBeInTheDocument();
-    expect(screen.getByText('Assessment Complete')).toBeInTheDocument();
-  });
-
   it('should render final assessment card', () => {
-    // Arrange
-    const onBack = vi.fn();
-
-    // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
+    // Arrange &Act
+    render(<AssessmentCompleteState assessment={mockAssessment} />);
 
     // Assert
     expect(screen.getByText('Final Assessment')).toBeInTheDocument();
@@ -54,22 +39,16 @@ describe('AssessmentCompleteState', () => {
   });
 
   it('should render reasoning text', () => {
-    // Arrange
-    const onBack = vi.fn();
-
-    // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
+    // Arrange & Act
+    render(<AssessmentCompleteState assessment={mockAssessment} />);
 
     // Assert
     expect(screen.getByText(/Exceptional candidate who exceeded expectations/)).toBeInTheDocument();
   });
 
   it('should render competency assessments', () => {
-    // Arrange
-    const onBack = vi.fn();
-
-    // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
+    // Arrange & Act
+    render(<AssessmentCompleteState assessment={mockAssessment} />);
 
     // Assert
     expect(screen.getByText('Competency Assessments')).toBeInTheDocument();
@@ -78,11 +57,10 @@ describe('AssessmentCompleteState', () => {
 
   it('should render PDF export button', () => {
     // Arrange
-    const onBack = vi.fn();
     const onExportPdf = vi.fn();
 
     // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} onExportPdf={onExportPdf} />);
+    render(<AssessmentCompleteState assessment={mockAssessment} onExportPdf={onExportPdf} />);
 
     // Assert
     expect(screen.getByTestId('export-pdf-button')).toBeInTheDocument();
@@ -92,10 +70,9 @@ describe('AssessmentCompleteState', () => {
   it('should call onExportPdf when PDF button is clicked', async () => {
     // Arrange
     const user = userEvent.setup();
-    const onBack = vi.fn();
     const onExportPdf = vi.fn();
 
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} onExportPdf={onExportPdf} />);
+    render(<AssessmentCompleteState assessment={mockAssessment} onExportPdf={onExportPdf} />);
 
     // Act
     await user.click(screen.getByTestId('export-pdf-button'));
@@ -105,27 +82,10 @@ describe('AssessmentCompleteState', () => {
   });
 
   it('should disable PDF button when onExportPdf is not provided', () => {
-    // Arrange
-    const onBack = vi.fn();
-
-    // Act
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
+    // Arrange & Act
+    render(<AssessmentCompleteState assessment={mockAssessment} />);
 
     // Assert
     expect(screen.getByTestId('export-pdf-button')).toBeDisabled();
-  });
-
-  it('should call onBack when back button is clicked', async () => {
-    // Arrange
-    const user = userEvent.setup();
-    const onBack = vi.fn();
-
-    render(<AssessmentCompleteState assessment={mockAssessment} onBack={onBack} />);
-
-    // Act
-    await user.click(screen.getByTestId('back-button'));
-
-    // Assert
-    expect(onBack).toHaveBeenCalledOnce();
   });
 });

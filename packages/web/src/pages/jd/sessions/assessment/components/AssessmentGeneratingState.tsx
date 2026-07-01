@@ -21,7 +21,7 @@ export const AssessmentGeneratingState = ({
   testId = 'assessment-generating-state',
 }: AssessmentGeneratingStateProps): JSX.Element => {
   return (
-    <div data-testid={testId} className="mt-6 space-y-6">
+    <div data-testid={testId} className="space-y-6">
       <div>
         <h2 className="text-xl font-bold">Generating assessment…</h2>
         <p className="text-muted-foreground mt-2 text-sm">This may take a few moments. Please wait.</p>
