@@ -22,9 +22,16 @@ export const SessionLayout = (): JSX.Element => {
   return (
     <div data-testid="session-layout" className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6">
       {/* Session Layout Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleBackClick} data-testid="back-button" aria-label="Go back">
-          <ArrowLeftIcon className="size-4" />
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="justify-start"
+          onClick={handleBackClick}
+          data-testid="back-button"
+          aria-label="Go back"
+        >
+          <ArrowLeftIcon className="size-5" />
           <span className="sr-only">Go back to session list</span>
         </Button>
         {isLoading ? (
