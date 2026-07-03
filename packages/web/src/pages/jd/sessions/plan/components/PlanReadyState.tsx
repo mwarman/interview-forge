@@ -137,7 +137,7 @@ export const PlanReadyState = ({
   };
 
   return (
-    <div data-testid={testId} className="mt-6 space-y-6">
+    <div data-testid={testId} className="space-y-6">
       <div>
         <h2 className="text-xl font-bold">Review the Plan</h2>
         <p className="text-muted-foreground mt-2 text-sm">

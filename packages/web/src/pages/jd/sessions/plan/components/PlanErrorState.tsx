@@ -43,18 +43,24 @@ export const PlanErrorState = ({
   testId = 'plan-error-state',
 }: PlanErrorStateProps): JSX.Element => {
   return (
-    <div data-testid={testId} className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
+    <div data-testid={testId} className="mx-auto max-w-2xl">
       <Alert variant="destructive">
-        <AlertTriangleIcon className="h-4 w-4" />
+        <AlertTriangleIcon className="size-4" />
         <AlertTitle>Plan Generation Failed</AlertTitle>
-        <AlertDescription data-testid="error-message">{errorMessage}</AlertDescription>
+        <AlertDescription className="my-2 space-y-2">
+          <div data-testid="error-message">{errorMessage}</div>
+          <Button
+            size="xs"
+            onClick={onRetry}
+            disabled={isRetrying}
+            data-testid="retry-generation-button"
+            aria-label="Retry plan generation"
+          >
+            {isRetrying ? 'Retrying…' : 'Retry Generation'}
+            <span className="sr-only">Retry plan generation</span>
+          </Button>
+        </AlertDescription>
       </Alert>
-
-      <div className="flex justify-center">
-        <Button onClick={onRetry} disabled={isRetrying} data-testid="retry-generation-button">
-          {isRetrying ? 'Retrying…' : 'Retry Generation'}
-        </Button>
-      </div>
     </div>
   );
 };

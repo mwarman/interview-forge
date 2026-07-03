@@ -1,6 +1,6 @@
 import { JSX, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, FileCheckCorner } from 'lucide-react';
+import { FileCheckCorner, Form } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ApprovePlanRequest, InterviewPlan } from '@interview-forge/shared';
@@ -9,9 +9,9 @@ import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
 import { useCreatePlan } from './api/useCreatePlan';
 import { useApprovePlan } from './api/useApprovePlan';
-import { PlanGeneratingState } from './components/PlanGeneratingState';
 import { PlanErrorState } from './components/PlanErrorState';
 import { PlanReadyState } from './components/PlanReadyState';
+import { SkeletonLoaderBlock } from '@/common/components/loader/SkeletonLoaderBlock';
 
 /**
  * PlanPage component - orchestrates the plan review and edit page.
@@ -111,24 +111,16 @@ export const PlanPage = (): JSX.Element => {
   }
 
   return (
-    <div data-testid="plan-page" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-      {/* Header with back button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => navigate(-1)}
-          data-testid="back-button"
-          aria-label="Go back"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Go back to sessions</span>
-        </Button>
-        <h1 className="flex-1 text-2xl font-bold">Interview Plan for {session.candidateName}</h1>
-      </div>
-
+    <div data-testid="plan-page">
       {/* State-based content */}
-      {session.status === 'PLAN_GENERATING' && <PlanGeneratingState />}
+      {session.status === 'PLAN_GENERATING' && (
+        <SkeletonLoaderBlock
+          title="Generating Plan"
+          description="Please wait while we generate your plan."
+          icon={<Form className="mb-4 size-16" />}
+          testId="plan-generating-state"
+        />
+      )}
 
       {session.status === 'PLAN_ERROR' && (
         <PlanErrorState
@@ -150,20 +142,24 @@ export const PlanPage = (): JSX.Element => {
       )}
 
       {session.status === 'PLAN_APPROVED' && (
-        <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
+        <div className="mx-auto max-w-2xl" data-testid="plan-approved-state">
           <Alert
             className="border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-50"
             data-testid="plan-approved-state"
           >
-            <FileCheckCorner className="mb-4 h-10 w-10 text-green-400" />
+            <FileCheckCorner className="size-4" />
             <AlertTitle>Plan Approved</AlertTitle>
-            <AlertDescription>
-              <div className="flex flex-col gap-2">
-                Your interview plan has been approved and is ready for the next phase.
-                <Button onClick={() => navigate(-1)} variant="default" size="xs" className="self-start">
-                  Return to Sessions
-                </Button>
-              </div>
+            <AlertDescription className="my-2 space-y-2">
+              <div>Your interview plan has been approved and is ready for the next phase.</div>
+              <Button
+                size="xs"
+                onClick={() => navigate(`/jds/${jdId}/sessions`)}
+                className="self-start"
+                data-testid="return-to-sessions-button"
+                aria-label="Return to sessions"
+              >
+                Return to Sessions
+              </Button>
             </AlertDescription>
           </Alert>
         </div>

@@ -162,7 +162,7 @@ describe('PlanPage', () => {
     renderWithAllProviders(<PlanPage />);
 
     // Assert
-    expect(screen.getByTestId('plan-generating-state-mock')).toBeInTheDocument();
+    expect(screen.getByTestId('plan-generating-state')).toBeInTheDocument();
   });
 
   it('should show error state when session status is PLAN_ERROR', async () => {
@@ -251,31 +251,5 @@ describe('PlanPage', () => {
     // Assert
     expect(screen.getByText('Plan Approved')).toBeInTheDocument();
     expect(screen.getByText(/ready for the next phase/)).toBeInTheDocument();
-  });
-
-  it('should render back button', async () => {
-    // Arrange
-    const { useGetSession } = await import('@/common/api/useGetSession');
-    const { useCreatePlan } = await import('./api/useCreatePlan');
-
-    vi.mocked(useGetSession).mockReturnValue({
-      isLoading: false,
-      data: mockSession,
-      isError: false,
-    } as never);
-
-    vi.mocked(useCreatePlan).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      isSuccess: false,
-      isError: false,
-      error: null,
-    } as never);
-
-    // Act
-    renderWithAllProviders(<PlanPage />);
-
-    // Assert
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
   });
 });
