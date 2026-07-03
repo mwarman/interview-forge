@@ -1,6 +1,7 @@
 import { JSX } from 'react';
 import { Outlet } from 'react-router-dom';
 
+import { Navigation } from '@/common/components/navigation/Navigation';
 import { ThemeToggle } from '@/common/components/theme/ThemeToggle';
 import { About } from '../components/about/About';
 
@@ -23,7 +24,9 @@ export const Layout = (): JSX.Element => {
           </div>
 
           {/* left side */}
-          <div data-testid="layout-header-left"></div>
+          <div data-testid="layout-header-left">
+            <Navigation />
+          </div>
 
           {/* right side */}
           <div data-testid="layout-header-right" className="ml-auto flex items-center gap-2">
