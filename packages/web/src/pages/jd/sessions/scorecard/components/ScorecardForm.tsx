@@ -123,7 +123,7 @@ export const ScorecardForm = ({ session }: ScorecardFormProps): JSX.Element => {
   };
 
   return (
-    <form data-testid="scorecard-form" className="space-y-8" onSubmit={handleSubmit(handleFormSubmit)}>
+    <form data-testid="scorecard-form" className="space-y-6" onSubmit={handleSubmit(handleFormSubmit)}>
       {/* Error alert */}
       <Alert variant="destructive" className={cn({ hidden: !error })} data-testid="scorecard-form-error">
         <AlertCircleIcon />

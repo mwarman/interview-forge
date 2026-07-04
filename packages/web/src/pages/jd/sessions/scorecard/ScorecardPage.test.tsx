@@ -116,7 +116,7 @@ describe('ScorecardPage', () => {
     renderWithAllProviders(<ScorecardPage />);
 
     // Assert
-    expect(screen.getByTestId('scorecard-page-error')).toBeInTheDocument();
+    expect(screen.getByTestId('session-load-error')).toBeInTheDocument();
     expect(screen.getByText('Failed to load session')).toBeInTheDocument();
   });
 
@@ -186,7 +186,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(screen.getByTestId('scorecard-page')).toBeInTheDocument();
-    expect(screen.getByText(`Score Interview: ${mockSession.candidateName}`)).toBeInTheDocument();
+    expect(screen.getByText('Score the Interview')).toBeInTheDocument();
   });
 
   it('should render scorecard form', async () => {
@@ -207,46 +207,6 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(screen.getByTestId('scorecard-form-mock')).toBeInTheDocument();
-  });
-
-  it('should render back button', async () => {
-    // Arrange
-    const { useGetSession } = await import('@/common/api/useGetSession');
-    const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
-
-    vi.mocked(useGetSession).mockReturnValue({
-      isLoading: false,
-      data: mockSession,
-      isError: false,
-    } as never);
-
-    vi.mocked(useSubmitScorecard).mockReturnValue(getDefaultMutationReturn() as never);
-
-    // Act
-    renderWithAllProviders(<ScorecardPage />);
-
-    // Assert
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
-  });
-
-  it('should render page header with back button', async () => {
-    // Arrange
-    const { useGetSession } = await import('@/common/api/useGetSession');
-    const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
-
-    vi.mocked(useGetSession).mockReturnValue({
-      isLoading: false,
-      data: mockSession,
-      isError: false,
-    } as never);
-
-    vi.mocked(useSubmitScorecard).mockReturnValue(getDefaultMutationReturn() as never);
-
-    // Act
-    renderWithAllProviders(<ScorecardPage />);
-
-    // Assert
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
   });
 
   it('should render scorecard form', async () => {

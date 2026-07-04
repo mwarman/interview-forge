@@ -148,10 +148,7 @@ export const PlanPage = (): JSX.Element => {
 
       {session.status === 'PLAN_APPROVED' && (
         <div className="mx-auto max-w-2xl" data-testid="plan-approved-state">
-          <Alert
-            className="border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-50"
-            data-testid="plan-approved-state"
-          >
+          <Alert className="border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-50">
             <FileCheckCorner className="size-4" />
             <AlertTitle>Plan Approved</AlertTitle>
             <AlertDescription className="my-2 space-y-2">
