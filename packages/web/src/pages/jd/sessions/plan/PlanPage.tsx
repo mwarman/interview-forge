@@ -1,6 +1,6 @@
 import { JSX, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FileCheckCorner, Form } from 'lucide-react';
+import { ArrowDownToLine, FileCheckCorner, Form } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ApprovePlanRequest, InterviewPlan } from '@interview-forge/shared';
@@ -87,9 +87,12 @@ export const PlanPage = (): JSX.Element => {
   // Loading state
   if (isSessionLoading) {
     return (
-      <div data-testid="plan-page-loading" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-        <div className="bg-muted h-8 max-w-96 animate-pulse rounded-lg" />
-      </div>
+      <SkeletonLoaderBlock
+        title="Loading Session"
+        description="Please wait while we load your session."
+        icon={<ArrowDownToLine className="mb-4 size-16" />}
+        testId="plan-page-loading"
+      />
     );
   }
 
