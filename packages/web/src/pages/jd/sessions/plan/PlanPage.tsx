@@ -44,6 +44,34 @@ export const PlanPage = (): JSX.Element => {
   const approvePlanMutation = useApprovePlan(jdId ?? '', sessionId ?? '');
 
   /**
+   * Trigger plan generation via the createPlanMutation.
+   */
+  const createPlan = () => {
+    createPlanMutation.mutate(undefined, {
+      onError: (error) => {
+        toast.error(`Failed to generate plan: ${error.message}`);
+      },
+    });
+  };
+
+  /**
+   * Trigger plan approval via the approvePlanMutation.
+   * @param plan - The edited InterviewPlan to approve.
+   */
+  const approvePlan = (plan: InterviewPlan) => {
+    const request: ApprovePlanRequest = { plan };
+    approvePlanMutation.mutate(request, {
+      onSuccess: () => {
+        toast.success('Plan approved successfully!');
+        navigate(`/jds/${jdId}/sessions`, { replace: true });
+      },
+      onError: (error) => {
+        toast.error(`Failed to approve plan: ${error.message}`);
+      },
+    });
+  };
+
+  /**
    * On mount, kick off plan generation if:
    * - Session exists and is not already generating/generated/approved/errored
    */
@@ -55,34 +83,9 @@ export const PlanPage = (): JSX.Element => {
       session.status !== 'PLAN_APPROVED' &&
       session.status !== 'PLAN_ERROR'
     ) {
-      createPlanMutation.mutate();
+      createPlan();
     }
   }, [session?.sessionId]);
-
-  /**
-   * Handle plan approval success
-   */
-  useEffect(() => {
-    if (approvePlanMutation?.isSuccess) {
-      toast.success('Plan approved successfully!');
-      navigate(`/jds/${jdId}/sessions`, { replace: true });
-    }
-  }, [approvePlanMutation?.isSuccess]);
-
-  /**
-   * Handle error states
-   */
-  useEffect(() => {
-    if (createPlanMutation?.isError) {
-      toast.error(`Failed to generate plan: ${createPlanMutation.error?.message}`);
-    }
-  }, [createPlanMutation?.isError]);
-
-  useEffect(() => {
-    if (approvePlanMutation?.isError) {
-      toast.error(`Failed to approve plan: ${approvePlanMutation.error?.message}`);
-    }
-  }, [approvePlanMutation?.isError]);
 
   // Loading state
   if (isSessionLoading) {
@@ -128,7 +131,7 @@ export const PlanPage = (): JSX.Element => {
       {session.status === 'PLAN_ERROR' && (
         <PlanErrorState
           errorMessage={session?.planErrorMessage || 'Unknown error occurred during plan generation'}
-          onRetry={() => createPlanMutation.mutate()}
+          onRetry={createPlan}
           isRetrying={createPlanMutation.isPending}
         />
       )}
@@ -137,8 +140,7 @@ export const PlanPage = (): JSX.Element => {
         <PlanReadyState
           plan={session.plan as InterviewPlan}
           onApprovePlan={(editedPlan) => {
-            const request: ApprovePlanRequest = { plan: editedPlan };
-            approvePlanMutation.mutate(request);
+            approvePlan(editedPlan);
           }}
           isApproving={approvePlanMutation.isPending}
         />
