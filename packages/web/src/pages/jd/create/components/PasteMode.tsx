@@ -98,8 +98,8 @@ export const PasteMode = ({ onSuccess }: PasteModeProps): JSX.Element => {
               className={validationErrors.title ? 'border-red-500' : ''}
             />
             <FieldDescription className="flex items-center justify-between">
-              <div>The title of the job description (max 200 characters).</div>
-              <div className="text-xs">{title.length}/200</div>
+              <span>The title of the job description (max 200 characters).</span>
+              <span className="text-xs">{title.length}/200</span>
             </FieldDescription>
             <FieldError>{validationErrors.title}</FieldError>
           </Field>
@@ -119,8 +119,8 @@ export const PasteMode = ({ onSuccess }: PasteModeProps): JSX.Element => {
               className={cn('h-60', { 'border-red-500': validationErrors.rawText })}
             />
             <FieldDescription className="flex items-center justify-between">
-              <div>The text of the job description (minimum 100 characters).</div>
-              <div className="text-xs">{rawText.length}/5000</div>
+              <span>The text of the job description (minimum 100 characters).</span>
+              <span className="text-xs">{rawText.length}/5000</span>
             </FieldDescription>
             <FieldError>{validationErrors.rawText}</FieldError>
           </Field>
