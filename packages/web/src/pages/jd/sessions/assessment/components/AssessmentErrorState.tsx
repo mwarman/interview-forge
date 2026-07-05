@@ -1,7 +1,7 @@
 import { JSX } from 'react';
 import { AlertTriangleIcon } from 'lucide-react';
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 
 interface AssessmentErrorStateProps {
@@ -45,10 +45,10 @@ export const AssessmentErrorState = ({
   return (
     <div data-testid={testId} className="mx-auto max-w-2xl">
       <Alert variant="destructive">
-        <AlertTriangleIcon className="h-4 w-4" />
+        <AlertTriangleIcon className="size-4" />
         <AlertTitle>Assessment Generation Failed</AlertTitle>
-        <AlertDescription data-testid="error-message">{errorMessage}</AlertDescription>
-        <AlertAction>
+        <AlertDescription className="my-2 space-y-2">
+          <div data-testid="error-message">{errorMessage}</div>
           <Button
             size="xs"
             onClick={onRetry}
@@ -59,7 +59,7 @@ export const AssessmentErrorState = ({
             {isRetrying ? 'Retrying…' : 'Retry'}
             <span className="sr-only">Retry assessment generation</span>
           </Button>
-        </AlertAction>
+        </AlertDescription>
       </Alert>
     </div>
   );

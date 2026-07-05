@@ -46,7 +46,7 @@ export const AssessmentCompleteState = ({
   testId = 'assessment-complete-state',
 }: AssessmentCompleteStateProps): JSX.Element => {
   return (
-    <div data-testid={testId} className="space-y-6">
+    <div data-testid={testId} className="space-y-6 p-1">
       {/* Assessment Summary Card (Read-only) */}
       <Card>
         <CardHeader>
@@ -54,26 +54,44 @@ export const AssessmentCompleteState = ({
           <CardDescription>Review the final assessment and recommendation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {assessment.overrideReason && (
+            <div className="space-y-4 border-l-2 border-amber-500 pl-4">
+              <div className="text-base/tight font-bold text-amber-600 uppercase">Override</div>
+              <div className="space-y-2">
+                <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Recommendation
+                </div>
+                <div>
+                  <RecommendationBadge
+                    recommendation={assessment.recommendation}
+                    testId="complete-recommendation-badge"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Reasoning</div>
+                <p className="text-sm leading-relaxed">{assessment.overrideReason}</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-4">
-            <div>
-              <CardDescription className="text-xs font-semibold tracking-wide uppercase">
-                Recommendation
-              </CardDescription>
-              <div className="mt-2">
+            <div className="space-y-2">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Recommendation</div>
+              <div>
                 <RecommendationBadge
                   recommendation={assessment.recommendation}
                   testId="complete-recommendation-badge"
                 />
               </div>
             </div>
-            <div>
-              <CardDescription className="text-xs font-semibold tracking-wide uppercase">Confidence</CardDescription>
-              <p className="mt-2 text-sm font-medium">{confidenceLabelMap[assessment.confidence]}</p>
+            <div className="space-y-2">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Confidence</div>
+              <p className="text-sm font-medium">{confidenceLabelMap[assessment.confidence]}</p>
             </div>
           </div>
 
           <div className="mt-4 space-y-2">
-            <CardDescription className="text-foreground font-semibold">Reasoning</CardDescription>
+            <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Reasoning</div>
             <p className="text-sm leading-relaxed">{assessment.reasoning}</p>
           </div>
         </CardContent>

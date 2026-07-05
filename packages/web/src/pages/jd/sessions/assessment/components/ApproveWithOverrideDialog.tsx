@@ -15,7 +15,7 @@ import {
 } from '@/common/components/shadcn/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/common/components/shadcn/select';
 import { Textarea } from '@/common/components/shadcn/textarea';
-import { FieldLabel, FieldError } from '@/common/components/shadcn/field';
+import { FieldLabel, FieldError, Field } from '@/common/components/shadcn/field';
 
 const overrideFormSchema = z.object({
   recommendation: RecommendationSchema,
@@ -113,42 +113,46 @@ export const ApproveWithOverrideDialog = ({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <FieldLabel htmlFor="recommendation">Recommendation</FieldLabel>
             <Controller
               name="recommendation"
               control={control}
               rules={{ required: 'Please select a recommendation' }}
               render={({ field }) => (
-                <Select value={field.value || ''} onValueChange={field.onChange}>
-                  <SelectTrigger id="recommendation" data-testid="recommendation-select">
-                    <SelectValue placeholder="Select recommendation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="STRONG_HIRE">STRONG HIRE</SelectItem>
-                    <SelectItem value="HIRE">HIRE</SelectItem>
-                    <SelectItem value="NO_HIRE">NO HIRE</SelectItem>
-                    <SelectItem value="STRONG_NO_HIRE">STRONG NO HIRE</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Field>
+                  <FieldLabel htmlFor="recommendation">Recommendation</FieldLabel>
+                  <Select value={field.value || ''} onValueChange={field.onChange}>
+                    <SelectTrigger id="recommendation" data-testid="recommendation-select">
+                      <SelectValue placeholder="Select recommendation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STRONG_HIRE">STRONG HIRE</SelectItem>
+                      <SelectItem value="HIRE">HIRE</SelectItem>
+                      <SelectItem value="NO_HIRE">NO HIRE</SelectItem>
+                      <SelectItem value="STRONG_NO_HIRE">STRONG NO HIRE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
               )}
             />
             {errors.recommendation && <FieldError>{errors.recommendation.message}</FieldError>}
           </div>
 
           <div>
-            <FieldLabel htmlFor="override-reason">Override Reason</FieldLabel>
             <Controller
               name="overrideReason"
               control={control}
               render={({ field }) => (
-                <Textarea
-                  id="override-reason"
-                  data-testid="override-reason-textarea"
-                  placeholder="Provide at least 20 characters explaining the override"
-                  className="resize-none"
-                  rows={4}
-                  {...field}
-                />
+                <Field>
+                  <FieldLabel htmlFor="override-reason">Override Reason</FieldLabel>
+                  <Textarea
+                    id="override-reason"
+                    data-testid="override-reason-textarea"
+                    placeholder="Provide at least 20 characters explaining the override"
+                    className="resize-none"
+                    rows={4}
+                    {...field}
+                  />
+                </Field>
               )}
             />
             {errors.overrideReason && <FieldError>{errors.overrideReason.message}</FieldError>}

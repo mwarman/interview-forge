@@ -7,10 +7,12 @@ import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
 import { useCreateAssessment } from './api/useCreateAssessment';
 import { useApproveAssessment } from './api/useApproveAssessment';
-import { AssessmentGeneratingState } from './components/AssessmentGeneratingState';
 import { AssessmentErrorState } from './components/AssessmentErrorState';
 import { AssessmentReadyState } from './components/AssessmentReadyState';
 import { AssessmentCompleteState } from './components/AssessmentCompleteState';
+import { SkeletonLoaderBlock } from '@/common/components/loader/SkeletonLoaderBlock';
+import { AlertCircleIcon, ArrowDownToLine, Form } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 
 /**
  * AssessmentPage component - orchestrates the assessment review and approval page.
@@ -80,25 +82,34 @@ export const AssessmentPage = (): JSX.Element => {
   // Loading state
   if (isSessionLoading) {
     return (
-      <div data-testid="assessment-page-loading" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-        <div className="bg-muted h-8 max-w-96 animate-pulse rounded-lg" />
-      </div>
+      <SkeletonLoaderBlock
+        title="Loading Session"
+        description="Please wait while we load your session."
+        icon={<ArrowDownToLine className="mb-4 size-16" />}
+        testId="assessment-page-loading"
+      />
     );
   }
 
   // Error state
   if (isSessionError || !session) {
     return (
-      <div data-testid="assessment-page-error" className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Failed to load session</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Could not fetch the session data. Please try again or go back.
-          </p>
-          <Button onClick={() => navigate(-1)} className="mt-4">
-            Go Back
-          </Button>
-        </div>
+      <div data-testid="assessment-page-error" className="mx-auto max-w-2xl">
+        <Alert variant="destructive">
+          <AlertCircleIcon className="size-4" />
+          <AlertTitle>Failed to load session</AlertTitle>
+          <AlertDescription className="my-2 space-y-2">
+            <div>Could not fetch the session data. Please try again or go back.</div>
+            <Button
+              size="xs"
+              onClick={() => navigate(-1)}
+              data-testid="assessment-page-error-go-back-button"
+              aria-label="Go Back"
+            >
+              Go Back
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -106,7 +117,14 @@ export const AssessmentPage = (): JSX.Element => {
   return (
     <div data-testid="assessment-page">
       {/* State-based content */}
-      {session.status === 'ASSESS_GENERATING' && <AssessmentGeneratingState />}
+      {session.status === 'ASSESS_GENERATING' && (
+        <SkeletonLoaderBlock
+          title="Generating Assessment"
+          description="This may take a few moments. Please wait."
+          icon={<Form className="mb-4 size-16" />}
+          testId="assessment-generating-state"
+        />
+      )}
 
       {session.status === 'ASSESS_ERROR' && (
         <AssessmentErrorState
