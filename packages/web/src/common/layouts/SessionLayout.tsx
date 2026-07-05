@@ -42,7 +42,7 @@ export const SessionLayout = (): JSX.Element => {
       </div>
 
       {/* Session Layout Content Area */}
-      <div data-testid="session-layout-content" className="flex-1 overflow-auto">
+      <div data-testid="session-layout-content" className="no-scrollbar flex-1 overflow-auto">
         <Outlet />
       </div>
     </div>
