@@ -18,11 +18,11 @@ import { Textarea } from '@/common/components/shadcn/textarea';
 import { FieldLabel, FieldError, Field } from '@/common/components/shadcn/field';
 
 const overrideFormSchema = z.object({
-  recommendation: RecommendationSchema,
-  overrideReason: z
+  overrideRecommendation: RecommendationSchema,
+  overrideReasoning: z
     .string()
-    .min(20, 'Override reason must be at least 20 characters')
-    .max(1000, 'Override reason must not exceed 1000 characters'),
+    .min(20, 'Override reasoning must be at least 20 characters')
+    .max(1000, 'Override reasoning must not exceed 1000 characters'),
 });
 
 type OverrideFormValues = z.infer<typeof overrideFormSchema>;
@@ -41,7 +41,7 @@ interface ApproveWithOverrideDialogProps {
   /**
    * Callback fired when form is submitted with override data
    */
-  onConfirm: (data: { recommendation: Recommendation; overrideReason: string }) => void;
+  onConfirm: (data: { overrideRecommendation: Recommendation; overrideReasoning: string }) => void;
 
   /**
    * Whether the confirm button is in a loading state
@@ -56,7 +56,7 @@ interface ApproveWithOverrideDialogProps {
 
 /**
  * ApproveWithOverrideDialog component - modal for approving assessment with recommendation override.
- * Displays a select for recommendation and textarea for override reason (min 20 chars).
+ * Displays a select for override recommendation and textarea for override reasoning (min 20 chars).
  * Uses react-hook-form with Zod validation.
  *
  * @param isOpen - Whether the dialog is open
@@ -82,8 +82,8 @@ export const ApproveWithOverrideDialog = ({
     resolver: zodResolver(overrideFormSchema),
     mode: 'onChange',
     defaultValues: {
-      recommendation: undefined,
-      overrideReason: '',
+      overrideRecommendation: undefined,
+      overrideReasoning: '',
     },
   });
 
@@ -96,8 +96,8 @@ export const ApproveWithOverrideDialog = ({
 
   const onSubmit = (data: OverrideFormValues) => {
     onConfirm({
-      recommendation: data.recommendation,
-      overrideReason: data.overrideReason,
+      overrideRecommendation: data.overrideRecommendation,
+      overrideReasoning: data.overrideReasoning,
     });
   };
 
@@ -107,21 +107,21 @@ export const ApproveWithOverrideDialog = ({
         <DialogHeader>
           <DialogTitle>Approve with Override</DialogTitle>
           <DialogDescription>
-            Override the recommended decision with a different recommendation and provide a reason.
+            Override the recommended decision with a different recommendation and provide your reasoning.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Controller
-              name="recommendation"
+              name="overrideRecommendation"
               control={control}
               rules={{ required: 'Please select a recommendation' }}
               render={({ field }) => (
                 <Field>
-                  <FieldLabel htmlFor="recommendation">Recommendation</FieldLabel>
+                  <FieldLabel htmlFor="override-recommendation">Recommendation</FieldLabel>
                   <Select value={field.value || ''} onValueChange={field.onChange}>
-                    <SelectTrigger id="recommendation" data-testid="recommendation-select">
+                    <SelectTrigger id="override-recommendation" data-testid="override-recommendation-select">
                       <SelectValue placeholder="Select recommendation" />
                     </SelectTrigger>
                     <SelectContent>
@@ -134,19 +134,19 @@ export const ApproveWithOverrideDialog = ({
                 </Field>
               )}
             />
-            {errors.recommendation && <FieldError>{errors.recommendation.message}</FieldError>}
+            {errors.overrideRecommendation && <FieldError>{errors.overrideRecommendation.message}</FieldError>}
           </div>
 
           <div>
             <Controller
-              name="overrideReason"
+              name="overrideReasoning"
               control={control}
               render={({ field }) => (
                 <Field>
-                  <FieldLabel htmlFor="override-reason">Override Reason</FieldLabel>
+                  <FieldLabel htmlFor="override-reasoning">Override Reasoning</FieldLabel>
                   <Textarea
-                    id="override-reason"
-                    data-testid="override-reason-textarea"
+                    id="override-reasoning"
+                    data-testid="override-reasoning-textarea"
                     placeholder="Provide at least 20 characters explaining the override"
                     className="resize-none"
                     rows={4}
@@ -155,7 +155,7 @@ export const ApproveWithOverrideDialog = ({
                 </Field>
               )}
             />
-            {errors.overrideReason && <FieldError>{errors.overrideReason.message}</FieldError>}
+            {errors.overrideReasoning && <FieldError>{errors.overrideReasoning.message}</FieldError>}
           </div>
         </form>
 
