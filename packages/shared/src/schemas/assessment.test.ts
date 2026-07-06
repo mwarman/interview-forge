@@ -725,5 +725,90 @@ describe('AssessmentSchema', () => {
       // Assert
       expect(result.success).toBe(true);
     });
+
+    it('should accept assessment with override reasoning', () => {
+      // Arrange
+      const validAssessment = {
+        assessmentId: '223e4567-e89b-12d3-a456-426614174000',
+        recommendation: 'HIRE',
+        confidence: 'HIGH',
+        reasoning:
+          'The candidate demonstrated strong technical fundamentals across all evaluated competencies. System design knowledge was particularly impressive with clear understanding of scalability patterns. Communication skills were evident.',
+        competencyAssessments: [
+          {
+            competencyId: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'System Design',
+            strengths: 'Good understanding',
+            concerns: 'Limited experience',
+            conflictsIdentified: [],
+          },
+        ],
+        generatedAt: '2026-06-22T10:30:00Z',
+        overrideReasoning: 'Candidate showed exceptional communication skills in follow-up discussion.',
+      };
+
+      // Act
+      const result = AssessmentSchema.safeParse(validAssessment);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept assessment with override recommendation', () => {
+      // Arrange
+      const validAssessment = {
+        assessmentId: '223e4567-e89b-12d3-a456-426614174000',
+        recommendation: 'HIRE',
+        confidence: 'HIGH',
+        reasoning:
+          'The candidate demonstrated strong technical fundamentals across all evaluated competencies. System design knowledge was particularly impressive with clear understanding of scalability patterns. Communication skills were evident.',
+        competencyAssessments: [
+          {
+            competencyId: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'System Design',
+            strengths: 'Good understanding',
+            concerns: 'Limited experience',
+            conflictsIdentified: [],
+          },
+        ],
+        generatedAt: '2026-06-22T10:30:00Z',
+        overrideRecommendation: 'STRONG_HIRE',
+      };
+
+      // Act
+      const result = AssessmentSchema.safeParse(validAssessment);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept assessment with both override reasoning and override recommendation', () => {
+      // Arrange
+      const validAssessment = {
+        assessmentId: '223e4567-e89b-12d3-a456-426614174000',
+        recommendation: 'HIRE',
+        confidence: 'HIGH',
+        reasoning:
+          'The candidate demonstrated strong technical fundamentals across all evaluated competencies. System design knowledge was particularly impressive with clear understanding of scalability patterns. Communication skills were evident.',
+        competencyAssessments: [
+          {
+            competencyId: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'System Design',
+            strengths: 'Good understanding',
+            concerns: 'Limited experience',
+            conflictsIdentified: [],
+          },
+        ],
+        generatedAt: '2026-06-22T10:30:00Z',
+        overrideReasoning: 'After discussion with team lead, candidate demonstrated exceptional potential.',
+        overrideRecommendation: 'STRONG_HIRE',
+      };
+
+      // Act
+      const result = AssessmentSchema.safeParse(validAssessment);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
   });
 });

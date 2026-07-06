@@ -78,16 +78,14 @@ export type ApprovePlanRequest = z.infer<typeof ApprovePlanRequestSchema>;
 
 /**
  * ApproveAssessmentRequestSchema - Zod schema for approve assessment request
- * Accepts optional recommendation override and override reason
- * Both fields are independent and optional, allowing:
+ * Accepts optional recommendation override and override reasoning
+ * Both fields are optional, allowing:
  * - Approve as-is (no fields provided)
- * - Override only recommendation
- * - Add only override reason
- * - Override both recommendation and reason
+ * - Override with both recommendation and reasoning (both required if overriding)
  */
 export const ApproveAssessmentRequestSchema = z.object({
-  recommendation: RecommendationSchema.optional(),
-  overrideReason: z.string().optional(),
+  overrideRecommendation: RecommendationSchema.optional(),
+  overrideReasoning: z.string().optional(),
 });
 
 /**
