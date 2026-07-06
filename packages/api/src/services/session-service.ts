@@ -179,11 +179,11 @@ export class SessionService {
 
   /**
    * Approve a session's assessment with optional overrides
-   * Accepts optional recommendation and overrideReason values to merge into existing assessment
+   * Accepts optional override recommendation and override reasoning values to merge into existing assessment
    * Updates status to COMPLETE and prevents double-approval via condition expression
    * @param jdId - The unique identifier of the parent job description
    * @param sessionId - The unique identifier of the session
-   * @param overrides - Optional object with fields to merge into assessment { recommendation?, overrideReason? }
+   * @param overrides - Optional object with fields to merge into assessment { overrideRecommendation?, overrideReasoning? }
    * @returns The updated session with status set to COMPLETE
    * @throws ConditionalCheckFailedException if status is not ASSESSED
    * @throws Error if repository update fails or session not found
@@ -191,7 +191,7 @@ export class SessionService {
   async approveAssessment(
     jdId: string,
     sessionId: string,
-    overrides?: { recommendation?: string; overrideReason?: string },
+    overrides?: { overrideRecommendation?: string; overrideReasoning?: string },
   ): Promise<Session> {
     logger.info(
       { jdId, sessionId, hasOverrides: !!overrides },

@@ -123,16 +123,16 @@ describe('approve-assessment-handler', () => {
   });
 
   describe('happy path - approve with recommendation override only', () => {
-    it('should approve with recommendation override and return 200', async () => {
+    it('should approve with override recommendation and return 200', async () => {
       // Arrange
-      const requestBody = { recommendation: 'STRONG_HIRE' };
+      const requestBody = { overrideRecommendation: 'STRONG_HIRE' };
       const event = createMockEvent(requestBody);
       const context = createMockContext();
 
       const mockApprovedSession = createMockApprovedSession({
         assessment: {
           ...createMockApprovedSession().assessment,
-          recommendation: 'STRONG_HIRE',
+          overrideRecommendation: 'STRONG_HIRE',
         },
       });
 
@@ -146,22 +146,22 @@ describe('approve-assessment-handler', () => {
       expect(result.statusCode).toBe(200);
       const body = JSON.parse(result.body || '{}');
       expect(body.status).toBe('COMPLETE');
-      expect(body.assessment.recommendation).toBe('STRONG_HIRE');
+      expect(body.assessment.overrideRecommendation).toBe('STRONG_HIRE');
       expect(sessionService.approveAssessment).toHaveBeenCalledWith(jdId, sessionId, requestBody);
     });
   });
 
-  describe('happy path - approve with override reason only', () => {
-    it('should approve with override reason and return 200', async () => {
+  describe('happy path - approve with override reasoning only', () => {
+    it('should approve with override reasoning and return 200', async () => {
       // Arrange
-      const requestBody = { overrideReason: 'Candidate demonstrated exceptional skills in interview' };
+      const requestBody = { overrideReasoning: 'Candidate demonstrated exceptional skills in interview' };
       const event = createMockEvent(requestBody);
       const context = createMockContext();
 
       const mockApprovedSession = createMockApprovedSession({
         assessment: {
           ...createMockApprovedSession().assessment,
-          overrideReason: 'Candidate demonstrated exceptional skills in interview',
+          overrideReasoning: 'Candidate demonstrated exceptional skills in interview',
         },
       });
 
@@ -175,17 +175,17 @@ describe('approve-assessment-handler', () => {
       expect(result.statusCode).toBe(200);
       const body = JSON.parse(result.body || '{}');
       expect(body.status).toBe('COMPLETE');
-      expect(body.assessment.overrideReason).toBe('Candidate demonstrated exceptional skills in interview');
+      expect(body.assessment.overrideReasoning).toBe('Candidate demonstrated exceptional skills in interview');
       expect(sessionService.approveAssessment).toHaveBeenCalledWith(jdId, sessionId, requestBody);
     });
   });
 
-  describe('happy path - approve with both recommendation and override reason', () => {
-    it('should approve with both recommendation and override reason and return 200', async () => {
+  describe('happy path - approve with both override recommendation and override reasoning', () => {
+    it('should approve with both override recommendation and override reasoning and return 200', async () => {
       // Arrange
       const requestBody = {
-        recommendation: 'NO_HIRE',
-        overrideReason: 'Candidate requested role reconsideration after interviewer feedback',
+        overrideRecommendation: 'NO_HIRE',
+        overrideReasoning: 'Candidate requested role reconsideration after interviewer feedback',
       };
       const event = createMockEvent(requestBody);
       const context = createMockContext();
@@ -193,8 +193,8 @@ describe('approve-assessment-handler', () => {
       const mockApprovedSession = createMockApprovedSession({
         assessment: {
           ...createMockApprovedSession().assessment,
-          recommendation: 'NO_HIRE',
-          overrideReason: 'Candidate requested role reconsideration after interviewer feedback',
+          overrideRecommendation: 'NO_HIRE',
+          overrideReasoning: 'Candidate requested role reconsideration after interviewer feedback',
         },
       });
 
@@ -208,8 +208,8 @@ describe('approve-assessment-handler', () => {
       expect(result.statusCode).toBe(200);
       const body = JSON.parse(result.body || '{}');
       expect(body.status).toBe('COMPLETE');
-      expect(body.assessment.recommendation).toBe('NO_HIRE');
-      expect(body.assessment.overrideReason).toBe(
+      expect(body.assessment.overrideRecommendation).toBe('NO_HIRE');
+      expect(body.assessment.overrideReasoning).toBe(
         'Candidate requested role reconsideration after interviewer feedback',
       );
       expect(sessionService.approveAssessment).toHaveBeenCalledWith(jdId, sessionId, requestBody);

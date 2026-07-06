@@ -331,7 +331,7 @@ export class SessionRepository {
    * Uses a condition expression to ensure status is ASSESSED (idempotency guard)
    * @param jdId - The unique identifier of the parent job description
    * @param sessionId - The unique identifier of the session
-   * @param overrides - Optional object with fields to merge into existing assessment { recommendation?, overrideReason? }
+   * @param overrides - Optional object with fields to merge into existing assessment { overrideRecommendation?, overrideReasoning? }
    * @returns The updated Session entity
    * @throws ConditionalCheckFailedException if status is not ASSESSED
    * @throws Error if DynamoDB operations fail or item not found
@@ -339,7 +339,7 @@ export class SessionRepository {
   async updateWithApprovedAssessment(
     jdId: string,
     sessionId: string,
-    overrides?: { recommendation?: string; overrideReason?: string },
+    overrides?: { overrideRecommendation?: string; overrideReasoning?: string },
   ): Promise<Session> {
     logger.debug(
       { jdId, sessionId, hasOverrides: !!overrides },
@@ -368,17 +368,20 @@ export class SessionRepository {
       // Merge overrides into existing assessment
       const mergedAssessment = { ...session.assessment };
 
-      if (overrides?.recommendation) {
+      if (overrides?.overrideRecommendation) {
         logger.debug(
           { jdId, sessionId },
-          '[SessionRepository.updateWithApprovedAssessment] - Merging recommendation override',
+          '[SessionRepository.updateWithApprovedAssessment] - Merging override recommendation',
         );
-        mergedAssessment.recommendation = overrides.recommendation;
+        mergedAssessment.overrideRecommendation = overrides.overrideRecommendation;
       }
 
-      if (overrides?.overrideReason) {
-        logger.debug({ jdId, sessionId }, '[SessionRepository.updateWithApprovedAssessment] - Merging override reason');
-        mergedAssessment.overrideReason = overrides.overrideReason;
+      if (overrides?.overrideReasoning) {
+        logger.debug(
+          { jdId, sessionId },
+          '[SessionRepository.updateWithApprovedAssessment] - Merging override reasoning',
+        );
+        mergedAssessment.overrideReasoning = overrides.overrideReasoning;
       }
 
       logger.debug(
