@@ -8,8 +8,8 @@
  *
  * Instructs the agent to:
  * 1. Read the job description using the interview-forge-read-jd action group
- * 2. Identify 4-8 competency areas relevant to the role
- * 3. Generate 3-5 structured questions per competency with types and follow-up prompts
+ * 2. Identify 1-4 competency areas relevant to the role
+ * 3. Generate 1-4 structured questions per competency with types and follow-up prompts
  * 4. Write the completed plan using the interview-forge-write-plan action group
  * 5. Format the plan as a valid InterviewPlan JSON structure
  */
@@ -44,12 +44,12 @@ The plan you generate must conform to the following JSON structure (all UUIDs ar
 
 ### Field Descriptions
 - **planId**: A unique UUID v4 identifier for the interview plan
-- **competencies**: Array of 4-8 competency areas (minimum 1, maximum 8)
+- **competencies**: Array of 1-4 competency areas (minimum 1, maximum 4)
   - **competencyId**: A unique UUID v4 identifier for the competency
   - **name**: The name of the competency (e.g., "System Design", "Leadership")
   - **description**: Brief explanation of why this competency is relevant to the role
   - **evaluationCriteria**: How to assess if the candidate demonstrates this competency
-  - **questions**: Array of 3-5 interview questions for this competency (minimum 1)
+  - **questions**: Array of 1-4 interview questions for this competency (minimum 1, maximum 4)
     - **questionId**: A unique UUID v4 identifier for the question
     - **text**: The actual question text—open-ended and probing
     - **type**: One of BEHAVIORAL, SITUATIONAL, or TECHNICAL
@@ -122,9 +122,9 @@ Follow these steps precisely:
 
 1. Use the **read-jd-action** in the **interview-forge-read-jd** action group to retrieve the full job description text for the provided jdId and sessionId.
 
-2. Analyze the job description and identify between **4 and 8 distinct competency areas** that are most relevant to the role. Consider both technical skills and behavioral/soft competencies. Document why each competency matters for the role.
+2. Analyze the job description and identify between **1 and 4 distinct competency areas** that are most relevant to the role. Consider both technical skills and behavioral/soft competencies. Document why each competency matters for the role.
 
-3. For each competency, generate between **3 and 5 structured interview questions**. Vary the types (BEHAVIORAL, TECHNICAL, SITUATIONAL) and ensure each question includes:
+3. For each competency, generate between **1 and 4 structured interview questions**. Vary the types (BEHAVIORAL, TECHNICAL, SITUATIONAL) and ensure each question includes:
    - A clear, open-ended question text
    - An appropriate question type
    - 0-1 follow-up prompts to probe deeper into the candidate's response
@@ -133,9 +133,11 @@ Follow these steps precisely:
    - All fields populated as shown in the schema
    - Valid UUID v4 RFC 9562/4122 values for all ID fields
    - Current ISO 8601 datetime in the generatedAt field
-   - Exactly 4-8 competencies, each with 3-5 questions
+   - Exactly 1-4 competencies, each with 1-4 questions
 
-5. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
+5. Ensure the plan is **valid JSON** and adheres strictly to the schema provided above.
+
+6. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
 
 ## Rules
 

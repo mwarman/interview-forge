@@ -1,6 +1,6 @@
 import { JSX, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, FileCheckCorner } from 'lucide-react';
+import { ArrowDownToLine, FileCheckCorner, Form } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ApprovePlanRequest, InterviewPlan } from '@interview-forge/shared';
@@ -9,9 +9,9 @@ import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
 import { useCreatePlan } from './api/useCreatePlan';
 import { useApprovePlan } from './api/useApprovePlan';
-import { PlanGeneratingState } from './components/PlanGeneratingState';
 import { PlanErrorState } from './components/PlanErrorState';
 import { PlanReadyState } from './components/PlanReadyState';
+import { SkeletonLoaderBlock } from '@/common/components/loader/SkeletonLoaderBlock';
 
 /**
  * PlanPage component - orchestrates the plan review and edit page.
@@ -44,6 +44,34 @@ export const PlanPage = (): JSX.Element => {
   const approvePlanMutation = useApprovePlan(jdId ?? '', sessionId ?? '');
 
   /**
+   * Trigger plan generation via the createPlanMutation.
+   */
+  const createPlan = () => {
+    createPlanMutation.mutate(undefined, {
+      onError: (error) => {
+        toast.error(`Failed to generate plan: ${error.message}`);
+      },
+    });
+  };
+
+  /**
+   * Trigger plan approval via the approvePlanMutation.
+   * @param plan - The edited InterviewPlan to approve.
+   */
+  const approvePlan = (plan: InterviewPlan) => {
+    const request: ApprovePlanRequest = { plan };
+    approvePlanMutation.mutate(request, {
+      onSuccess: () => {
+        toast.success('Plan approved successfully!');
+        navigate(`/jds/${jdId}/sessions`, { replace: true });
+      },
+      onError: (error) => {
+        toast.error(`Failed to approve plan: ${error.message}`);
+      },
+    });
+  };
+
+  /**
    * On mount, kick off plan generation if:
    * - Session exists and is not already generating/generated/approved/errored
    */
@@ -55,41 +83,19 @@ export const PlanPage = (): JSX.Element => {
       session.status !== 'PLAN_APPROVED' &&
       session.status !== 'PLAN_ERROR'
     ) {
-      createPlanMutation.mutate();
+      createPlan();
     }
   }, [session?.sessionId]);
-
-  /**
-   * Handle plan approval success
-   */
-  useEffect(() => {
-    if (approvePlanMutation?.isSuccess) {
-      toast.success('Plan approved successfully!');
-      navigate(`/jds/${jdId}/sessions`, { replace: true });
-    }
-  }, [approvePlanMutation?.isSuccess]);
-
-  /**
-   * Handle error states
-   */
-  useEffect(() => {
-    if (createPlanMutation?.isError) {
-      toast.error(`Failed to generate plan: ${createPlanMutation.error?.message}`);
-    }
-  }, [createPlanMutation?.isError]);
-
-  useEffect(() => {
-    if (approvePlanMutation?.isError) {
-      toast.error(`Failed to approve plan: ${approvePlanMutation.error?.message}`);
-    }
-  }, [approvePlanMutation?.isError]);
 
   // Loading state
   if (isSessionLoading) {
     return (
-      <div data-testid="plan-page-loading" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-        <div className="bg-muted h-8 max-w-96 animate-pulse rounded-lg" />
-      </div>
+      <SkeletonLoaderBlock
+        title="Loading Session"
+        description="Please wait while we load your session."
+        icon={<ArrowDownToLine className="mb-4 size-16" />}
+        testId="plan-page-loading"
+      />
     );
   }
 
@@ -111,29 +117,21 @@ export const PlanPage = (): JSX.Element => {
   }
 
   return (
-    <div data-testid="plan-page" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-      {/* Header with back button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => navigate(-1)}
-          data-testid="back-button"
-          aria-label="Go back"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Go back to sessions</span>
-        </Button>
-        <h1 className="flex-1 text-2xl font-bold">Interview Plan for {session.candidateName}</h1>
-      </div>
-
+    <div data-testid="plan-page">
       {/* State-based content */}
-      {session.status === 'PLAN_GENERATING' && <PlanGeneratingState />}
+      {session.status === 'PLAN_GENERATING' && (
+        <SkeletonLoaderBlock
+          title="Generating Plan"
+          description="Please wait while we generate your plan."
+          icon={<Form className="mb-4 size-16" />}
+          testId="plan-generating-state"
+        />
+      )}
 
       {session.status === 'PLAN_ERROR' && (
         <PlanErrorState
           errorMessage={session?.planErrorMessage || 'Unknown error occurred during plan generation'}
-          onRetry={() => createPlanMutation.mutate()}
+          onRetry={createPlan}
           isRetrying={createPlanMutation.isPending}
         />
       )}
@@ -142,28 +140,28 @@ export const PlanPage = (): JSX.Element => {
         <PlanReadyState
           plan={session.plan as InterviewPlan}
           onApprovePlan={(editedPlan) => {
-            const request: ApprovePlanRequest = { plan: editedPlan };
-            approvePlanMutation.mutate(request);
+            approvePlan(editedPlan);
           }}
           isApproving={approvePlanMutation.isPending}
         />
       )}
 
       {session.status === 'PLAN_APPROVED' && (
-        <div className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
-          <Alert
-            className="border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-50"
-            data-testid="plan-approved-state"
-          >
-            <FileCheckCorner className="mb-4 h-10 w-10 text-green-400" />
+        <div className="mx-auto max-w-2xl" data-testid="plan-approved-state">
+          <Alert className="border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-50">
+            <FileCheckCorner className="size-4" />
             <AlertTitle>Plan Approved</AlertTitle>
-            <AlertDescription>
-              <div className="flex flex-col gap-2">
-                Your interview plan has been approved and is ready for the next phase.
-                <Button onClick={() => navigate(-1)} variant="default" size="xs" className="self-start">
-                  Return to Sessions
-                </Button>
-              </div>
+            <AlertDescription className="my-2 space-y-2">
+              <div>Your interview plan has been approved and is ready for the next phase.</div>
+              <Button
+                size="xs"
+                onClick={() => navigate(`/jds/${jdId}/sessions`)}
+                className="self-start"
+                data-testid="return-to-sessions-button"
+                aria-label="Return to sessions"
+              >
+                Return to Sessions
+              </Button>
             </AlertDescription>
           </Alert>
         </div>

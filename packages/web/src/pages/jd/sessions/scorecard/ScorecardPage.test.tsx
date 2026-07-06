@@ -116,7 +116,7 @@ describe('ScorecardPage', () => {
     renderWithAllProviders(<ScorecardPage />);
 
     // Assert
-    expect(screen.getByTestId('scorecard-page-error')).toBeInTheDocument();
+    expect(screen.getByTestId('session-load-error')).toBeInTheDocument();
     expect(screen.getByText('Failed to load session')).toBeInTheDocument();
   });
 
@@ -144,7 +144,7 @@ describe('ScorecardPage', () => {
     );
   });
 
-  it('should redirect to detail page when status is SCORED', async () => {
+  it('should redirect to assessment page when status is SCORED', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -163,7 +163,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/detail',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });
@@ -186,7 +186,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(screen.getByTestId('scorecard-page')).toBeInTheDocument();
-    expect(screen.getByText(`Score Interview: ${mockSession.candidateName}`)).toBeInTheDocument();
+    expect(screen.getByText('Score the Interview')).toBeInTheDocument();
   });
 
   it('should render scorecard form', async () => {
@@ -207,46 +207,6 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(screen.getByTestId('scorecard-form-mock')).toBeInTheDocument();
-  });
-
-  it('should render back button', async () => {
-    // Arrange
-    const { useGetSession } = await import('@/common/api/useGetSession');
-    const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
-
-    vi.mocked(useGetSession).mockReturnValue({
-      isLoading: false,
-      data: mockSession,
-      isError: false,
-    } as never);
-
-    vi.mocked(useSubmitScorecard).mockReturnValue(getDefaultMutationReturn() as never);
-
-    // Act
-    renderWithAllProviders(<ScorecardPage />);
-
-    // Assert
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
-  });
-
-  it('should render page header with back button', async () => {
-    // Arrange
-    const { useGetSession } = await import('@/common/api/useGetSession');
-    const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
-
-    vi.mocked(useGetSession).mockReturnValue({
-      isLoading: false,
-      data: mockSession,
-      isError: false,
-    } as never);
-
-    vi.mocked(useSubmitScorecard).mockReturnValue(getDefaultMutationReturn() as never);
-
-    // Act
-    renderWithAllProviders(<ScorecardPage />);
-
-    // Assert
-    expect(screen.getByTestId('back-button')).toBeInTheDocument();
   });
 
   it('should render scorecard form', async () => {
@@ -293,7 +253,7 @@ describe('ScorecardPage', () => {
     );
   });
 
-  it('should redirect for ASSESS_GENERATING status', async () => {
+  it('should redirect to assessment page for ASSESS_GENERATING status', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -312,12 +272,12 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/plan',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });
 
-  it('should redirect for ASSESSED status', async () => {
+  it('should redirect to assessment page for ASSESSED status', async () => {
     // Arrange
     const { useGetSession } = await import('@/common/api/useGetSession');
     const { useSubmitScorecard } = await import('./api/useSubmitScorecard');
@@ -336,7 +296,7 @@ describe('ScorecardPage', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/jds/jd-123/sessions/session-123/plan',
+      '/jds/jd-123/sessions/session-123/assessment',
       expect.objectContaining({ replace: true }),
     );
   });

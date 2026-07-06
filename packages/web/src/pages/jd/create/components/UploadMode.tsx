@@ -200,8 +200,8 @@ export const UploadMode = ({ onSuccess }: UploadModeProps): JSX.Element => {
               className={validationErrors.title ? 'border-red-500' : ''}
             />
             <FieldDescription className="flex items-center justify-between">
-              <div>The title of the job description (max 200 characters).</div>
-              <div className="text-xs">{title.length}/200</div>
+              <span>The title of the job description (max 200 characters).</span>
+              <span className="text-xs">{title.length}/200</span>
             </FieldDescription>
             <FieldError>{validationErrors.title}</FieldError>
           </Field>

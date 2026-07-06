@@ -1,13 +1,14 @@
 import { JSX, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, AlertCircleIcon } from 'lucide-react';
+import { AlertCircleIcon, ArrowDownToLine } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
-import { useSubmitScorecard } from './api/useSubmitScorecard';
+import { getSessionRoute } from '@/common/utils/session-routing';
 import { ScorecardForm } from './components/ScorecardForm';
+import { SkeletonLoaderBlock } from '@/common/components/loader/SkeletonLoaderBlock';
 
 /**
  * ScorecardPage component - orchestrates the scorecard entry form.
@@ -29,98 +30,85 @@ export const ScorecardPage = (): JSX.Element | null => {
     isError: isSessionError,
   } = useGetSession(jdId ?? '', sessionId ?? '');
 
-  // Submit scorecard mutation
-  const submitMutation = useSubmitScorecard(jdId ?? '', sessionId ?? '');
-
   /**
    * Redirect if session status is not PLAN_APPROVED
    */
   useEffect(() => {
     if (session && session.status !== 'PLAN_APPROVED') {
       toast.info('Scorecard is only available for approved plans. Redirecting...');
-      // Determine redirect target based on status
-      const redirectMap: Record<string, string> = {
-        PLAN_PENDING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_GENERATING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_GENERATED: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        PLAN_ERROR: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        SCORED: `/jds/${jdId}/sessions/${sessionId}/detail`,
-        ASSESS_GENERATING: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        ASSESS_ERROR: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        ASSESSED: `/jds/${jdId}/sessions/${sessionId}/plan`,
-        COMPLETE: `/jds/${jdId}/sessions/${sessionId}/plan`,
-      };
-      const target = redirectMap[session.status] || `/jds/${jdId}/sessions/${sessionId}/plan`;
-      navigate(target, { replace: true });
+      const route = getSessionRoute(jdId ?? '', sessionId ?? '', session.status);
+      navigate(route, { replace: true });
     }
   }, [session?.status, jdId, sessionId, navigate]);
-
-  /**
-   * Handle successful scorecard submission
-   */
-  useEffect(() => {
-    if (submitMutation.isSuccess) {
-      toast.success('Scorecard submitted successfully!');
-      navigate(`/jds/${jdId}/sessions/${sessionId}/detail`);
-    }
-  }, [submitMutation.isSuccess, jdId, sessionId, navigate]);
-
-  /**
-   * Handle submission errors
-   */
-  useEffect(() => {
-    if (submitMutation.isError) {
-      toast.error(`Failed to submit scorecard: ${submitMutation.error?.message}`);
-    }
-  }, [submitMutation.isError, submitMutation.error?.message]);
 
   // Loading state
   if (isSessionLoading) {
     return (
-      <div data-testid="scorecard-page-loading" className="mx-auto max-w-7xl space-y-4 px-4 py-6 md:px-6">
-        <div className="bg-muted h-8 max-w-96 animate-pulse rounded-lg" />
-      </div>
+      <SkeletonLoaderBlock
+        title="Loading Session"
+        description="Please wait while we load your session."
+        icon={<ArrowDownToLine className="mb-4 size-16" />}
+        testId="scorecard-page-loading"
+      />
     );
   }
 
-  // Error state
+  // Session load error state
   if (isSessionError || !session) {
     return (
-      <div data-testid="scorecard-page-error" className="mx-auto max-w-2xl space-y-6 px-4 py-8 md:px-6">
+      <div data-testid="session-load-error" className="mx-auto max-w-2xl">
         <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
+          <AlertCircleIcon className="size-4" />
           <AlertTitle>Failed to load session</AlertTitle>
-          <AlertDescription>Could not fetch the session data. Please try again or go back.</AlertDescription>
+          <AlertDescription className="my-2 space-y-2">
+            <div>Could not fetch the session data. Please try again or go back.</div>
+            <Button
+              size="xs"
+              onClick={() => navigate(-1)}
+              data-testid="scorecard-page-go-back-button"
+              aria-label="Go Back"
+            >
+              Go Back
+            </Button>
+          </AlertDescription>
         </Alert>
-        <Button onClick={() => navigate(-1)}>Go Back</Button>
       </div>
     );
   }
 
-  // Guard: Only show scorecard if plan is approved
+  // Session status error state
   if (session.status !== 'PLAN_APPROVED' || !session.plan) {
-    // TODO: Rendering nothing is a poor user experience - we should ideally show a message that scorecard is not available and redirect after a few seconds, but for now we'll just return null
-    return null;
+    return (
+      <div data-testid="session-status-error" className="mx-auto max-w-2xl">
+        <Alert variant="destructive">
+          <AlertCircleIcon className="size-4" />
+          <AlertTitle>Invalid Session Status</AlertTitle>
+          <AlertDescription className="my-2 space-y-2">
+            <div>Scorecard is only available for approved plans.</div>
+            <Button
+              size="xs"
+              onClick={() => navigate(`/jds/${jdId}/sessions`, { replace: true })}
+              data-testid="return-to-sessions-button"
+              aria-label="Return to Sessions"
+            >
+              Return to Sessions
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
+  // Show scorecard state
   return (
-    <div data-testid="scorecard-page" className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => navigate(-1)}
-          data-testid="back-button"
-          aria-label="Go back"
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Go back</span>
-        </Button>
-        <h1 className="flex-1 text-2xl font-bold">Score Interview: {session.candidateName}</h1>
+    <div data-testid="scorecard-page" className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold">Score the Interview</h2>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Please fill out the scorecard below and submit your scores.
+        </p>
       </div>
 
-      {/* Form */}
       <ScorecardForm session={session} />
     </div>
   );

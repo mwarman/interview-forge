@@ -3,7 +3,7 @@ agent: 'agent'
 description: 'Plan and implement a change.'
 ---
 
-Plan and implement a change to the codebase.
+Plan and implement a change to the codebase following the steps below. If you encounter any ambiguity, ask for clarification before proceeding. Follow overall project conventions specified in `AGENTS.md`.
 
 ---
 

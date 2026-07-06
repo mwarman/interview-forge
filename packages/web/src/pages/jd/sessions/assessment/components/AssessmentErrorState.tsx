@@ -4,9 +4,9 @@ import { AlertTriangleIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { Button } from '@/common/components/shadcn/button';
 
-interface PlanErrorStateProps {
+interface AssessmentErrorStateProps {
   /**
-   * Error message from session.planErrorMessage
+   * Error message from session.assessErrorMessage
    */
   errorMessage: string;
 
@@ -27,26 +27,26 @@ interface PlanErrorStateProps {
 }
 
 /**
- * PlanErrorState component - displays an error message and a retry button
- * when plan generation encounters an error.
+ * AssessmentErrorState component - displays an error message and a retry button
+ * when assessment generation encounters an error.
  *
- * @param errorMessage - Error message from session.planErrorMessage
+ * @param errorMessage - Error message from session.assessErrorMessage
  * @param onRetry - Callback fired when "Retry Generation" button is clicked
  * @param isRetrying - Whether the retry button is in a loading state
  * @param testId - Optional test ID for testing
- * @returns {JSX.Element} The PlanErrorState component
+ * @returns {JSX.Element} The AssessmentErrorState component
  */
-export const PlanErrorState = ({
+export const AssessmentErrorState = ({
   errorMessage,
   onRetry,
   isRetrying = false,
-  testId = 'plan-error-state',
-}: PlanErrorStateProps): JSX.Element => {
+  testId = 'assessment-error-state',
+}: AssessmentErrorStateProps): JSX.Element => {
   return (
     <div data-testid={testId} className="mx-auto max-w-2xl">
       <Alert variant="destructive">
         <AlertTriangleIcon className="size-4" />
-        <AlertTitle>Plan Generation Failed</AlertTitle>
+        <AlertTitle>Assessment Generation Failed</AlertTitle>
         <AlertDescription className="my-2 space-y-2">
           <div data-testid="error-message">{errorMessage}</div>
           <Button
@@ -54,10 +54,10 @@ export const PlanErrorState = ({
             onClick={onRetry}
             disabled={isRetrying}
             data-testid="retry-generation-button"
-            aria-label="Retry plan generation"
+            aria-label="Retry assessment generation"
           >
-            {isRetrying ? 'Retrying…' : 'Retry Generation'}
-            <span className="sr-only">Retry plan generation</span>
+            {isRetrying ? 'Retrying…' : 'Retry'}
+            <span className="sr-only">Retry assessment generation</span>
           </Button>
         </AlertDescription>
       </Alert>

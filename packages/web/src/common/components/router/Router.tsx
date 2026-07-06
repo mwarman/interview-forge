@@ -8,6 +8,8 @@ import { JDSessionsPage } from '@/pages/jd/sessions/list/JDSessionsPage';
 import { PlanPage } from '@/pages/jd/sessions/plan/PlanPage';
 import { ScorecardPage } from '@/pages/jd/sessions/scorecard/ScorecardPage';
 import { SessionDetailPage } from '@/pages/jd/sessions/detail/SessionDetailPage';
+import { AssessmentPage } from '@/pages/jd/sessions/assessment/AssessmentPage';
+import { SessionLayout } from '@/common/layouts/SessionLayout';
 
 /**
  * The Router component defines the routing structure of the application using React Router.
@@ -25,9 +27,12 @@ export const Router = (): JSX.Element => {
           <Route path="/jds" element={<JDListPage />} />
           <Route path="/jds/create" element={<JDCreatePage />} />
           <Route path="/jds/:jdId/sessions" element={<JDSessionsPage />} />
-          <Route path="/jds/:jdId/sessions/:sessionId/plan" element={<PlanPage />} />
-          <Route path="/jds/:jdId/sessions/:sessionId/scorecard" element={<ScorecardPage />} />
-          <Route path="/jds/:jdId/sessions/:sessionId/detail" element={<SessionDetailPage />} />
+          <Route element={<SessionLayout />}>
+            <Route path="/jds/:jdId/sessions/:sessionId/plan" element={<PlanPage />} />
+            <Route path="/jds/:jdId/sessions/:sessionId/scorecard" element={<ScorecardPage />} />
+            <Route path="/jds/:jdId/sessions/:sessionId/assessment" element={<AssessmentPage />} />
+            <Route path="/jds/:jdId/sessions/:sessionId/detail" element={<SessionDetailPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

@@ -28,14 +28,14 @@ describe('planGenerationSystemPrompt', () => {
     expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('interview-forge-write-plan');
   });
 
-  it('should instruct the agent to identify 4-8 competency areas', () => {
+  it('should instruct the agent to identify 1-4 competency areas', () => {
     // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('4 and 8');
+    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('1 and 4');
   });
 
-  it('should instruct the agent to generate 3-5 questions per competency', () => {
+  it('should instruct the agent to generate 1-4 questions per competency', () => {
     // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('3 and 5');
+    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('1 and 4');
   });
 
   it('should include the InterviewPlan JSON schema structure', () => {

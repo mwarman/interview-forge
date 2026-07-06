@@ -3,7 +3,7 @@ agent: 'agent'
 description: 'Implement an issue.'
 ---
 
-Implement GitHub Issue #${input:issueNumber:Issue number}.
+Implement GitHub Issue #${input:issueNumber:Issue number} following the steps below. If you encounter any ambiguity, ask for clarification before proceeding. Follow overall project conventions specified in `AGENTS.md`.
 
 ---
 

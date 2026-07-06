@@ -341,9 +341,9 @@ describe('InterviewPlanSchema', () => {
       }
     });
 
-    it('should validate a plan with maximum 8 competencies', () => {
+    it('should validate a plan with maximum 4 competencies', () => {
       // Arrange
-      const competencies = Array.from({ length: 8 }, (_, i) => ({
+      const competencies = Array.from({ length: 4 }, (_, i) => ({
         competencyId: `${i}23e4567-e89b-12d3-a456-426614174000`,
         name: `Competency ${i + 1}`,
         description: `Description for competency ${i + 1}`,
@@ -369,7 +369,7 @@ describe('InterviewPlanSchema', () => {
       // Assert
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.competencies).toHaveLength(8);
+        expect(result.data.competencies).toHaveLength(4);
       }
     });
 
@@ -436,9 +436,9 @@ describe('InterviewPlanSchema', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject plan with more than 8 competencies', () => {
+    it('should reject plan with more than 4 competencies', () => {
       // Arrange
-      const competencies = Array.from({ length: 9 }, (_, i) => ({
+      const competencies = Array.from({ length: 5 }, (_, i) => ({
         competencyId: `${i}23e4567-e89b-12d3-a456-426614174000`,
         name: `Competency ${i + 1}`,
         description: `Description for competency ${i + 1}`,

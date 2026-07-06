@@ -54,6 +54,7 @@ export const CompetencySchema = z.object({
   questions: z
     .array(QuestionSchema)
     .min(1, 'At least one question is required per competency')
+    .max(4, 'Maximum 4 questions allowed per competency')
     .meta({ description: 'Array of questions for the competency' }),
 });
 
@@ -64,8 +65,8 @@ export type Competency = z.infer<typeof CompetencySchema>;
 
 /**
  * InterviewPlanSchema - Zod schema for Interview Plan entity
- * Validates plan attributes: planId, competencies array (min 1, max 8), and generated timestamp
- * Max 8 competencies reflects structured interviewing best practices
+ * Validates plan attributes: planId, competencies array (min 1, max 4), and generated timestamp
+ * Max 4 competencies reflects structured interviewing best practices
  */
 export const InterviewPlanSchema = z.object({
   planId: z
@@ -75,7 +76,7 @@ export const InterviewPlanSchema = z.object({
   competencies: z
     .array(CompetencySchema)
     .min(1, 'At least one competency is required')
-    .max(8, 'Maximum 8 competencies allowed')
+    .max(4, 'Maximum 4 competencies allowed')
     .meta({ description: 'Array of competencies for the interview plan' }),
   generatedAt: z.iso
     .datetime('generatedAt must be a valid ISO 8601 datetime')

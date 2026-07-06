@@ -38,6 +38,7 @@ export const SessionSchema = z.object({
   planErrorMessage: z.string().optional(),
   scorecard: z.record(z.string(), z.unknown()).optional(),
   assessment: z.record(z.string(), z.unknown()).optional(),
+  assessErrorMessage: z.string().optional(),
   createdAt: z.iso.datetime('createdAt must be a valid ISO 8601 datetime'),
   TTL: z.number().int().positive('TTL must be a positive integer'),
 });
