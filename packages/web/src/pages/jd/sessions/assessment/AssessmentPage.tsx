@@ -143,8 +143,8 @@ export const AssessmentPage = (): JSX.Element => {
           }}
           onApproveWithOverride={(data) => {
             const request: ApproveAssessmentRequest = {
-              recommendation: data.recommendation as Recommendation,
-              overrideReason: data.overrideReason,
+              overrideRecommendation: data.overrideRecommendation as Recommendation,
+              overrideReasoning: data.overrideReasoning,
             };
             approveAssessmentMutation.mutate(request);
           }}

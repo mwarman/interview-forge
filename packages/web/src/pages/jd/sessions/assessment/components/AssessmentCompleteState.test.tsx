@@ -88,4 +88,46 @@ describe('AssessmentCompleteState', () => {
     // Assert
     expect(screen.getByTestId('export-pdf-button')).toBeDisabled();
   });
+
+  it('should display override section when override reasoning is provided', () => {
+    // Arrange
+    const assessmentWithOverride: Assessment = {
+      ...mockAssessment,
+      overrideReasoning: 'After team discussion, candidate shows exceptional potential.',
+      overrideRecommendation: 'STRONG_HIRE',
+    };
+
+    // Act
+    render(<AssessmentCompleteState assessment={assessmentWithOverride} />);
+
+    // Assert
+    expect(screen.getByText('Override')).toBeInTheDocument();
+    expect(screen.getByText('After team discussion, candidate shows exceptional potential.')).toBeInTheDocument();
+    expect(screen.getByTestId('complete-override-recommendation-badge')).toHaveTextContent('STRONG HIRE');
+  });
+
+  it('should display original recommendation in override section when override recommendation is not provided', () => {
+    // Arrange
+    const assessmentWithOverrideReasoningOnly: Assessment = {
+      ...mockAssessment,
+      recommendation: 'HIRE',
+      overrideReasoning: 'Reconsidered after additional review.',
+    };
+
+    // Act
+    render(<AssessmentCompleteState assessment={assessmentWithOverrideReasoningOnly} />);
+
+    // Assert
+    expect(screen.getByText('Override')).toBeInTheDocument();
+    expect(screen.getByText('Reconsidered after additional review.')).toBeInTheDocument();
+    expect(screen.getByTestId('complete-override-recommendation-badge')).toHaveTextContent('HIRE');
+  });
+
+  it('should not display override section when override reasoning is not provided', () => {
+    // Arrange & Act
+    render(<AssessmentCompleteState assessment={mockAssessment} />);
+
+    // Assert
+    expect(screen.queryByText('Override')).not.toBeInTheDocument();
+  });
 });

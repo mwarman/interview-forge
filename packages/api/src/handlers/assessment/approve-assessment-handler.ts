@@ -10,11 +10,11 @@ import { sessionService } from '@/services/session-service';
 /**
  * Approve Assessment Handler - approves a session's assessment with optional overrides
  * Request: PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve
- * Body: { recommendation?: Recommendation, overrideReason?: string }
+ * Body: { overrideRecommendation?: Recommendation, overrideReasoning?: string }
  *
  * Responsibilities:
  * - Extract and validate path parameters (jdId, sessionId)
- * - Parse and validate request body (optional recommendation and overrideReason)
+ * - Parse and validate request body (optional overrideRecommendation and overrideReasoning)
  * - Delegate to business service to approve the assessment
  * - Return 409 if the session status is not ASSESSED (idempotency guard)
  * - Return 200 with updated session on success
@@ -57,14 +57,14 @@ export const handle: APIGatewayProxyHandlerV2 = async (event, context) => {
       {
         jdId,
         sessionId,
-        hasRecommendationOverride: !!request.recommendation,
-        hasOverrideReason: !!request.overrideReason,
+        hasOverrideRecommendation: !!request.overrideRecommendation,
+        hasOverrideReasoning: !!request.overrideReasoning,
       },
       '[ApproveAssessmentHandler] - Approving assessment',
     );
 
     // Build overrides object only if fields are provided
-    const overrides = request.recommendation || request.overrideReason ? request : undefined;
+    const overrides = request.overrideRecommendation || request.overrideReasoning ? request : undefined;
 
     // Delegate to service to approve assessment
     const updatedSession = await sessionService.approveAssessment(jdId, sessionId, overrides);

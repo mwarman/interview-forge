@@ -22,7 +22,7 @@ describe('ApproveWithOverrideDialog', () => {
     expect(screen.getByText('Approve with Override')).toBeInTheDocument();
   });
 
-  it('should display recommendation select and override reason textarea', () => {
+  it('should display override recommendation select and override reasoning textarea', () => {
     // Arrange
     const onOpenChange = vi.fn();
     const onConfirm = vi.fn();
@@ -31,8 +31,8 @@ describe('ApproveWithOverrideDialog', () => {
     render(<ApproveWithOverrideDialog isOpen={true} onOpenChange={onOpenChange} onConfirm={onConfirm} />);
 
     // Assert
-    expect(screen.getByTestId('recommendation-select')).toBeInTheDocument();
-    expect(screen.getByTestId('override-reason-textarea')).toBeInTheDocument();
+    expect(screen.getByTestId('override-recommendation-select')).toBeInTheDocument();
+    expect(screen.getByTestId('override-reasoning-textarea')).toBeInTheDocument();
   });
 
   it('should disable confirm button initially', () => {

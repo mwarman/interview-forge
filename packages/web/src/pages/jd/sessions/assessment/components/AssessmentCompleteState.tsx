@@ -54,7 +54,7 @@ export const AssessmentCompleteState = ({
           <CardDescription>Review the final assessment and recommendation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {assessment.overrideReason && (
+          {assessment.overrideReasoning && (
             <div className="space-y-4 border-l-2 border-amber-500 pl-4">
               <div className="text-base/tight font-bold text-amber-600 uppercase">Override</div>
               <div className="space-y-2">
@@ -63,14 +63,14 @@ export const AssessmentCompleteState = ({
                 </div>
                 <div>
                   <RecommendationBadge
-                    recommendation={assessment.recommendation}
-                    testId="complete-recommendation-badge"
+                    recommendation={assessment.overrideRecommendation || assessment.recommendation}
+                    testId="complete-override-recommendation-badge"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Reasoning</div>
-                <p className="text-sm leading-relaxed">{assessment.overrideReason}</p>
+                <p className="text-sm leading-relaxed">{assessment.overrideReasoning}</p>
               </div>
             </div>
           )}

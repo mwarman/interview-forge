@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { SessionSchema, SessionStatusSchema, type Session, type SessionStatus } from './session';
+import {
+  SessionSchema,
+  SessionStatusSchema,
+  ApproveAssessmentRequestSchema,
+  type Session,
+  type SessionStatus,
+  type ApproveAssessmentRequest,
+} from './session';
 
 describe('SessionStatusSchema', () => {
   describe('valid enum values', () => {
@@ -437,6 +444,100 @@ describe('SessionSchema', () => {
       expect(session).toBeDefined();
       expect(session.sessionId).toBeTruthy();
       expect(status).toBe('PLAN_PENDING');
+    });
+  });
+});
+
+describe('ApproveAssessmentRequestSchema', () => {
+  describe('valid payloads', () => {
+    it('should accept empty object (approve as-is)', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({});
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept override recommendation only', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({
+        overrideRecommendation: 'STRONG_HIRE',
+      });
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept override reasoning only', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({
+        overrideReasoning: 'Candidate showed exceptional communication skills in follow-up.',
+      });
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept both override recommendation and reasoning', () => {
+      // Arrange
+      const request: ApproveAssessmentRequest = {
+        overrideRecommendation: 'STRONG_HIRE',
+        overrideReasoning: 'After discussion with team, candidate exceeds all requirements.',
+      };
+
+      // Act
+      const result = ApproveAssessmentRequestSchema.safeParse(request);
+
+      // Assert
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept all valid recommendation values', () => {
+      // Arrange
+      const recommendations = ['HIRE', 'NO_HIRE', 'STRONG_HIRE', 'STRONG_NO_HIRE'] as const;
+
+      recommendations.forEach((recommendation) => {
+        // Act
+        const result = ApproveAssessmentRequestSchema.safeParse({
+          overrideRecommendation: recommendation,
+          overrideReasoning: 'Test reasoning',
+        });
+
+        // Assert
+        expect(result.success).toBe(true);
+      });
+    });
+  });
+
+  describe('invalid payloads', () => {
+    it('should reject invalid override recommendation', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({
+        overrideRecommendation: 'INVALID_RECOMMENDATION',
+      });
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject non-string override reasoning', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({
+        overrideReasoning: 123,
+      });
+
+      // Assert
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject non-string override recommendation', () => {
+      // Arrange & Act
+      const result = ApproveAssessmentRequestSchema.safeParse({
+        overrideRecommendation: { value: 'HIRE' },
+      });
+
+      // Assert
+      expect(result.success).toBe(false);
     });
   });
 });

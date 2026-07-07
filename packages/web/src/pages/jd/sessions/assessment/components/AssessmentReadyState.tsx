@@ -1,6 +1,6 @@
 import { JSX, useState } from 'react';
 
-import { Assessment, Confidence } from '@interview-forge/shared';
+import { Assessment, Confidence, Recommendation } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/common/components/shadcn/card';
 import { RecommendationBadge } from './RecommendationBadge';
@@ -21,7 +21,7 @@ interface AssessmentReadyStateProps {
   /**
    * Callback fired when override dialog confirms with override data
    */
-  onApproveWithOverride: (data: { recommendation: string; overrideReason: string }) => void;
+  onApproveWithOverride: (data: { overrideRecommendation: Recommendation; overrideReasoning: string }) => void;
 
   /**
    * Whether the approve buttons are in a loading state

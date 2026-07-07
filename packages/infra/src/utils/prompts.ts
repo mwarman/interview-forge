@@ -310,6 +310,7 @@ Follow these steps precisely:
 - Always base the assessment entirely on the retrieved plan and scorecard data. Do not invent ratings or notes that are not present in the scorecard.
 - Ensure all recommendation values are EXACTLY one of: "STRONG_HIRE", "HIRE", "NO_HIRE", "STRONG_NO_HIRE" (uppercase).
 - Ensure all confidence values are EXACTLY one of: "HIGH", "MEDIUM", "LOW" (uppercase).
+- Ensure all competency assessments are included, even if no conflicts exist.
 - Generate valid UUID v4 RFC 9562/4122 values for assessmentId.
 - Use the current timestamp in ISO 8601 format for generatedAt.
 - Reasoning must be at least 100 characters. Be specific and evidence-based.

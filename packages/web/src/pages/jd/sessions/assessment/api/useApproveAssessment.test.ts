@@ -43,13 +43,13 @@ describe('useApproveAssessment', () => {
     expect(apiClient.put).toHaveBeenCalledWith(`/jds/${jdId}/sessions/${sessionId}/assessment/approve`, {});
   });
 
-  it('should approve assessment with recommendation override', async () => {
+  it('should approve assessment with override recommendation and reasoning', async () => {
     // Arrange
     const jdId = '123e4567-e89b-12d3-a456-426614174000';
     const sessionId = '223e4567-e89b-12d3-a456-426614174000';
     const request: ApproveAssessmentRequest = {
-      recommendation: 'HIRE',
-      overrideReason: 'Strategic hire for team expansion',
+      overrideRecommendation: 'HIRE',
+      overrideReasoning: 'Strategic hire for team expansion',
     };
     const mockSession: Session = {
       sessionId,
