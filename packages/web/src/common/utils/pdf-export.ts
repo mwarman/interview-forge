@@ -5,6 +5,7 @@ import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Assessment, CompetencyAssessment } from '@interview-forge/shared';
 
 // Register fonts
+// @ts-expect-error: pdfMake.vfs is not typed in the pdfmake package
 pdfMake.vfs = pdfFonts;
 
 interface GeneratePdfParams {
