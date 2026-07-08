@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 
 import { Assessment } from '@interview-forge/shared';
 import { renderHookWithAllProviders } from '@/test/test-utils';
@@ -78,7 +78,7 @@ describe('usePdfExport', () => {
     result.current();
 
     // Assert
-    const callArgs = (downloadAssessmentPdf as vi.Mock).mock.calls[0];
+    const callArgs = (downloadAssessmentPdf as Mock).mock.calls[0];
     expect(callArgs[1]).toContain('assessment-john-doe');
     expect(callArgs[1]).toContain('2026-06-22');
     expect(callArgs[1]).toMatch(/\.pdf$/);
@@ -99,7 +99,7 @@ describe('usePdfExport', () => {
     result.current();
 
     // Assert
-    const callArgs = (downloadAssessmentPdf as vi.Mock).mock.calls[0];
+    const callArgs = (downloadAssessmentPdf as Mock).mock.calls[0];
     // Should sanitize special characters
     expect(callArgs[1]).toMatch(/assessment-[a-z0-9-]+\.pdf/);
   });
@@ -121,7 +121,7 @@ describe('usePdfExport', () => {
     result.current();
 
     // Assert
-    const callArgs = (downloadAssessmentPdf as vi.Mock).mock.calls[0][0];
+    const callArgs = (downloadAssessmentPdf as Mock).mock.calls[0][0];
     expect(callArgs.assessment).toEqual(mockAssessment);
     expect(callArgs.candidateName).toBe(candidateName);
     expect(callArgs.jdTitle).toBe(jdTitle);
@@ -142,7 +142,7 @@ describe('usePdfExport', () => {
     result.current();
 
     // Assert
-    const callArgs = (downloadAssessmentPdf as vi.Mock).mock.calls[0][0];
+    const callArgs = (downloadAssessmentPdf as Mock).mock.calls[0][0];
     expect(callArgs.generatedAt instanceof Date).toBe(true);
     expect(callArgs.generatedAt.toISOString()).toContain('2026-06-22');
   });
@@ -152,7 +152,7 @@ describe('usePdfExport', () => {
     const { downloadAssessmentPdf } = await import('@/common/utils/pdf-export');
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const testError = new Error('PDF generation failed');
-    (downloadAssessmentPdf as vi.Mock).mockImplementation(() => {
+    (downloadAssessmentPdf as Mock).mockImplementation(() => {
       throw testError;
     });
 
