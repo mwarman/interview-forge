@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Assessment, ApproveAssessmentRequest, Recommendation } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
 import { useGetSession } from '@/common/api/useGetSession';
+import { useGetJobDescription } from '@/common/api/useGetJobDescription';
 import { useCreateAssessment } from './api/useCreateAssessment';
 import { useApproveAssessment } from './api/useApproveAssessment';
 import { AssessmentErrorState } from './components/AssessmentErrorState';
@@ -13,6 +14,7 @@ import { AssessmentCompleteState } from './components/AssessmentCompleteState';
 import { SkeletonLoaderBlock } from '@/common/components/loader/SkeletonLoaderBlock';
 import { AlertCircleIcon, ArrowDownToLine, Form } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
+import { usePdfExport } from './hooks/usePdfExport';
 
 /**
  * AssessmentPage component - orchestrates the assessment review and approval page.
@@ -41,9 +43,19 @@ export const AssessmentPage = (): JSX.Element => {
     refetchIntervalMs: 10000,
   });
 
+  // Fetch job description for PDF export
+  const { data: jobDescription } = useGetJobDescription(jdId ?? '');
+
   // Mutations for creating and approving assessments
   const createAssessmentMutation = useCreateAssessment(jdId ?? '', sessionId ?? '');
   const approveAssessmentMutation = useApproveAssessment(jdId ?? '', sessionId ?? '');
+
+  // PDF export handler
+  const handleExportPdf = usePdfExport({
+    assessment: session?.assessment as Assessment,
+    candidateName: session?.candidateName ?? '',
+    jdTitle: jobDescription?.title ?? 'Job Description',
+  });
 
   /**
    * On mount, kick off assessment generation if:
@@ -153,13 +165,7 @@ export const AssessmentPage = (): JSX.Element => {
       )}
 
       {session.status === 'COMPLETE' && session.assessment && (
-        <AssessmentCompleteState
-          assessment={session.assessment as Assessment}
-          onExportPdf={() => {
-            // TODO: Implement PDF export in future story
-            toast.info('PDF export coming soon');
-          }}
-        />
+        <AssessmentCompleteState assessment={session.assessment as Assessment} onExportPdf={handleExportPdf} />
       )}
     </div>
   );
