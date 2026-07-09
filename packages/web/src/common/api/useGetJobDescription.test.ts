@@ -81,24 +81,26 @@ describe('useGetJobDescription', () => {
     // Arrange
     vi.mocked(apiClient.get).mockResolvedValue({ data: mockJobDescription } as never);
 
-    // Act
-    const { result, rerender } = renderHookWithAllProviders(() => useGetJobDescription(JD_ID));
+    // Act - first call
+    const { result: result1 } = renderHookWithAllProviders(() => useGetJobDescription(JD_ID));
 
     // Assert - initial call
     await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
+      expect(result1.current.isSuccess).toBe(true);
     });
     expect(apiClient.get).toHaveBeenCalledTimes(1);
 
-    // Act - rerender with different ID
+    vi.clearAllMocks();
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockJobDescription } as never);
+
+    // Act - second call with different ID
     const newJdId = '660e8400-e29b-41d4-a716-446655440002';
-    const newMockJD = { ...mockJobDescription, jdId: newJdId };
-    vi.mocked(apiClient.get).mockResolvedValue({ data: newMockJD } as never);
-    rerender();
+    const { result: result2 } = renderHookWithAllProviders(() => useGetJobDescription(newJdId));
 
     // Assert - should call with new ID
     await waitFor(() => {
-      expect(apiClient.get).toHaveBeenLastCalledWith(`/jds/${JD_ID}`);
+      expect(result2.current.isSuccess).toBe(true);
     });
+    expect(apiClient.get).toHaveBeenCalledWith(`/jds/${newJdId}`);
   });
 });
