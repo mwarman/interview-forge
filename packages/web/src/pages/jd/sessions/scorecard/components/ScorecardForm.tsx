@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import { toast } from 'sonner';
+import { cn } from 'cn';
 
 import {
   InterviewPlan,
@@ -23,7 +24,6 @@ import { LikertRating } from './LikertRating';
 import { useSubmitScorecard } from '../api/useSubmitScorecard';
 import { Alert, AlertDescription, AlertTitle } from '@/common/components/shadcn/alert';
 import { AlertCircleIcon } from 'lucide-react';
-import { cn } from '@/common/utils/css';
 
 /**
  * Form schema for scorecard - validates the array of competency scores

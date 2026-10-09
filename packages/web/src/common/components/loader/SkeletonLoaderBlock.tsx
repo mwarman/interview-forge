@@ -1,6 +1,6 @@
 import { JSX } from 'react';
+import { cn } from 'cn';
 
-import { cn } from '@/common/utils/css';
 import { Skeleton } from '@/common/components/shadcn/skeleton';
 
 interface SkeletonLoaderBlockProps {

@@ -2,8 +2,8 @@ import { JSX, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { CloudUpload } from 'lucide-react';
+import { cn } from 'cn';
 
-import { cn } from '@/common/utils/css';
 import { Button } from '@/common/components/shadcn/button';
 import {
   Field,
