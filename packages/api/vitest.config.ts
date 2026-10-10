@@ -1,7 +1,7 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
 import path from 'path';
 
-import baseConfig from '../../vitest.config';
+import baseConfig from '../../vitest.config.ts';
 
 /**
  * Vitest configuration for the API package.
@@ -12,7 +12,7 @@ export default mergeConfig(
   defineConfig({
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
     },
     test: {

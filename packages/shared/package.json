@@ -1,6 +1,6 @@
 {
   "name": "@interview-forge/shared",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -9,5 +9,8 @@
     "clean": "rimraf coverage dist",
     "test": "vitest run --silent passed-only",
     "test:coverage": "vitest run --coverage --silent passed-only"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
   }
 }

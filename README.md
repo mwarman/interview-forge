@@ -17,8 +17,8 @@ Built on **AWS Bedrock Agents**, **React**, and a **TypeScript monorepo**, this 
 
 ### Prerequisites
 
-- Node.js 24.16.0+
-- npm 10.5.0+
+- Node.js 24.21.0+
+- npm 11.19.0+
 - AWS credentials configured (for CDK deployments)
 
 ### Setup

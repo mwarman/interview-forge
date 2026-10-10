@@ -1,6 +1,7 @@
 import { JSX, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { cn } from 'cn';
 
 import { CreateJobDescriptionRequestSchema } from '@interview-forge/shared';
 import { Button } from '@/common/components/shadcn/button';
@@ -15,7 +16,6 @@ import {
 import { Input } from '@/common/components/shadcn/input';
 import { Textarea } from '@/common/components/shadcn/textarea';
 import { useCreateJobDescription } from '@/pages/jd/create/api/useCreateJobDescription';
-import { cn } from '@/common/utils/css';
 
 interface PasteModeProps {
   onSuccess?: () => void;
