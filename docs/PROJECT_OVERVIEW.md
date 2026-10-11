@@ -105,7 +105,7 @@ The system is organized around two human approval checkpoints that explicitly ga
 
 ```mermaid
 flowchart TD
-    subgraph Web["React Frontend (packages/web)"]
+    subgraph Web["React Frontend (apps/web)"]
         A[JD Input\nPaste or Upload]
         B[JD List + Session List]
         C[Plan Review & Edit UI\nCheckpoint 1]
@@ -118,7 +118,7 @@ flowchart TD
         GW[REST API]
     end
 
-    subgraph Lambda["Lambda Functions (packages/api)"]
+    subgraph Lambda["Lambda Functions (apps/api)"]
         L1[ingest-handler]
         L2[plan-handler]
         L3[approve-plan-handler]
@@ -314,7 +314,7 @@ erDiagram
 
 ### API Architecture
 
-The `packages/api` workspace is organized into three cohesive layers enforcing Single Responsibility Principle (SRP) and Don't Repeat Yourself (DRY) across all Lambda handlers. Each layer has a well-defined contract with the layers adjacent to it; no layer reaches past its immediate neighbor.
+The `apps/api` workspace is organized into three cohesive layers enforcing Single Responsibility Principle (SRP) and Don't Repeat Yourself (DRY) across all Lambda handlers. Each layer has a well-defined contract with the layers adjacent to it; no layer reaches past its immediate neighbor.
 
 ```
 API Gateway

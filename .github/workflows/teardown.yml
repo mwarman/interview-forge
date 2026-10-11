@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Create infrastructure .env file
-        working-directory: ./packages/infra
+        working-directory: ./apps/infra
         run: |
           echo "CDK_APP_NAME=${{ vars.CDK_APP_NAME }}" >> .env
           echo "CDK_ENV_NAME=${{ vars.CDK_ENV_NAME }}" >> .env
@@ -53,16 +53,16 @@ jobs:
           role-session-name: teardown-interview-forge-${{ github.run_id }}
 
       - name: Synthesize AWS CDK infrastructure
-        run: npm run cdk:synth --workspace packages/infra
+        run: npm run cdk:synth --workspace apps/infra
 
       - name: Teardown infrastructure
-        run: npm run cdk:destroy --workspace packages/infra
+        run: npm run cdk:destroy --workspace apps/infra
 
       - name: Clean up sensitive files
         if: always()
         run: |
           rm -f ./packages/shared/.env
-          rm -f ./packages/api/.env
-          rm -f ./packages/web/.env
-          rm -f ./packages/infra/.env
+          rm -f ./apps/api/.env
+          rm -f ./apps/web/.env
+          rm -f ./apps/infra/.env
           npm run clean

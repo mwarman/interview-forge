@@ -41,7 +41,7 @@ Create a manually triggered GitHub Actions workflow (`deploy.yml`) that installs
 **Acceptance Criteria:**
 
 - AC-01: Workflow is triggered via `workflow_dispatch` with an optional `environment` input defaulting to `dev`
-- AC-02: Workflow installs Node.js dependencies at root, then runs `npm run cdk deploy --all -w packages/infra` with `--require-approval never`
+- AC-02: Workflow installs Node.js dependencies at root, then runs `npm run cdk deploy --all -w apps/infra` with `--require-approval never`
 - AC-03: AWS credentials are injected from repository secrets; no credentials are hardcoded
 - AC-04: Workflow fails fast and surfaces CDK error output clearly if deploy fails
 - AC-05: Successful run completes without manual approval gates (fully automated given manual trigger)
@@ -59,7 +59,7 @@ Create a manually triggered GitHub Actions workflow (`teardown.yml`) that execut
 **Acceptance Criteria:**
 
 - AC-01: Workflow is triggered via `workflow_dispatch` with a required `confirm` string input; workflow exits with a non-zero code and clear message if input is not `"yes"`
-- AC-02: Workflow runs `npm run cdk destroy --all --force -w packages/infra` when confirmation passes
+- AC-02: Workflow runs `npm run cdk destroy --all --force -w apps/infra` when confirmation passes
 - AC-03: AWS credentials are injected from repository secrets, consistent with M1-01
 - AC-04: Workflow outputs a confirmation summary (stack names destroyed) on success
 
@@ -71,7 +71,7 @@ Create a manually triggered GitHub Actions workflow (`teardown.yml`) that execut
 ### Issue M1-03: Define DynamoDB Single-Table CDK Construct
 
 **Description:**  
-Implement the DynamoDB table CDK construct in `packages/infra/src/stacks/` using the single-table design specified in the Project Overview. The table requires a composite primary key (`PK` / `SK`), one GSI (`GSI1` with `GSI1PK` / `GSI1SK`), TTL attribute configuration (`TTL`), and on-demand billing mode. Every resource must carry the required organizational tags: `App`, `Env`, `OU`, `Owner`.
+Implement the DynamoDB table CDK construct in `apps/infra/src/stacks/` using the single-table design specified in the Project Overview. The table requires a composite primary key (`PK` / `SK`), one GSI (`GSI1` with `GSI1PK` / `GSI1SK`), TTL attribute configuration (`TTL`), and on-demand billing mode. Every resource must carry the required organizational tags: `App`, `Env`, `OU`, `Owner`.
 
 **Acceptance Criteria:**
 
@@ -84,7 +84,7 @@ Implement the DynamoDB table CDK construct in `packages/infra/src/stacks/` using
 - AC-07: `cdk synth` produces valid CloudFormation with no warnings on the table resource
 
 **Effort:** S  
-**Notes:** Table name and tag values should be driven by the `CDK_` prefixed env vars validated via Zod in `packages/infra/src/utils/` per the technology guidelines.
+**Notes:** Table name and tag values should be driven by the `CDK_` prefixed env vars validated via Zod in `apps/infra/src/utils/` per the technology guidelines.
 
 ---
 
@@ -118,7 +118,7 @@ Implement the canonical Zod schemas for the `JD` and `Session` entities in `pack
 - AC-02: `SessionSchema` validates all Session entity attributes; optional fields (`plan`, `scorecard`, `assessment`) are correctly typed as optional Maps
 - AC-03: `SessionStatus` enum is defined as a Zod enum with values: `PLAN_GENERATING`, `PLAN_ERROR`, `PLAN_PENDING`, `PLAN_APPROVED`, `SCORED`, `ASSESS_GENERATING`, `ASSESS_ERROR`, `ASSESSED`, `COMPLETE`
 - AC-04: TypeScript types `Jd`, `Session`, and `SessionStatus` are inferred from schemas using `z.infer` and exported
-- AC-05: Schemas are importable from `@monorepo/shared` in both `packages/api` and `packages/web` without relative path imports
+- AC-05: Schemas are importable from `@monorepo/shared` in both `apps/api` and `apps/web` without relative path imports
 - AC-06: Unit tests cover valid payloads, missing required fields, and invalid enum values for both schemas
 
 **Effort:** M  
@@ -129,7 +129,7 @@ Implement the canonical Zod schemas for the `JD` and `Session` entities in `pack
 ### Issue M1-06: Implement CloudWatch Structured Logging Baseline
 
 **Description:**  
-Establish the structured logging pattern for all Lambda functions in `packages/api`. Create a shared logger utility in `packages/api/src/utils/logger.ts` that wraps `console.log` with structured JSON output (timestamp, level, lambdaName, correlationId, message, optional payload). All Lambda handlers must use this logger rather than raw `console.log`. Define CloudWatch Log Groups in CDK for each Lambda with a 7-day retention policy.
+Establish the structured logging pattern for all Lambda functions in `apps/api`. Create a shared logger utility in `apps/api/src/utils/logger.ts` that wraps `console.log` with structured JSON output (timestamp, level, lambdaName, correlationId, message, optional payload). All Lambda handlers must use this logger rather than raw `console.log`. Define CloudWatch Log Groups in CDK for each Lambda with a 7-day retention policy.
 
 **Acceptance Criteria:**
 
@@ -161,7 +161,7 @@ Establish the structured logging pattern for all Lambda functions in `packages/a
 ### Issue M2-01: Implement JD Ingest Lambda (`ingest-handler`)
 
 **Description:**  
-Implement the `ingest-handler` Lambda in `packages/api/src/handlers/ingest/`. This handler accepts two input modes via API Gateway: (1) raw JSON body with `title` and `rawText` (paste mode), and (2) multipart or pre-signed S3 URL flow for file uploads. For file uploads, the handler reads the file from S3 (uploaded directly by the frontend using a pre-signed PUT URL), extracts text via `unpdf` for PDFs or reads directly for TXT, then writes the JD record to DynamoDB with a 72-hour TTL. Generate `jdId` (UUID) and `createdAt` at write time.
+Implement the `ingest-handler` Lambda in `apps/api/src/handlers/ingest/`. This handler accepts two input modes via API Gateway: (1) raw JSON body with `title` and `rawText` (paste mode), and (2) multipart or pre-signed S3 URL flow for file uploads. For file uploads, the handler reads the file from S3 (uploaded directly by the frontend using a pre-signed PUT URL), extracts text via `unpdf` for PDFs or reads directly for TXT, then writes the JD record to DynamoDB with a 72-hour TTL. Generate `jdId` (UUID) and `createdAt` at write time.
 
 **Acceptance Criteria:**
 
@@ -182,7 +182,7 @@ Implement the `ingest-handler` Lambda in `packages/api/src/handlers/ingest/`. Th
 ### Issue M2-02: Implement Session & JD CRUD Lambda (`session-handler`)
 
 **Description:**  
-Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `POST /jds/upload-url` route that generates a pre-assigned `jdId` and a pre-signed S3 PUT URL for file uploads.
+Implement the `session-handler` Lambda in `apps/api/src/handlers/session/` to handle all CRUD operations for JDs and sessions via path-based routing. Operations: list all JDs (GSI1 query), get single JD, create candidate session (write SESSION item with TTL copied from parent JD), list sessions for a JD (GSI1 query), get single session. Also expose a `POST /jds/upload-url` route that generates a pre-assigned `jdId` and a pre-signed S3 PUT URL for file uploads.
 
 **Acceptance Criteria:**
 
@@ -203,7 +203,7 @@ Implement the `session-handler` Lambda in `packages/api/src/handlers/session/` t
 ### Issue M2-03: Wire M2 Lambda Routes in CDK
 
 **Description:**  
-Add CDK Lambda function constructs and API Gateway integrations for `ingest-handler` and `session-handler` in `packages/infra`. Wire the routes defined in M2-01 and M2-02 to the API Gateway REST API skeleton from M1-04. Assign the shared Lambda execution role from M1-04. Pass required environment variables (`TABLE_NAME`, `BUCKET_NAME`) via CDK `environment` map.
+Add CDK Lambda function constructs and API Gateway integrations for `ingest-handler` and `session-handler` in `apps/infra`. Wire the routes defined in M2-01 and M2-02 to the API Gateway REST API skeleton from M1-04. Assign the shared Lambda execution role from M1-04. Pass required environment variables (`TABLE_NAME`, `BUCKET_NAME`) via CDK `environment` map.
 
 **Acceptance Criteria:**
 
@@ -221,7 +221,7 @@ Add CDK Lambda function constructs and API Gateway integrations for `ingest-hand
 ### Issue M2-04: Implement JD Input Page (React)
 
 **Description:**  
-Implement the JD input page in `packages/web/src/pages/jd/create/`. The page provides two input modes selectable via tabs: (1) paste mode — a title field and a large textarea for raw JD text; (2) upload mode — a title field and a drag-and-drop file dropzone accepting `.pdf` and `.txt` files only. On submit, paste mode calls `POST /jds` directly; upload mode calls `POST /jds/upload-url`, uploads the file directly to S3 via the pre-signed URL, then calls `POST /jds` with the `s3Key`. On success, navigate to the JD list page.
+Implement the JD input page in `apps/web/src/pages/jd/create/`. The page provides two input modes selectable via tabs: (1) paste mode — a title field and a large textarea for raw JD text; (2) upload mode — a title field and a drag-and-drop file dropzone accepting `.pdf` and `.txt` files only. On submit, paste mode calls `POST /jds` directly; upload mode calls `POST /jds/upload-url`, uploads the file directly to S3 via the pre-signed URL, then calls `POST /jds` with the `s3Key`. On success, navigate to the JD list page.
 
 **Acceptance Criteria:**
 
@@ -242,7 +242,7 @@ Implement the JD input page in `packages/web/src/pages/jd/create/`. The page pro
 ### Issue M2-05: Implement JD List Page with Session List (React)
 
 **Description:**  
-Implement the JD list page in `packages/web/src/pages/jd/list/`. Display all JDs returned from `GET /jds` as a scrollable list of cards. Each card shows: JD title, created date, TTL expiry countdown, and a count of existing sessions. Selecting a JD expands or navigates to a session sub-view listing all sessions for that JD with status badges and a "New Session" button. "New Session" calls `POST /jds/{jdId}/sessions` with a recruiter-entered candidate name and navigates to the plan generation page (M3).
+Implement the JD list page in `apps/web/src/pages/jd/list/`. Display all JDs returned from `GET /jds` as a scrollable list of cards. Each card shows: JD title, created date, TTL expiry countdown, and a count of existing sessions. Selecting a JD expands or navigates to a session sub-view listing all sessions for that JD with status badges and a "New Session" button. "New Session" calls `POST /jds/{jdId}/sessions` with a recruiter-entered candidate name and navigates to the plan generation page (M3).
 
 **Acceptance Criteria:**
 
@@ -261,25 +261,25 @@ Implement the JD list page in `packages/web/src/pages/jd/list/`. Display all JDs
 ### Issue M2-06: Add Shared API Client and TanStack Query Hooks for JD/Session Domain
 
 **Description:**  
-Implement the Axios instance and TanStack Query hooks for the JD and session domain in `packages/web/src/common/api/` (global Axios config) and `packages/web/src/pages/jd/hooks/`. Hooks needed: `useGetJds`, `useGetJd`, `useCreateSession`, `useGetSessions`, `useGetSession`, `useGetUploadUrl`. Each hook wraps the corresponding API route.
+Implement the Axios instance and TanStack Query hooks for the JD and session domain in `apps/web/src/common/api/` (global Axios config) and `apps/web/src/pages/jd/hooks/`. Hooks needed: `useGetJds`, `useGetJd`, `useCreateSession`, `useGetSessions`, `useGetSession`, `useGetUploadUrl`. Each hook wraps the corresponding API route.
 
 **Acceptance Criteria:**
 
-- AC-01: A global Axios instance is defined in `packages/web/src/common/utils/axios.ts` with `baseURL` sourced from `import.meta.env.VITE_API_BASE_URL`
-- AC-02: `useGetJds` and `useGetJd` are `useQuery` hooks; `useCreateSession` is a `useMutation` hook; all are co-located in `packages/web/src/pages/jd/hooks/`
+- AC-01: A global Axios instance is defined in `apps/web/src/common/utils/axios.ts` with `baseURL` sourced from `import.meta.env.VITE_API_BASE_URL`
+- AC-02: `useGetJds` and `useGetJd` are `useQuery` hooks; `useCreateSession` is a `useMutation` hook; all are co-located in `apps/web/src/pages/jd/hooks/`
 - AC-03: All hooks use the shared Axios instance; no inline `fetch` calls in page components
 - AC-04: `useCreateSession` mutation invalidates the session list query for the relevant `jdId` on success
 - AC-05: Unit tests for each hook use `msw` or mock Axios; cover success and error states
 
 **Effort:** M  
-**Notes:** `VITE_API_BASE_URL` must be set to the API Gateway endpoint URL. Document this in a `.env.example` file at `packages/web/`.
+**Notes:** `VITE_API_BASE_URL` must be set to the API Gateway endpoint URL. Document this in a `.env.example` file at `apps/web/`.
 
 ---
 
 ### Issue M2-07: Implement Error Handling Middleware for Lambda Handlers
 
 **Description:**  
-Create a higher-order function `withErrorHandler` in `packages/api/src/utils/error-handler.ts` that wraps Lambda handler functions in a standardized try/catch. The wrapper catches unhandled errors, logs them via the structured logger, and returns a uniform API Gateway error response shape: `{ statusCode, body: { error: string, message: string } }`. Define typed `AppError` classes for 400, 404, 422, and 500 error scenarios.
+Create a higher-order function `withErrorHandler` in `apps/api/src/utils/error-handler.ts` that wraps Lambda handler functions in a standardized try/catch. The wrapper catches unhandled errors, logs them via the structured logger, and returns a uniform API Gateway error response shape: `{ statusCode, body: { error: string, message: string } }`. Define typed `AppError` classes for 400, 404, 422, and 500 error scenarios.
 
 **Acceptance Criteria:**
 
@@ -377,9 +377,9 @@ Define the `interview-forge-plan-agent` Bedrock Agent in CDK using `CfnAgent` an
 **Description:**  
 Replace the original single `plan-handler` with two Lambdas that implement the async kickoff/worker pattern to work within the 29-second API Gateway timeout:
 
-**`plan-kickoff-handler`** (`packages/api/src/handlers/plan-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/plan`). Validates path parameters, verifies the session exists and is in a valid pre-generation state, updates session `status` to `PLAN_GENERATING` in DynamoDB, then invokes `plan-worker` asynchronously using `InvokeCommand` with `InvocationType: 'Event'`. Returns HTTP 202 immediately — the client must poll for completion.
+**`plan-kickoff-handler`** (`apps/api/src/handlers/plan-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/plan`). Validates path parameters, verifies the session exists and is in a valid pre-generation state, updates session `status` to `PLAN_GENERATING` in DynamoDB, then invokes `plan-worker` asynchronously using `InvokeCommand` with `InvocationType: 'Event'`. Returns HTTP 202 immediately — the client must poll for completion.
 
-**`plan-worker`** (`packages/api/src/handlers/plan-worker/`): Invoked asynchronously by `plan-kickoff-handler` — never directly by API Gateway. Invokes the `interview-forge-plan-agent` via `BedrockAgentRuntimeClient`. On agent success, the `write-plan-action` action Lambda (M3-02) writes the plan and transitions status to `PLAN_PENDING` — the worker reads the completed session record and logs completion. On any unhandled exception, the worker catches the error and writes `status = PLAN_ERROR` with an `errorMessage` attribute to the session record so the frontend can surface a retry affordance rather than polling indefinitely.
+**`plan-worker`** (`apps/api/src/handlers/plan-worker/`): Invoked asynchronously by `plan-kickoff-handler` — never directly by API Gateway. Invokes the `interview-forge-plan-agent` via `BedrockAgentRuntimeClient`. On agent success, the `write-plan-action` action Lambda (M3-02) writes the plan and transitions status to `PLAN_PENDING` — the worker reads the completed session record and logs completion. On any unhandled exception, the worker catches the error and writes `status = PLAN_ERROR` with an `errorMessage` attribute to the session record so the frontend can surface a retry affordance rather than polling indefinitely.
 
 **Acceptance Criteria:**
 
@@ -401,7 +401,7 @@ Replace the original single `plan-handler` with two Lambdas that implement the a
 ### Issue M3-05: Implement Approve Plan Lambda (`approve-plan-handler`)
 
 **Description:**  
-Implement the `approve-plan-handler` Lambda in `packages/api/src/handlers/approve-plan/`. Invoked by `PUT /jds/{jdId}/sessions/{sessionId}/plan/approve`. Accepts an optional modified plan payload (the recruiter may have edited the plan in the UI before approving). If a plan payload is provided, validates it against `InterviewPlanSchema` and overwrites the `plan` attribute in DynamoDB. Whether or not a modified plan is provided, updates `status` to `PLAN_APPROVED`.
+Implement the `approve-plan-handler` Lambda in `apps/api/src/handlers/approve-plan/`. Invoked by `PUT /jds/{jdId}/sessions/{sessionId}/plan/approve`. Accepts an optional modified plan payload (the recruiter may have edited the plan in the UI before approving). If a plan payload is provided, validates it against `InterviewPlanSchema` and overwrites the `plan` attribute in DynamoDB. Whether or not a modified plan is provided, updates `status` to `PLAN_APPROVED`.
 
 **Acceptance Criteria:**
 
@@ -420,7 +420,7 @@ Implement the `approve-plan-handler` Lambda in `packages/api/src/handlers/approv
 ### Issue M3-06: Implement Plan Review & Edit UI — Checkpoint 1 (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the plan review and edit page in `packages/web/src/pages/session/plan/`. This page handles three distinct states driven by session `status`:
+Implement the plan review and edit page in `apps/web/src/pages/session/plan/`. This page handles three distinct states driven by session `status`:
 
 1. **Generating state** (`PLAN_GENERATING`): Shows an animated "Generating your interview plan…" indicator. Uses the `usePollSessionStatus` hook (M3-09) to re-fetch the session on a 4-second interval until status exits `PLAN_GENERATING`.
 2. **Error state** (`PLAN_ERROR`): Shows an error message with the `planErrorMessage` surfaced from the session record and a "Retry" button that calls `POST .../plan` again to re-trigger the kickoff.
@@ -489,7 +489,7 @@ Validate and iterate the plan generation agent system prompt established in M3-0
 ### Issue M3-09: Implement Shared Session Polling Hook (`usePollSessionStatus`) ⚠️ NEW
 
 **Description:**  
-Implement a reusable TanStack Query polling hook in `packages/web/src/common/hooks/usePollSessionStatus.ts`. This hook is consumed by both the Plan Review UI (M3-06) and the Assessment Review UI (M5-06) to drive async generation UX without duplicating polling logic. The hook wraps `useQuery` with a `refetchInterval` that is active only while the session is in a generating state, and stops automatically on terminal status transitions.
+Implement a reusable TanStack Query polling hook in `apps/web/src/common/hooks/usePollSessionStatus.ts`. This hook is consumed by both the Plan Review UI (M3-06) and the Assessment Review UI (M5-06) to drive async generation UX without duplicating polling logic. The hook wraps `useQuery` with a `refetchInterval` that is active only while the session is in a generating state, and stops automatically on terminal status transitions.
 
 **Acceptance Criteria:**
 
@@ -537,7 +537,7 @@ Implement `ScorecardSchema` in `packages/shared/src/schemas/`. The scorecard cap
 ### Issue M4-02: Implement Score Handler Lambda (`score-handler`)
 
 **Description:**  
-Implement the `score-handler` Lambda in `packages/api/src/handlers/score/`. Invoked by `POST /jds/{jdId}/sessions/{sessionId}/scorecard`. Validates the request body against `ScorecardSchema`, writes the scorecard to the SESSION item in DynamoDB (`scorecard` attribute), and transitions `status` to `SCORED`. A condition expression prevents overwriting a scorecard if status is already `ASSESSED` or `COMPLETE`.
+Implement the `score-handler` Lambda in `apps/api/src/handlers/score/`. Invoked by `POST /jds/{jdId}/sessions/{sessionId}/scorecard`. Validates the request body against `ScorecardSchema`, writes the scorecard to the SESSION item in DynamoDB (`scorecard` attribute), and transitions `status` to `SCORED`. A condition expression prevents overwriting a scorecard if status is already `ASSESSED` or `COMPLETE`.
 
 **Acceptance Criteria:**
 
@@ -555,7 +555,7 @@ Implement the `score-handler` Lambda in `packages/api/src/handlers/score/`. Invo
 ### Issue M4-03: Implement Scorecard Entry UI (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the scorecard entry page in `packages/web/src/pages/session/scorecard/`. The page renders the approved interview plan as a structured scoring form. Before rendering the form, the page must guard against the session being in an unexpected state: if `status` is not `PLAN_APPROVED`, the page should redirect to the appropriate page for the current status (e.g., back to the plan page if still `PLAN_PENDING`). For each competency, display: competency name, a `Textarea` for overall competency notes, and each question with its text and a 5-point Likert rating control plus an optional per-question notes field. A "Submit Scorecard" button is enabled only when all questions have a rating.
+Implement the scorecard entry page in `apps/web/src/pages/session/scorecard/`. The page renders the approved interview plan as a structured scoring form. Before rendering the form, the page must guard against the session being in an unexpected state: if `status` is not `PLAN_APPROVED`, the page should redirect to the appropriate page for the current status (e.g., back to the plan page if still `PLAN_PENDING`). For each competency, display: competency name, a `Textarea` for overall competency notes, and each question with its text and a 5-point Likert rating control plus an optional per-question notes field. A "Submit Scorecard" button is enabled only when all questions have a rating.
 
 **Acceptance Criteria:**
 
@@ -576,7 +576,7 @@ Implement the scorecard entry page in `packages/web/src/pages/session/scorecard/
 ### Issue M4-04: Add Scorecard TanStack Query Hooks
 
 **Description:**  
-Implement the `useSubmitScorecard` mutation hook in `packages/web/src/pages/session/hooks/`. Wraps `POST /jds/{jdId}/sessions/{sessionId}/scorecard`. On success, invalidates the session query for `sessionId` so the updated status is reflected immediately.
+Implement the `useSubmitScorecard` mutation hook in `apps/web/src/pages/session/hooks/`. Wraps `POST /jds/{jdId}/sessions/{sessionId}/scorecard`. On success, invalidates the session query for `sessionId` so the updated status is reflected immediately.
 
 **Acceptance Criteria:**
 
@@ -663,9 +663,9 @@ Define the `interview-forge-assess-agent` Bedrock Agent in CDK using `CfnAgent` 
 **Description:**  
 Implement the async kickoff/worker pair for assessment generation, applying the identical pattern established in M3-04.
 
-**`assess-kickoff-handler`** (`packages/api/src/handlers/assess-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/assessment`). Validates path parameters, verifies session is in `SCORED` status, updates `status` to `ASSESS_GENERATING`, invokes `assess-worker` with `InvocationType: 'Event'`, returns HTTP 202 immediately.
+**`assess-kickoff-handler`** (`apps/api/src/handlers/assess-kickoff/`): Invoked synchronously by API Gateway (`POST /jds/{jdId}/sessions/{sessionId}/assessment`). Validates path parameters, verifies session is in `SCORED` status, updates `status` to `ASSESS_GENERATING`, invokes `assess-worker` with `InvocationType: 'Event'`, returns HTTP 202 immediately.
 
-**`assess-worker`** (`packages/api/src/handlers/assess-worker/`): Invoked asynchronously by `assess-kickoff-handler`. Invokes the `interview-forge-assess-agent` via `BedrockAgentRuntimeClient`. On any unhandled exception, writes `status = ASSESS_ERROR` and `assessErrorMessage` to the session record.
+**`assess-worker`** (`apps/api/src/handlers/assess-worker/`): Invoked asynchronously by `assess-kickoff-handler`. Invokes the `interview-forge-assess-agent` via `BedrockAgentRuntimeClient`. On any unhandled exception, writes `status = ASSESS_ERROR` and `assessErrorMessage` to the session record.
 
 **Acceptance Criteria:**
 
@@ -686,7 +686,7 @@ Implement the async kickoff/worker pair for assessment generation, applying the 
 ### Issue M5-05: Implement Approve Assessment Lambda (`approve-assess-handler`)
 
 **Description:**  
-Implement the `approve-assess-handler` Lambda in `packages/api/src/handlers/approve-assess/`. Invoked by `PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve`. Accepts an optional recruiter override flag (`{ override: true, overrideReason: string }`). If override is present, records the override in the assessment attribute before finalizing. Updates `status` to `COMPLETE`. A condition expression prevents double-approval.
+Implement the `approve-assess-handler` Lambda in `apps/api/src/handlers/approve-assess/`. Invoked by `PUT /jds/{jdId}/sessions/{sessionId}/assessment/approve`. Accepts an optional recruiter override flag (`{ override: true, overrideReason: string }`). If override is present, records the override in the assessment attribute before finalizing. Updates `status` to `COMPLETE`. A condition expression prevents double-approval.
 
 **Acceptance Criteria:**
 
@@ -705,7 +705,7 @@ Implement the `approve-assess-handler` Lambda in `packages/api/src/handlers/appr
 ### Issue M5-06: Implement Assessment Review UI — Checkpoint 2 (React) ⚠️ MODIFIED
 
 **Description:**  
-Implement the assessment review page in `packages/web/src/pages/session/assessment/`. This page handles three states mirroring the plan review page pattern:
+Implement the assessment review page in `apps/web/src/pages/session/assessment/`. This page handles three states mirroring the plan review page pattern:
 
 1. **Generating state** (`ASSESS_GENERATING`): Shows an animated "Generating assessment…" indicator. Uses `usePollSessionStatus` with `pollingStatuses: ['ASSESS_GENERATING']` to poll every 4 seconds until status exits `ASSESS_GENERATING`.
 2. **Error state** (`ASSESS_ERROR`): Shows the `assessErrorMessage` from the session record and a "Retry" button that calls `POST .../assessment` again.
@@ -765,11 +765,11 @@ Add CDK Lambda function constructs and API Gateway integrations for `assess-kick
 ### Issue M6-01: Implement Client-Side PDF Assessment Export
 
 **Description:**  
-Implement the PDF export feature in `packages/web/src/pages/session/assessment/` using `pdfmake`. When the recruiter clicks "Download Assessment PDF" on a `COMPLETE` session, generate and download a formatted PDF containing: candidate name, JD title, generation date, overall recommendation with confidence, reasoning narrative, per-competency assessment (strengths, concerns, conflicts), and a footer noting whether a recruiter override was applied.
+Implement the PDF export feature in `apps/web/src/pages/session/assessment/` using `pdfmake`. When the recruiter clicks "Download Assessment PDF" on a `COMPLETE` session, generate and download a formatted PDF containing: candidate name, JD title, generation date, overall recommendation with confidence, reasoning narrative, per-competency assessment (strengths, concerns, conflicts), and a footer noting whether a recruiter override was applied.
 
 **Acceptance Criteria:**
 
-- AC-01: `pdfmake` is installed in `packages/web` and imported as an ES module; bundle size impact is acceptable (tree-shakeable import)
+- AC-01: `pdfmake` is installed in `apps/web` and imported as an ES module; bundle size impact is acceptable (tree-shakeable import)
 - AC-02: PDF contains: header with "interview-forge" branding, candidate name, JD title, assessment date; body with recommendation, confidence, reasoning, and competency sections; footer with override notice if applicable
 - AC-03: Recommendation section uses text styling (bold, larger font) to visually distinguish recommendation strength; no color dependency (PDF must be readable when printed in grayscale)
 - AC-04: "Download Assessment PDF" button triggers client-side generation and browser download; no network call to Lambda
@@ -875,21 +875,21 @@ Validate and iterate the reconciliation agent system prompt from M5-03 against r
 
 ## Appendix B: Environment Variables Reference
 
-| Variable                        | Workspace                                            | Description                                |
-| ------------------------------- | ---------------------------------------------------- | ------------------------------------------ |
-| `VITE_API_BASE_URL`             | `packages/web`                                       | API Gateway base URL (from CDK output)     |
-| `TABLE_NAME`                    | `packages/api` (all Lambdas)                         | DynamoDB table name                        |
-| `BUCKET_NAME`                   | `packages/api` (`ingest-handler`, `session-handler`) | S3 bucket name                             |
-| `PLAN_WORKER_FUNCTION_NAME`     | `packages/api` (`plan-kickoff-handler`)              | Lambda function name of `plan-worker`      |
-| `BEDROCK_PLAN_AGENT_ID`         | `packages/api` (`plan-worker`)                       | Bedrock plan agent ID                      |
-| `BEDROCK_PLAN_AGENT_ALIAS_ID`   | `packages/api` (`plan-worker`)                       | Bedrock plan agent alias ID                |
-| `ASSESS_WORKER_FUNCTION_NAME`   | `packages/api` (`assess-kickoff-handler`)            | Lambda function name of `assess-worker`    |
-| `BEDROCK_ASSESS_AGENT_ID`       | `packages/api` (`assess-worker`)                     | Bedrock reconciliation agent ID            |
-| `BEDROCK_ASSESS_AGENT_ALIAS_ID` | `packages/api` (`assess-worker`)                     | Bedrock reconciliation agent alias ID      |
-| `CDK_APP`                       | `packages/infra`                                     | Resource tag value for `App`               |
-| `CDK_ENV`                       | `packages/infra`                                     | Resource tag value for `Env` (e.g., `dev`) |
-| `CDK_OU`                        | `packages/infra`                                     | Resource tag value for `OU`                |
-| `CDK_OWNER`                     | `packages/infra`                                     | Resource tag value for `Owner`             |
+| Variable                        | Workspace                                        | Description                                |
+| ------------------------------- | ------------------------------------------------ | ------------------------------------------ |
+| `VITE_API_BASE_URL`             | `apps/web`                                       | API Gateway base URL (from CDK output)     |
+| `TABLE_NAME`                    | `apps/api` (all Lambdas)                         | DynamoDB table name                        |
+| `BUCKET_NAME`                   | `apps/api` (`ingest-handler`, `session-handler`) | S3 bucket name                             |
+| `PLAN_WORKER_FUNCTION_NAME`     | `apps/api` (`plan-kickoff-handler`)              | Lambda function name of `plan-worker`      |
+| `BEDROCK_PLAN_AGENT_ID`         | `apps/api` (`plan-worker`)                       | Bedrock plan agent ID                      |
+| `BEDROCK_PLAN_AGENT_ALIAS_ID`   | `apps/api` (`plan-worker`)                       | Bedrock plan agent alias ID                |
+| `ASSESS_WORKER_FUNCTION_NAME`   | `apps/api` (`assess-kickoff-handler`)            | Lambda function name of `assess-worker`    |
+| `BEDROCK_ASSESS_AGENT_ID`       | `apps/api` (`assess-worker`)                     | Bedrock reconciliation agent ID            |
+| `BEDROCK_ASSESS_AGENT_ALIAS_ID` | `apps/api` (`assess-worker`)                     | Bedrock reconciliation agent alias ID      |
+| `CDK_APP`                       | `apps/infra`                                     | Resource tag value for `App`               |
+| `CDK_ENV`                       | `apps/infra`                                     | Resource tag value for `Env` (e.g., `dev`) |
+| `CDK_OU`                        | `apps/infra`                                     | Resource tag value for `OU`                |
+| `CDK_OWNER`                     | `apps/infra`                                     | Resource tag value for `Owner`             |
 
 ---
 

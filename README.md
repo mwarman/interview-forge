@@ -41,13 +41,13 @@ npm run build
 
 ```bash
 # Start the React development server
-npm run dev -w packages/web
+npm run dev -w apps/web
 
 # Run tests in watch mode (single workspace)
-npm run test -w packages/web
+npm run test -w apps/web
 
 # Deploy infrastructure (requires AWS credentials)
-npm run cdk:deploy -w packages/infra
+npm run cdk:deploy -w apps/infra
 ```
 
 ## Architecture
@@ -182,7 +182,7 @@ npm test --workspaces
 npm run test:coverage --workspaces
 
 # Run tests in specific workspace
-npm run test -w packages/web
+npm run test -w apps/web
 ```
 
 ### Linting & Formatting
@@ -205,7 +205,7 @@ npm run format
 npm run build
 
 # Build specific workspace
-npm run build -w packages/api
+npm run build -w apps/api
 ```
 
 ## Deployment
@@ -213,20 +213,20 @@ npm run build -w packages/api
 ### Prerequisites
 
 1. AWS Account with appropriate permissions
-2. Environment variables configured (see `packages/infra/src/utils/config.ts`)
+2. Environment variables configured (see `apps/infra/src/utils/config.ts`)
 3. AWS credentials in `~/.aws/credentials` or via environment
 
 ### Deploy
 
 ```bash
 # From repository root
-npm run cdk:deploy -w packages/infra
+npm run cdk:deploy -w apps/infra
 ```
 
 ### Destroy
 
 ```bash
-npm run cdk:destroy -w packages/infra
+npm run cdk:destroy -w apps/infra
 ```
 
 ### CI/CD
@@ -251,10 +251,10 @@ npm run format                      # Format entire monorepo
 ### Workspace-Scoped Commands
 
 ```bash
-npm install <pkg> -w packages/web  # Add dependency to specific workspace
-npm run dev -w packages/web        # Start web dev server
-npm run test -w packages/api       # Test API workspace
-npm run cdk:synth -w packages/infra # Synthesize CDK template
+npm install <pkg> -w apps/web  # Add dependency to specific workspace
+npm run dev -w apps/web        # Start web dev server
+npm run test -w apps/api       # Test API workspace
+npm run cdk:synth -w apps/infra # Synthesize CDK template
 ```
 
 ## Design Decisions
