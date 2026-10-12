@@ -1,6 +1,6 @@
 /**
  * AgentInvocationError
- * Thrown when a Bedrock Agent invocation fails, such as network errors,
+ * Thrown when a AgentCore harness invocation fails, such as network errors,
  * authentication issues, or agent runtime exceptions.
  */
 export class AgentInvocationError extends Error {
@@ -8,7 +8,7 @@ export class AgentInvocationError extends Error {
     public jdId: string,
     public sessionId: string,
     public cause: Error,
-    message: string = 'Failed to invoke Bedrock Agent',
+    message: string = 'Failed to invoke AgentCore harness',
   ) {
     super(message);
     this.name = 'AgentInvocationError';

@@ -4,14 +4,14 @@ import { sessionRepository } from '@/repositories/session-repository';
 import { assessWorkerEventSchema, AssessWorkerEvent } from '@/schemas/assess-worker-event-schema';
 
 /**
- * Assess Worker Handler - asynchronously generates assessment using Bedrock Agent
+ * Assess Worker Handler - asynchronously generates assessment using AgentCore harness
  * Invoked asynchronously by assess-kickoff-handler, never directly by API Gateway
  *
  * Event payload: { jdId: string, sessionId: string }
  *
  * Responsibilities:
  * - Validate and parse the event payload
- * - Invoke Bedrock Agent via assessService.generateAssessment
+ * - Invoke AgentCore harness via assessService.generateAssessment
  * - Log agent invocation duration at info level for cost monitoring
  * - On any unhandled exception, update session status to ASSESS_ERROR with error message
  * - Persist error status even if DynamoDB write fails (nested try/catch)
@@ -42,7 +42,7 @@ export const handle = async (event: AssessWorkerEvent | unknown): Promise<void> 
     );
 
     // Invoke assessment generation service (reuse existing service logic)
-    // This will invoke Bedrock Agent and wait for completion
+    // This will invoke AgentCore harness and wait for completion
     // The write-assessment-action Lambda will write the assessment to session
     await assessService.generateAssessment(jdId, sessionId);
 

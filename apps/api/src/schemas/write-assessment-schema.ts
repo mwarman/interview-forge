@@ -1,57 +1,27 @@
 /**
- * Zod schemas for validating WriteAssessmentAction events and parameters
- * in the Bedrock Action Agent.
+ * Zod schema for the arguments of the write-assessment tool (AgentCore gateway target).
  *
- * Event schema expects:
+ * The gateway passes the tool input as a flat event object:
  * {
- *   actionGroup: 'interview-forge-write-assessment',
- *   function: 'write-assessment-action',
- *   parameters: [
- *     { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
- *     { name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440000' },
- *     { name: 'assessment', value: '{"assessmentId":"...","recommendation":"HIRE",...}'
- *   ]
+ *   sessionId: '550e8400-e29b-41d4-a716-446655440000',
+ *   jdId: '550e8400-e29b-41d4-a716-446655440001',
+ *   assessment: '{"...": "..."}'
  * }
  *
- * The sessionId and jdId parameters are validated to ensure they are non-empty strings.
- * The assessment parameter is validated to ensure it is a non-empty string (JSON string of the assessment).
+ * The assessment argument is a non-empty JSON string, parsed and validated against the shared schema by the handler.
  */
 import { z } from 'zod';
 
-import { BedrockActionEventSchema, BedrockParameterSchema } from '@interview-forge/shared';
-
 /**
- * Schema for validating WriteAssessmentAction handler event parameters
- * Expects parameters array to contain objects with names 'sessionId', 'jdId', and 'assessment'
- * with non-empty string values. sessionId and jdId must be non-empty strings.
- * assessment must be a non-empty string (expected to be a JSON string of the assessment).
+ * Schema for validating the write-assessment tool arguments
  */
-const writeAssessmentActionEventParametersSchema = z.union([
-  BedrockParameterSchema.extend({
-    name: z.literal('sessionId'),
-    value: z.string().min(1, 'sessionId parameter cannot be empty'),
-  }),
-  BedrockParameterSchema.extend({
-    name: z.literal('jdId'),
-    value: z.string().min(1, 'jdId parameter cannot be empty'),
-  }),
-  BedrockParameterSchema.extend({
-    name: z.literal('assessment'),
-    value: z.string().min(1, 'assessment parameter cannot be empty'),
-  }),
-]);
-
-/**
- * Schema for validating WriteAssessmentAction handler event
- * Expects: { actionGroup, function, parameters: [sessionId, jdId, assessment] }
- */
-export const writeAssessmentActionEventSchema = BedrockActionEventSchema.extend({
-  actionGroup: z.literal('interview-forge-write-assessment'),
-  function: z.literal('write-assessment-action'),
-  parameters: z.array(writeAssessmentActionEventParametersSchema),
+export const writeAssessmentArgsSchema = z.object({
+  sessionId: z.string().min(1, 'sessionId cannot be empty'),
+  jdId: z.string().min(1, 'jdId cannot be empty'),
+  assessment: z.string().min(1, 'assessment cannot be empty'),
 });
 
 /**
- * Lambda event type for WriteAssessmentAction handler, inferred from the Zod schema.
+ * Tool arguments type for the write-assessment tool, inferred from the Zod schema.
  */
-export type WriteAssessmentActionEvent = z.infer<typeof writeAssessmentActionEventSchema>;
+export type WriteAssessmentArgs = z.infer<typeof writeAssessmentArgsSchema>;

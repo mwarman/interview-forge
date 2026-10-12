@@ -1,352 +1,266 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
-import { Template, Match } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { AgentStack } from './agent-stack';
 import { DataStack } from './data-stack';
-import { getConfig } from '../utils/config';
+import { getConfig, getTags } from '../utils/config';
+
+interface PolicyStatement {
+  Action: string | string[];
+  Resource: string | string[];
+}
+
+type Resources = Record<string, { Properties: Record<string, any> }>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 describe('AgentStack', () => {
   let app: cdk.App;
-  let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
+
+  const createStack = (): { stack: AgentStack; template: Template } => {
+    process.env.CDK_APP_NAME = 'test-app';
+    process.env.CDK_ENV_NAME = 'dev';
+    const config = getConfig();
+    const stack = new AgentStack(app, 'TestAgentStack', {
+      config,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
+      tags: getTags(config),
+    });
+    return { stack, template: Template.fromStack(stack) };
+  };
+
+  const findHarness = (template: Template, name: string) =>
+    Object.values(template.findResources('AWS::BedrockAgentCore::Harness') as Resources).find(
+      (harness) => harness.Properties.HarnessName === name,
+    )!.Properties;
+
+  const toolNamesOf = (template: Template, gatewayLogicalIdPrefix: string): string[] =>
+    Object.entries(template.findResources('AWS::BedrockAgentCore::GatewayTarget') as Resources)
+      .filter(([logicalId]) => logicalId.startsWith(gatewayLogicalIdPrefix))
+      .map(([, target]) => target.Properties.Name as string)
+      .sort();
 
   beforeEach(() => {
     app = new cdk.App({
       context: { 'aws:cdk:bundling-stacks': [] },
     });
-    config = getConfig();
-    dataStack = new DataStack(app, 'TestDataStack', { config });
-  });
-
-  it('should define a CfnAgent with the correct agent name and foundation model', () => {
-    // Arrange
     process.env.CDK_APP_NAME = 'test-app';
     process.env.CDK_ENV_NAME = 'dev';
-    const config = getConfig();
+    dataStack = new DataStack(app, 'TestDataStack', { config: getConfig() });
+  });
 
+  it('should not define any classic Bedrock Agent resources', () => {
     // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
+    const { template } = createStack();
 
     // Assert
-    const template = Template.fromStack(stack);
-    template.hasResourceProperties('AWS::Bedrock::Agent', {
-      AgentName: 'test-app-plan-agent',
-      FoundationModel: Match.objectLike({
-        'Fn::Join': [
-          '',
-          [
-            'arn:aws:bedrock:us-east-1:',
-            Match.anyValue(),
-            ':inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0',
-          ],
-        ],
+    template.resourceCountIs('AWS::Bedrock::Agent', 0);
+    template.resourceCountIs('AWS::Bedrock::AgentAlias', 0);
+  });
+
+  it('should define five tool Lambdas with unchanged function names', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    template.resourceCountIs('AWS::Lambda::Function', 5);
+    for (const name of [
+      'read-jd-action',
+      'write-plan-action',
+      'read-plan-action',
+      'read-scorecard-action',
+      'write-assessment-action',
+    ]) {
+      template.hasResourceProperties('AWS::Lambda::Function', { FunctionName: `test-app-${name}-dev` });
+    }
+  });
+
+  it('should define one MCP gateway per agent using IAM authorization', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    template.resourceCountIs('AWS::BedrockAgentCore::Gateway', 2);
+    for (const key of ['plan', 'assess']) {
+      template.hasResourceProperties('AWS::BedrockAgentCore::Gateway', {
+        Name: `test-app-${key}-gateway-dev`,
+        ProtocolType: 'MCP',
+        AuthorizerType: 'AWS_IAM',
+      });
+    }
+  });
+
+  it('should define Lambda gateway targets isolated per agent', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    template.resourceCountIs('AWS::BedrockAgentCore::GatewayTarget', 5);
+    expect(toolNamesOf(template, 'Plan')).toEqual(['read-jd', 'write-plan']);
+    expect(toolNamesOf(template, 'Assess')).toEqual(['read-plan', 'read-scorecard', 'write-assessment']);
+  });
+
+  it('should define tool schemas with required string arguments for every target', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    const targets = Object.values(template.findResources('AWS::BedrockAgentCore::GatewayTarget') as Resources);
+    const requiredByTool = Object.fromEntries(
+      targets.map((target) => {
+        const tool = target.Properties.TargetConfiguration.Mcp.Lambda.ToolSchema.InlinePayload[0];
+        expect(tool.Name).toBe(target.Properties.Name);
+        expect(tool.InputSchema.Type).toBe('object');
+        expect(Object.values(tool.InputSchema.Properties).every((p: any) => p.Type === 'string')).toBe(true); // eslint-disable-line @typescript-eslint/no-explicit-any
+        expect(target.Properties.CredentialProviderConfigurations).toEqual([
+          { CredentialProviderType: 'GATEWAY_IAM_ROLE' },
+        ]);
+        return [tool.Name, [...tool.InputSchema.Required].sort()];
       }),
-    });
-  });
-
-  it('should define a CfnAgent with a non-empty instruction (system prompt)', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
-    const agentValues = Object.values(agents);
-    expect(agentValues.length).toBe(2); // Plan agent + Assessment agent
-
-    // Find and verify the plan agent (by looking for plan-specific action groups)
-    const planAgent = agentValues.find((agent) => {
-      const actionGroups = (agent.Properties as Record<string, unknown>).ActionGroups as Array<Record<string, unknown>>;
-      return actionGroups.some((ag) => ag.ActionGroupName === 'interview-forge-read-jd');
-    });
-
-    expect(planAgent).toBeDefined();
-    const instruction = (planAgent!.Properties as Record<string, unknown>).Instruction as string;
-    expect(typeof instruction).toBe('string');
-    expect(instruction.length).toBeGreaterThan(0);
-    // Verify the prompt references both action functions and action group names
-    expect(instruction).toContain('read-jd-action');
-    expect(instruction).toContain('write-plan-action');
-    expect(instruction).toContain('interview-forge-read-jd');
-    expect(instruction).toContain('interview-forge-write-plan');
-  });
-
-  it('should define a CfnAgent with two action groups (interview-forge-read-jd and interview-forge-write-plan)', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
-    const agentValues = Object.values(agents);
-    expect(agentValues.length).toBe(2); // Plan agent + Assessment agent
-
-    // Find the plan agent
-    const planAgent = agentValues.find((agent) => {
-      const actionGroups = (agent.Properties as Record<string, unknown>).ActionGroups as Array<Record<string, unknown>>;
-      return actionGroups.some((ag) => ag.ActionGroupName === 'interview-forge-read-jd');
-    });
-
-    expect(planAgent).toBeDefined();
-    const actionGroups = (planAgent!.Properties as Record<string, unknown>).ActionGroups as Array<
-      Record<string, unknown>
-    >;
-    expect(actionGroups).toBeDefined();
-    const actionGroupNames = actionGroups.map((ag) => ag.ActionGroupName);
-    expect(actionGroupNames).toContain('interview-forge-read-jd');
-    expect(actionGroupNames).toContain('interview-forge-write-plan');
-  });
-
-  it('should define the interview-forge-read-jd action group with read-jd-action function schema', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
-    const agentValues = Object.values(agents);
-    const actionGroups = (agentValues[0].Properties as Record<string, unknown>).ActionGroups as Array<
-      Record<string, unknown>
-    >;
-
-    const jdActionGroup = actionGroups.find((ag) => ag.ActionGroupName === 'interview-forge-read-jd');
-    expect(jdActionGroup).toBeDefined();
-
-    const functionSchema = jdActionGroup!.FunctionSchema as Record<string, unknown>;
-    const functions = functionSchema.Functions as Array<Record<string, unknown>>;
-    expect(functions).toBeDefined();
-    expect(functions.length).toBe(1);
-    expect(functions[0].Name).toBe('read-jd-action');
-
-    // Verify jdId parameter is defined
-    const parameters = functions[0].Parameters as Record<string, Record<string, unknown>>;
-    expect(parameters).toBeDefined();
-    expect(parameters.jdId).toBeDefined();
-    expect(parameters.jdId.Type).toBe('string');
-    expect(parameters.jdId.Required).toBe(true);
-  });
-
-  it('should define the interview-forge-write-plan action group with write-plan-action function schema', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    const agents = template.findResources('AWS::Bedrock::Agent') as Record<string, Record<string, unknown>>;
-    const agentValues = Object.values(agents);
-    const actionGroups = (agentValues[0].Properties as Record<string, unknown>).ActionGroups as Array<
-      Record<string, unknown>
-    >;
-
-    const planActionGroup = actionGroups.find((ag) => ag.ActionGroupName === 'interview-forge-write-plan');
-    expect(planActionGroup).toBeDefined();
-
-    const functionSchema = planActionGroup!.FunctionSchema as Record<string, unknown>;
-    const functions = functionSchema.Functions as Array<Record<string, unknown>>;
-    expect(functions).toBeDefined();
-    expect(functions.length).toBe(1);
-    expect(functions[0].Name).toBe('write-plan-action');
-
-    // Verify all three required parameters are defined
-    const parameters = functions[0].Parameters as Record<string, Record<string, unknown>>;
-    expect(parameters).toBeDefined();
-    expect(parameters.sessionId).toBeDefined();
-    expect(parameters.sessionId.Type).toBe('string');
-    expect(parameters.sessionId.Required).toBe(true);
-    expect(parameters.jdId).toBeDefined();
-    expect(parameters.jdId.Type).toBe('string');
-    expect(parameters.jdId.Required).toBe(true);
-    expect(parameters.plan).toBeDefined();
-    expect(parameters.plan.Type).toBe('string');
-    expect(parameters.plan.Required).toBe(true);
-  });
-
-  it('should define a CfnAgentAlias with alias name dev', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    template.hasResourceProperties('AWS::Bedrock::AgentAlias', {
-      AgentAliasName: 'dev',
-    });
-  });
-
-  it('should create an IAM role with bedrock:InvokeModel permission on Claude Sonnet 4.6 ARNs', () => {
-    // Arrange
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-
-    // Verify an IAM policy with bedrock:InvokeModel is created
-    const allPolicies = template.findResources('AWS::IAM::Policy') as Record<
-      string,
-      Record<string, Record<string, Record<string, unknown>[]>>
-    >;
-    const hasBedrockPolicy = Object.values(allPolicies).some(
-      (policy: Record<string, Record<string, Record<string, unknown>[]>>) => {
-        const statements = (policy.Properties.PolicyDocument.Statement || []) as Record<string, unknown>[];
-        return statements.some((stmt: Record<string, unknown>) => {
-          const actions = Array.isArray(stmt.Action) ? (stmt.Action as string[]) : [stmt.Action as string];
-          return actions.some((action: string) => action === 'bedrock:InvokeModel');
-        });
-      },
     );
-    expect(hasBedrockPolicy).toBe(true);
+    expect(requiredByTool).toEqual({
+      'read-jd': ['jdId'],
+      'write-plan': ['jdId', 'plan', 'sessionId'],
+      'read-plan': ['jdId', 'sessionId'],
+      'read-scorecard': ['jdId', 'sessionId'],
+      'write-assessment': ['assessment', 'jdId', 'sessionId'],
+    });
   });
 
-  it('should create an IAM role that trusts the bedrock.amazonaws.com service principal', () => {
-    // Arrange
-    const config = getConfig();
-
+  it('should define a plan harness using Claude Haiku 4.5 and the plan system prompt', () => {
     // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
+    const { template } = createStack();
 
     // Assert
-    const template = Template.fromStack(stack);
+    const harness = findHarness(template, 'test_app_plan_dev');
+    expect(harness.Model.BedrockModelConfig.ModelId).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');
+    expect(harness.SystemPrompt).toHaveLength(1);
+    expect(harness.SystemPrompt[0].Text).toContain('**read-jd** tool');
+    expect(harness.SystemPrompt[0].Text).toContain('**write-plan** tool');
+  });
+
+  it('should define an assess harness using Claude Haiku 4.5 and the reconciliation system prompt', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    const harness = findHarness(template, 'test_app_assess_dev');
+    expect(harness.Model.BedrockModelConfig.ModelId).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');
+    expect(harness.SystemPrompt[0].Text).toContain('**read-scorecard** tool');
+    expect(harness.SystemPrompt[0].Text).toContain('**write-assessment** tool');
+  });
+
+  it('should bound harness runtime below the worker Lambda timeout and disable memory', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    template.resourceCountIs('AWS::BedrockAgentCore::Harness', 2);
+    template.allResourcesProperties('AWS::BedrockAgentCore::Harness', {
+      TimeoutSeconds: 240,
+      MaxIterations: 10,
+      Memory: { Disabled: {} },
+      Tools: [
+        Match.objectLike({
+          Type: 'agentcore_gateway',
+          Config: { AgentCoreGateway: Match.objectLike({ OutboundAuth: { AwsIam: {} } }) },
+        }),
+      ],
+    });
+  });
+
+  it('should trust the AgentCore service in the gateway and harness roles', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    const roles = Object.values(template.findResources('AWS::IAM::Role') as Resources).filter((role) =>
+      JSON.stringify(role.Properties.AssumeRolePolicyDocument).includes('bedrock-agentcore.amazonaws.com'),
+    );
+    expect(roles).toHaveLength(4); // 2 gateway roles + 2 harness roles
     template.hasResourceProperties('AWS::IAM::Role', {
       AssumeRolePolicyDocument: {
         Statement: [
-          {
-            Effect: 'Allow',
-            Principal: { Service: 'bedrock.amazonaws.com' },
-          },
+          Match.objectLike({
+            Principal: { Service: 'bedrock-agentcore.amazonaws.com' },
+            Condition: { StringEquals: { 'aws:SourceAccount': Match.anyValue() } },
+          }),
         ],
       },
     });
   });
 
-  it('should grant bedrock.amazonaws.com lambda:InvokeFunction on both action group Lambdas', () => {
-    // Arrange
-    const config = getConfig();
-
+  it('should grant gateway roles lambda:InvokeFunction on their tool Lambdas', () => {
     // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
+    const { template } = createStack();
 
     // Assert
-    const template = Template.fromStack(stack);
-
-    // Verify five Lambda permission resources are created for Bedrock (2 for plan agent + 3 for assessment agent)
-    const allPermissions = template.findResources('AWS::Lambda::Permission') as Record<string, Record<string, unknown>>;
-    const bedrockPermissions = Object.values(allPermissions).filter(
-      (permission: Record<string, unknown>) =>
-        (permission.Properties as Record<string, unknown>)?.Principal === 'bedrock.amazonaws.com' &&
-        (permission.Properties as Record<string, unknown>)?.Action === 'lambda:InvokeFunction',
+    const policies = Object.values(template.findResources('AWS::IAM::Policy') as Resources);
+    const invokeStatements = policies.flatMap((policy) =>
+      (policy.Properties.PolicyDocument.Statement as PolicyStatement[]).filter((statement) =>
+        [statement.Action].flat().includes('lambda:InvokeFunction'),
+      ),
     );
-    expect(bedrockPermissions.length).toBe(5); // 2 for plan agent (read-jd, write-plan) + 3 for assessment agent (read-plan, read-scorecard, write-assessment)
+    expect(invokeStatements.map((s) => [s.Resource].flat().length).sort()).toEqual([2, 3]);
   });
 
-  it('should expose planAgent and planAgentAlias as public properties', () => {
-    // Arrange
-    const config = getConfig();
-
+  it('should grant harness roles model invocation and gateway invocation', () => {
     // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
+    const { template } = createStack();
 
     // Assert
-    expect(stack.planAgent).toBeDefined();
-    expect(stack.planAgentAlias).toBeDefined();
-  });
-
-  it('should export the Plan Agent ID and Alias ID as stack outputs', () => {
-    // Arrange
-    process.env.CDK_APP_NAME = 'test-app';
-    process.env.CDK_ENV_NAME = 'dev';
-    const config = getConfig();
-
-    // Act
-    const stack = new AgentStack(app, 'TestAgentStack', {
-      config,
-      table: dataStack.table,
-      bucket: dataStack.bucket,
-    });
-
-    // Assert
-    const template = Template.fromStack(stack);
-    template.hasOutput('PlanAgentId', {
-      Description: 'Bedrock Plan Agent ID',
-      Export: {
-        Name: 'test-app-PlanAgentId-dev',
-      },
-    });
-    template.hasOutput('PlanAgentAliasId', {
-      Description: 'Bedrock Plan Agent Alias ID (dev)',
-      Export: {
-        Name: 'test-app-PlanAgentAliasId-dev',
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: Match.arrayWith(['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream']),
+            Resource: Match.arrayWith([
+              Match.objectLike({
+                'Fn::Join': ['', Match.arrayWith([':inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0'])],
+              }),
+              'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+              'arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+              'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+            ]),
+          }),
+          Match.objectLike({
+            Action: 'bedrock-agentcore:InvokeGateway',
+            Resource: Match.anyValue(),
+          }),
+        ]),
       },
     });
   });
 
-  it('should accept externally created Lambda functions as props (edge case: function from ARN)', () => {
-    // Arrange
-    const config = getConfig();
+  it('should expose the tool Lambdas and harnesses as public properties', () => {
+    // Act
+    const { stack } = createStack();
 
-    // Act & Assert — should not throw
-    expect(() => {
-      new AgentStack(app, 'TestAgentStackExternal', {
-        config,
-        table: dataStack.table,
-        bucket: dataStack.bucket,
-      });
-    }).not.toThrow();
+    // Assert
+    expect(stack.readJdActionLambda).toBeDefined();
+    expect(stack.writePlanActionLambda).toBeDefined();
+    expect(stack.readPlanActionLambda).toBeDefined();
+    expect(stack.readScorecardActionLambda).toBeDefined();
+    expect(stack.writeAssessmentActionLambda).toBeDefined();
+    expect(stack.planHarness).toBeDefined();
+    expect(stack.assessHarness).toBeDefined();
+  });
+
+  it('should export the harness ARNs as stack outputs', () => {
+    // Act
+    const { template } = createStack();
+
+    // Assert
+    template.hasOutput('PlanHarnessArn', { Export: { Name: 'test-app-PlanHarnessArn-dev' } });
+    template.hasOutput('AssessHarnessArn', { Export: { Name: 'test-app-AssessHarnessArn-dev' } });
+    expect(Object.keys(template.toJSON().Outputs)).toEqual(['PlanHarnessArn', 'AssessHarnessArn']);
+  });
+
+  it('should apply the required organizational tags at the stack level so CloudFormation tags every resource', () => {
+    // Act
+    const { stack } = createStack();
+
+    // Assert
+    expect(Object.keys(stack.tags.tagValues()).sort()).toEqual(['App', 'Env', 'OU', 'Owner']);
   });
 });

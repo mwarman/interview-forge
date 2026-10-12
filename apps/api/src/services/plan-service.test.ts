@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BedrockAgentRuntimeClient } from '@aws-sdk/client-bedrock-agent-runtime';
 
 // Mock dependencies BEFORE importing the service
 vi.mock('@/utils/logger', () => ({
@@ -20,12 +19,14 @@ vi.mock('@/repositories/session-repository', () => ({
 
 vi.mock('@/utils/config', () => ({
   config: {
-    PLAN_AGENT_ALIAS_ID: 'test-agent-alias-id',
+    PLAN_HARNESS_ARN: 'test-harness-arn',
     PLAN_WORKER_FUNCTION_NAME: 'test-plan-worker-function',
   },
 }));
 
-vi.mock('@aws-sdk/client-bedrock-agent-runtime');
+vi.mock('@/utils/harness-client', () => ({
+  invokeHarness: vi.fn(),
+}));
 
 vi.mock('@/utils/lambda-client', () => ({
   invokeLambdaAsync: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('@/utils/lambda-client', () => ({
 import { PlanService } from './plan-service';
 import { sessionRepository } from '@/repositories/session-repository';
 import { invokeLambdaAsync } from '@/utils/lambda-client';
+import { invokeHarness } from '@/utils/harness-client';
 import { PlanNotWrittenError } from '@/errors/plan-not-written-error';
 import { AgentInvocationError } from '@/errors/agent-invocation-error';
 import { NotFoundError, ConflictError } from '@/errors/api-error';
@@ -92,24 +94,7 @@ describe('PlanService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithPlan = createMockSessionWithPlan(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream with chunk data
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Agent processing...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Plan generated'),
-          },
-        };
-        // Stream ends when generator completes (no explicit completion event needed)
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithPlan);
 
@@ -119,6 +104,11 @@ describe('PlanService', () => {
       // Assert
       expect(result).toEqual(mockSessionWithPlan);
       expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
+      expect(invokeHarness).toHaveBeenCalledWith({
+        harnessArn: 'test-harness-arn',
+        sessionId,
+        prompt: `Generate an interview plan for job description ${jdId} and session ${sessionId}`,
+      });
       expect(result.plan).toBeDefined();
     });
 
@@ -128,19 +118,7 @@ describe('PlanService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithoutPlan = createMockSessionWithoutPlan(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream that completes without writing plan
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Processing...'),
-          },
-        };
-        // Stream ends without agent writing plan to DynamoDB
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithoutPlan);
 
@@ -148,13 +126,13 @@ describe('PlanService', () => {
       await expect(planService.generatePlan(jdId, sessionId)).rejects.toThrow(PlanNotWrittenError);
     });
 
-    it('should throw AgentInvocationError when Bedrock Agent invocation fails', async () => {
+    it('should throw AgentInvocationError when AgentCore harness invocation fails', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
       const mockError = new Error('Network timeout');
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockRejectedValue(mockError);
+      vi.mocked(invokeHarness).mockRejectedValue(mockError);
 
       // Act & Assert
       await expect(planService.generatePlan(jdId, sessionId)).rejects.toThrow(AgentInvocationError);
@@ -165,18 +143,7 @@ describe('PlanService', () => {
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
-      // Mock the Bedrock Agent response stream
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Processing...'),
-          },
-        };
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(null);
 
@@ -190,29 +157,7 @@ describe('PlanService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithPlan = createMockSessionWithPlan(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream with multiple chunk events
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Starting analysis...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Generating questions...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Plan complete'),
-          },
-        };
-        // Stream ends when generator completes
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithPlan);
 

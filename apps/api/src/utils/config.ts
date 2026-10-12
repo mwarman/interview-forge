@@ -20,23 +20,18 @@ const ConfigSchema = z.object({
     .describe('LOG_FORMAT - Logging format (optional, default: "json")'),
   JD_TABLE_NAME: z.string().min(1).describe('JD_TABLE_NAME - DynamoDB table for Job Descriptions (required)'),
   JD_BUCKET_NAME: z.string().min(1).describe('JD_BUCKET_NAME - S3 bucket for Job Descriptions (required)'),
-  PLAN_AGENT_ID: z.string().min(1).describe('PLAN_AGENT_ID - Bedrock Agent ID for plan generation (required)'),
-  PLAN_AGENT_ALIAS_ID: z
+  PLAN_HARNESS_ARN: z
     .string()
     .min(1)
-    .describe('PLAN_AGENT_ALIAS_ID - Bedrock Agent alias ID for plan generation (required)'),
+    .describe('PLAN_HARNESS_ARN - AgentCore harness ARN for plan generation (required)'),
   PLAN_WORKER_FUNCTION_NAME: z
     .string()
     .min(1)
     .describe('PLAN_WORKER_FUNCTION_NAME - Lambda function name for async plan worker (required)'),
-  ASSESS_AGENT_ID: z
+  ASSESS_HARNESS_ARN: z
     .string()
     .min(1)
-    .describe('ASSESS_AGENT_ID - Bedrock Agent ID for assessment generation (required)'),
-  ASSESS_AGENT_ALIAS_ID: z
-    .string()
-    .min(1)
-    .describe('ASSESS_AGENT_ALIAS_ID - Bedrock Agent alias ID for assessment generation (required)'),
+    .describe('ASSESS_HARNESS_ARN - AgentCore harness ARN for assessment generation (required)'),
   ASSESS_WORKER_FUNCTION_NAME: z
     .string()
     .min(1)

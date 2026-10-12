@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { BackendStack } from './backend-stack';
 import { DataStack } from './data-stack';
 import { getConfig } from '../utils/config';
@@ -10,8 +9,8 @@ describe('BackendStack', () => {
   let app: cdk.App;
   let config: ReturnType<typeof getConfig>;
   let dataStack: DataStack;
-  let planAgentAlias: bedrock.CfnAgentAlias;
-  let assessAgentAlias: bedrock.CfnAgentAlias;
+  const planHarnessArn = 'arn:aws:bedrock-agentcore:us-east-1:123456789012:harness/test-plan';
+  const assessHarnessArn = 'arn:aws:bedrock-agentcore:us-east-1:123456789012:harness/test-assess';
 
   beforeEach(() => {
     app = new cdk.App({
@@ -19,30 +18,6 @@ describe('BackendStack', () => {
     });
     config = getConfig();
     dataStack = new DataStack(app, 'TestDataStack', { config });
-
-    // Create mock Bedrock Agents and Aliases for testing
-    const tempStack = new cdk.Stack(app, 'TempAgentStack');
-    const planAgent = new bedrock.CfnAgent(tempStack, 'TestPlanAgent', {
-      agentName: 'test-plan-agent',
-      foundationModel: 'anthropic.claude-sonnet-4-6',
-      agentResourceRoleArn: `arn:aws:iam::123456789012:role/test-agent-role`,
-      instruction: 'Test agent',
-    });
-    planAgentAlias = new bedrock.CfnAgentAlias(tempStack, 'TestPlanAgentAlias', {
-      agentId: planAgent.attrAgentId,
-      agentAliasName: 'test',
-    });
-
-    const assessAgent = new bedrock.CfnAgent(tempStack, 'TestAssessAgent', {
-      agentName: 'test-assess-agent',
-      foundationModel: 'anthropic.claude-sonnet-4-6',
-      agentResourceRoleArn: `arn:aws:iam::123456789012:role/test-agent-role`,
-      instruction: 'Test agent',
-    });
-    assessAgentAlias = new bedrock.CfnAgentAlias(tempStack, 'TestAssessAgentAlias', {
-      agentId: assessAgent.attrAgentId,
-      agentAliasName: 'test',
-    });
   });
 
   it('should define an API Gateway REST API with correct naming pattern', () => {
@@ -56,12 +31,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -80,12 +51,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -106,12 +73,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -130,12 +93,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -152,12 +111,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -279,12 +234,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -320,12 +271,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -339,10 +286,8 @@ describe('BackendStack', () => {
           LOG_LEVEL: config.CDK_LOG_LEVEL,
           LOG_FORMAT: config.CDK_LOG_FORMAT,
           LOG_ENABLED: config.CDK_LOG_ENABLED,
-          PLAN_AGENT_ID: 'test-agent-id',
-          PLAN_AGENT_ALIAS_ID: 'test-alias-id',
-          ASSESS_AGENT_ID: 'test-assess-agent-id',
-          ASSESS_AGENT_ALIAS_ID: 'test-assess-alias-id',
+          PLAN_HARNESS_ARN: planHarnessArn,
+          ASSESS_HARNESS_ARN: assessHarnessArn,
         },
       },
     });
@@ -376,12 +321,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -405,12 +346,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -446,13 +383,13 @@ describe('BackendStack', () => {
       },
     );
 
-    // Verify at least one policy contains bedrock actions (for plan-handler)
+    // Verify at least one policy contains bedrock actions (for the worker handlers)
     const hasBedrockPolicy = Object.values(allPolicies).some(
       (policy: Record<string, Record<string, Record<string, unknown>[]>>) => {
         const statements = (policy.Properties.PolicyDocument.Statement || []) as Record<string, unknown>[];
         return statements.some((stmt: Record<string, unknown>) => {
           const actions = Array.isArray(stmt.Action) ? (stmt.Action as string[]) : [stmt.Action as string];
-          return actions.some((action: string) => action.includes('bedrock'));
+          return actions.some((action: string) => action.includes('bedrock-agentcore'));
         });
       },
     );
@@ -460,6 +397,37 @@ describe('BackendStack', () => {
     expect(hasDynamoDBPolicy).toBe(true);
     expect(hasS3Policy).toBe(true);
     expect(hasBedrockPolicy).toBe(true);
+  });
+
+  it('should grant the plan and assess workers permission to invoke only their own harness', () => {
+    // Arrange
+    const config = getConfig();
+
+    // Act
+    const stack = new BackendStack(app, 'TestBackendStack', {
+      config,
+      table: dataStack.table,
+      bucket: dataStack.bucket,
+      planHarnessArn,
+      assessHarnessArn,
+    });
+
+    // Assert
+    const template = Template.fromStack(stack);
+    for (const harnessArn of [planHarnessArn, assessHarnessArn]) {
+      template.hasResourceProperties('AWS::IAM::Policy', {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
+              Effect: 'Allow',
+              Resource: [harnessArn, `${harnessArn}/*`],
+            }),
+          ]),
+        },
+      });
+    }
+    expect(JSON.stringify(template.toJSON())).not.toContain('bedrock:InvokeAgent');
   });
 
   it('should export the API Gateway URL as a stack output', () => {
@@ -473,12 +441,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert
@@ -500,12 +464,8 @@ describe('BackendStack', () => {
       config,
       table: dataStack.table,
       bucket: dataStack.bucket,
-      planAgentAlias,
-      planAgentId: 'test-agent-id',
-      planAgentAliasId: 'test-alias-id',
-      assessAgentAlias,
-      assessAgentId: 'test-assess-agent-id',
-      assessAgentAliasId: 'test-assess-alias-id',
+      planHarnessArn,
+      assessHarnessArn,
     });
 
     // Assert

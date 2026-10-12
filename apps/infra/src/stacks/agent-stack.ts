@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
+import * as bedrockagentcore from 'aws-cdk-lib/aws-bedrockagentcore';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -23,8 +23,45 @@ interface AgentStackProps extends cdk.StackProps {
 }
 
 /**
- * AgentStack: Bedrock Agent resources for interview plan generation and assessment reconciliation
- * This stack contains Bedrock agent action group Lambdas, the plan agent, the assessment agent, their action groups, IAM roles, and aliases.
+ * A string input property of an AgentCore gateway tool
+ */
+interface ToolProperty {
+  description: string;
+}
+
+/**
+ * Definition of an AgentCore gateway tool backed by a Lambda function.
+ * The tool name doubles as the gateway target name.
+ */
+interface ToolDefinition {
+  name: string;
+  description: string;
+  properties: Record<string, ToolProperty>;
+}
+
+/**
+ * Inputs for a single AgentCore agent (gateway, tool targets and harness)
+ */
+interface AgentDefinition {
+  key: 'plan' | 'assess';
+  systemPrompt: string;
+  tools: Array<{ lambda: NodejsFunction; definition: ToolDefinition }>;
+}
+
+const JD_ID_PROPERTY: ToolProperty = { description: 'The unique identifier (UUID) of the parent job description.' };
+
+/**
+ * Maximum duration of one harness invocation. Kept below the 300 s worker Lambda timeout so the
+ * harness fails first and the worker can record the error.
+ */
+const HARNESS_TIMEOUT_SECONDS = 240;
+const HARNESS_MAX_ITERATIONS = 10;
+const HARNESS_MAX_TOKENS = 8192;
+
+/**
+ * AgentStack: AgentCore resources for interview plan generation and assessment reconciliation
+ * This stack contains the gateway tool Lambdas, one AgentCore gateway (with a Lambda target per tool)
+ * and one AgentCore harness per agent (plan, assessment), plus their IAM roles.
  */
 export class AgentStack extends cdk.Stack {
   public readonly readJdActionLambda: NodejsFunction;
@@ -32,10 +69,8 @@ export class AgentStack extends cdk.Stack {
   public readonly readPlanActionLambda: NodejsFunction;
   public readonly readScorecardActionLambda: NodejsFunction;
   public readonly writeAssessmentActionLambda: NodejsFunction;
-  public readonly planAgent: bedrock.CfnAgent;
-  public readonly planAgentAlias: bedrock.CfnAgentAlias;
-  public readonly assessAgent: bedrock.CfnAgent;
-  public readonly assessAgentAlias: bedrock.CfnAgentAlias;
+  public readonly planHarness: bedrockagentcore.CfnHarness;
+  public readonly assessHarness: bedrockagentcore.CfnHarness;
 
   constructor(scope: Construct, id: string, props: AgentStackProps) {
     super(scope, id, props);
@@ -49,463 +84,304 @@ export class AgentStack extends cdk.Stack {
       LOG_ENABLED: config.CDK_LOG_ENABLED,
       JD_TABLE_NAME: table.tableName,
       JD_BUCKET_NAME: bucket.bucketName,
-      PLAN_AGENT_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
-      PLAN_AGENT_ALIAS_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
-      PLAN_WORKER_FUNCTION_NAME: 'placeholder', // Not used in the Action Lambdas, but included for validation
-      ASSESS_AGENT_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
-      ASSESS_AGENT_ALIAS_ID: 'placeholder', // Required for config validation, but not needed in the Action Lambdas
-      ASSESS_WORKER_FUNCTION_NAME: 'placeholder', // Not used in the Action Lambdas, but included for validation
+      PLAN_HARNESS_ARN: 'placeholder', // Required for config validation, but not needed in the tool Lambdas
+      PLAN_WORKER_FUNCTION_NAME: 'placeholder', // Not used in the tool Lambdas, but included for validation
+      ASSESS_HARNESS_ARN: 'placeholder', // Required for config validation, but not needed in the tool Lambdas
+      ASSESS_WORKER_FUNCTION_NAME: 'placeholder', // Not used in the tool Lambdas, but included for validation
     };
 
-    // Read JD Action Lambda Function (Bedrock Agent action group handler)
-    this.readJdActionLambda = new NodejsFunction(this, 'ReadJdActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/job-description/read-jd-action.ts'),
-      handler: 'handle',
-      runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(15),
-      loggingFormat: lambda.LoggingFormat.JSON,
-      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'ReadJdActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-jd-action-${config.CDK_ENV_NAME}`,
-        retention: logs.RetentionDays.ONE_WEEK,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }),
-      environment: lambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
+    const createToolLambda = (constructId: string, name: string, entry: string): NodejsFunction =>
+      new NodejsFunction(this, `${constructId}Function`, {
+        functionName: `${config.CDK_APP_NAME}-${name}-${config.CDK_ENV_NAME}`,
+        description: `AgentCore gateway tool: ${name}`,
+        entry: path.join(import.meta.dirname, `../../../api/src/handlers/${entry}.ts`),
+        handler: 'handle',
+        runtime: lambda.Runtime.NODEJS_24_X,
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(15),
+        loggingFormat: lambda.LoggingFormat.JSON,
+        applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
+        systemLogLevelV2: lambda.SystemLogLevel.INFO,
+        logGroup: new logs.LogGroup(this, `${constructId}FunctionLogGroup`, {
+          logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-${name}-${config.CDK_ENV_NAME}`,
+          retention: logs.RetentionDays.ONE_WEEK,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
+        environment: lambdaEnvironment,
+        bundling: {
+          minify: true,
+          target: 'esnext',
+          sourceMap: false,
+        },
+      });
 
-    // Grant permissions to ReadJdActionLambda
+    // Tool Lambdas (AgentCore gateway Lambda targets)
+    this.readJdActionLambda = createToolLambda('ReadJdAction', 'read-jd-action', 'job-description/read-jd-action');
     table.grantReadData(this.readJdActionLambda);
 
-    // Write Plan Action Lambda Function (Bedrock Agent action group handler)
-    this.writePlanActionLambda = new NodejsFunction(this, 'WritePlanActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/write-plan-action.ts'),
-      handler: 'handle',
-      runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(15),
-      loggingFormat: lambda.LoggingFormat.JSON,
-      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'WritePlanActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-write-plan-action-${config.CDK_ENV_NAME}`,
-        retention: logs.RetentionDays.ONE_WEEK,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }),
-      environment: lambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Grant permissions to WritePlanActionLambda
+    this.writePlanActionLambda = createToolLambda('WritePlanAction', 'write-plan-action', 'plan/write-plan-action');
     table.grantReadWriteData(this.writePlanActionLambda);
 
-    // Read Plan Action Lambda Function (Bedrock Agent action group handler)
-    this.readPlanActionLambda = new NodejsFunction(this, 'ReadPlanActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-read-plan-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/plan/read-plan-action.ts'),
-      handler: 'handle',
-      runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(15),
-      loggingFormat: lambda.LoggingFormat.JSON,
-      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'ReadPlanActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-plan-action-${config.CDK_ENV_NAME}`,
-        retention: logs.RetentionDays.ONE_WEEK,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }),
-      environment: lambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Grant permissions to ReadPlanActionLambda
+    this.readPlanActionLambda = createToolLambda('ReadPlanAction', 'read-plan-action', 'plan/read-plan-action');
     table.grantReadData(this.readPlanActionLambda);
 
-    // Read Scorecard Action Lambda Function (Bedrock Agent action group handler)
-    this.readScorecardActionLambda = new NodejsFunction(this, 'ReadScorecardActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-read-scorecard-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/scorecard/read-scorecard-action.ts'),
-      handler: 'handle',
-      runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(15),
-      loggingFormat: lambda.LoggingFormat.JSON,
-      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'ReadScorecardActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-read-scorecard-action-${config.CDK_ENV_NAME}`,
-        retention: logs.RetentionDays.ONE_WEEK,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }),
-      environment: lambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Grant permissions to ReadScorecardActionLambda
+    this.readScorecardActionLambda = createToolLambda(
+      'ReadScorecardAction',
+      'read-scorecard-action',
+      'scorecard/read-scorecard-action',
+    );
     table.grantReadData(this.readScorecardActionLambda);
 
-    // Write Assessment Action Lambda Function (Bedrock Agent action group handler)
-    this.writeAssessmentActionLambda = new NodejsFunction(this, 'WriteAssessmentActionFunction', {
-      functionName: `${config.CDK_APP_NAME}-write-assessment-action-${config.CDK_ENV_NAME}`,
-      entry: path.join(import.meta.dirname, '../../../api/src/handlers/assessment/write-assessment-action.ts'),
-      handler: 'handle',
-      runtime: lambda.Runtime.NODEJS_24_X,
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(15),
-      loggingFormat: lambda.LoggingFormat.JSON,
-      applicationLogLevelV2: lambda.ApplicationLogLevel.DEBUG,
-      systemLogLevelV2: lambda.SystemLogLevel.INFO,
-      logGroup: new logs.LogGroup(this, 'WriteAssessmentActionFunctionLogGroup', {
-        logGroupName: `/aws/lambda/${config.CDK_APP_NAME}-write-assessment-action-${config.CDK_ENV_NAME}`,
-        retention: logs.RetentionDays.ONE_WEEK,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }),
-      environment: lambdaEnvironment,
-      bundling: {
-        minify: true,
-        target: 'esnext',
-        sourceMap: false,
-      },
-    });
-
-    // Grant permissions to WriteAssessmentActionLambda
+    this.writeAssessmentActionLambda = createToolLambda(
+      'WriteAssessmentAction',
+      'write-assessment-action',
+      'assessment/write-assessment-action',
+    );
     table.grantReadWriteData(this.writeAssessmentActionLambda);
 
-    // Create the IAM execution role for the Bedrock Agent.
-    // AWS requires the role name to start with AmazonBedrockExecutionRoleForAgents_.
-    const agentRole = new iam.Role(this, 'PlanAgentRole', {
-      roleName: `AmazonBedrockExecutionRoleForAgents_${config.CDK_APP_NAME}-plan-${config.CDK_ENV_NAME}`,
-      assumedBy: new iam.ServicePrincipal('bedrock.amazonaws.com', {
-        conditions: {
-          StringEquals: { 'aws:SourceAccount': this.account },
-        },
-      }),
-    });
+    // Creates an IAM role that the AgentCore service assumes (gateway service role / harness execution role)
+    const createAgentCoreRole = (constructId: string): iam.Role =>
+      new iam.Role(this, constructId, {
+        assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com', {
+          conditions: {
+            StringEquals: { 'aws:SourceAccount': this.account },
+          },
+        }),
+      });
 
-    // Grant the agent role permission to invoke the Claude Sonnet 4.6 model.
-    // The cross-region inference profile and all regional foundation model ARNs are required.
-    agentRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeModel', 'bedrock:ListInferenceProfiles', 'bedrock:GetInferenceProfile'],
-        resources: [
-          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-        ],
-      }),
-    );
+    // Creates the gateway, tool targets, roles and harness for one agent
+    const createAgent = ({ key, systemPrompt, tools }: AgentDefinition): bedrockagentcore.CfnHarness => {
+      const label = key === 'plan' ? 'Plan' : 'Assess';
 
-    // Define the read-jd action group.
-    // actionGroupName uses the app name prefix for uniqueness and clarity.
-    // Must match the actionGroup literal in the read-jd-action Lambda schema ('interview-forge-read-jd').
-    const readJdActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
-      actionGroupName: 'interview-forge-read-jd',
-      actionGroupExecutor: {
-        lambda: this.readJdActionLambda.functionArn,
-      },
-      functionSchema: {
-        functions: [
+      // Gateway service role: invokes the agent's tool Lambdas
+      const gatewayRole = createAgentCoreRole(`${label}GatewayRole`);
+      gatewayRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['lambda:InvokeFunction'],
+          resources: tools.map(({ lambda: toolLambda }) => toolLambda.functionArn),
+        }),
+      );
+
+      // One gateway per agent keeps each agent's tool access isolated
+      const gateway = new bedrockagentcore.CfnGateway(this, `${label}Gateway`, {
+        name: `${config.CDK_APP_NAME}-${key}-gateway-${config.CDK_ENV_NAME}`,
+        description: `Tools for the ${config.CDK_APP_NAME} ${key} agent`,
+        protocolType: 'MCP',
+        authorizerType: 'AWS_IAM',
+        roleArn: gatewayRole.roleArn,
+      });
+      gateway.node.addDependency(gatewayRole);
+
+      // One Lambda target per tool; the tool schema mirrors the arguments validated by the Lambda handler
+      const targets = tools.map(({ lambda: toolLambda, definition }) => {
+        const target = new bedrockagentcore.CfnGatewayTarget(
+          this,
+          `${label}${definition.name
+            .split('-')
+            .map((part) => part[0].toUpperCase() + part.slice(1))
+            .join('')}Target`,
           {
-            name: 'read-jd-action',
+            name: definition.name,
+            gatewayIdentifier: gateway.attrGatewayIdentifier,
+            credentialProviderConfigurations: [{ credentialProviderType: 'GATEWAY_IAM_ROLE' }],
+            targetConfiguration: {
+              mcp: {
+                lambda: {
+                  lambdaArn: toolLambda.functionArn,
+                  toolSchema: {
+                    inlinePayload: [
+                      {
+                        name: definition.name,
+                        description: definition.description,
+                        inputSchema: {
+                          type: 'object',
+                          properties: Object.fromEntries(
+                            Object.entries(definition.properties).map(([propertyName, property]) => [
+                              propertyName,
+                              { type: 'string', description: property.description },
+                            ]),
+                          ),
+                          required: Object.keys(definition.properties),
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        );
+        target.node.addDependency(gatewayRole);
+        return target;
+      });
+
+      // Harness execution role: invokes the model and the agent's gateway
+      const harnessRole = createAgentCoreRole(`${label}HarnessRole`);
+      harnessRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'bedrock:InvokeModel',
+            'bedrock:InvokeModelWithResponseStream',
+            'bedrock:ListInferenceProfiles',
+            'bedrock:GetInferenceProfile',
+          ],
+          resources: [
+            `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+            `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+            `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+            `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+          ],
+        }),
+      );
+      harnessRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['bedrock-agentcore:InvokeGateway'],
+          resources: [gateway.attrGatewayArn],
+        }),
+      );
+      harnessRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+          resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/bedrock-agentcore/*`],
+        }),
+      );
+
+      // Harness names allow only letters, digits and underscores (max 40 characters)
+      const harness = new bedrockagentcore.CfnHarness(this, `${label}Harness`, {
+        harnessName: `${config.CDK_APP_NAME}_${key}_${config.CDK_ENV_NAME}`.replace(/[^a-zA-Z0-9_]/g, '_'),
+        executionRoleArn: harnessRole.roleArn,
+        model: {
+          bedrockModelConfig: {
+            modelId: `us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
+            maxTokens: HARNESS_MAX_TOKENS,
+          },
+        },
+        systemPrompt: [{ text: systemPrompt }],
+        tools: [
+          {
+            type: 'agentcore_gateway',
+            name: `${key}_gateway`,
+            config: {
+              agentCoreGateway: {
+                gatewayArn: gateway.attrGatewayArn,
+                outboundAuth: { awsIam: {} },
+              },
+            },
+          },
+        ],
+        maxIterations: HARNESS_MAX_ITERATIONS,
+        timeoutSeconds: HARNESS_TIMEOUT_SECONDS,
+        // The agents are stateless: results are persisted by the write tool, not by harness memory
+        memory: { disabled: {} },
+      });
+      harness.node.addDependency(harnessRole);
+      targets.forEach((target) => harness.node.addDependency(target));
+
+      return harness;
+    };
+
+    this.planHarness = createAgent({
+      key: 'plan',
+      systemPrompt: PLAN_GENERATION_SYSTEM_PROMPT,
+      tools: [
+        {
+          lambda: this.readJdActionLambda,
+          definition: {
+            name: 'read-jd',
             description:
               'Reads a job description from storage by its unique identifier. Returns the job description title and raw text content.',
-            parameters: {
-              jdId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the job description to read.',
-                required: true,
-              },
+            properties: {
+              jdId: { description: 'The unique identifier (UUID) of the job description to read.' },
             },
           },
-        ],
-      },
-    };
-
-    // Define the write-plan action group.
-    // actionGroupName uses the app name prefix for uniqueness and clarity.
-    // Must match the actionGroup literal in the write-plan-action Lambda schema ('interview-forge-write-plan').
-    const writePlanActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
-      actionGroupName: 'interview-forge-write-plan',
-      actionGroupExecutor: {
-        lambda: this.writePlanActionLambda.functionArn,
-      },
-      functionSchema: {
-        functions: [
-          {
-            name: 'write-plan-action',
-            description:
-              'Writes a completed interview plan to a session in storage. The plan must include interview rounds with competency areas and structured questions.',
-            parameters: {
-              sessionId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the session to update with the interview plan.',
-                required: true,
-              },
-              jdId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the parent job description.',
-                required: true,
-              },
-              plan: {
-                type: 'string',
-                description:
-                  'The complete interview plan serialized as a JSON string, conforming to the InterviewPlan schema with an interviewRounds array.',
-                required: true,
-              },
-            },
-          },
-        ],
-      },
-    };
-
-    // Create the Bedrock Plan Agent
-    this.planAgent = new bedrock.CfnAgent(this, 'PlanAgent', {
-      agentName: `${config.CDK_APP_NAME}-plan-agent`,
-      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-      agentResourceRoleArn: agentRole.roleArn,
-      instruction: PLAN_GENERATION_SYSTEM_PROMPT,
-      actionGroups: [readJdActionGroup, writePlanActionGroup],
-      // Allow the CDK to skip the in-use check on delete for dev/qa environments
-      skipResourceInUseCheckOnDelete: true,
-    });
-
-    // Create the DRAFT alias for development.
-    // Omitting routingConfiguration defaults to the DRAFT version.
-    this.planAgentAlias = new bedrock.CfnAgentAlias(this, 'PlanAgentAlias', {
-      agentId: this.planAgent.attrAgentId,
-      agentAliasName: 'dev',
-    });
-
-    // Grant the Bedrock service principal permission to invoke the read-jd-action Lambda.
-    new lambda.CfnPermission(this, 'BedrockInvokeReadJdAction', {
-      functionName: this.readJdActionLambda.functionArn,
-      principal: 'bedrock.amazonaws.com',
-      action: 'lambda:InvokeFunction',
-      sourceArn: this.planAgent.attrAgentArn,
-    });
-
-    // Grant the Bedrock service principal permission to invoke the write-plan-action Lambda.
-    new lambda.CfnPermission(this, 'BedrockInvokeWritePlanAction', {
-      functionName: this.writePlanActionLambda.functionArn,
-      principal: 'bedrock.amazonaws.com',
-      action: 'lambda:InvokeFunction',
-      sourceArn: this.planAgent.attrAgentArn,
-    });
-
-    // Create the IAM execution role for the Bedrock Assessment Agent.
-    // AWS requires the role name to start with AmazonBedrockExecutionRoleForAgents_.
-    const assessAgentRole = new iam.Role(this, 'AssessAgentRole', {
-      roleName: `AmazonBedrockExecutionRoleForAgents_${config.CDK_APP_NAME}-assess-${config.CDK_ENV_NAME}`,
-      assumedBy: new iam.ServicePrincipal('bedrock.amazonaws.com', {
-        conditions: {
-          StringEquals: { 'aws:SourceAccount': this.account },
         },
-      }),
+        {
+          lambda: this.writePlanActionLambda,
+          definition: {
+            name: 'write-plan',
+            description:
+              'Writes a completed interview plan to a session in storage. The plan must include competency areas with structured questions.',
+            properties: {
+              sessionId: {
+                description: 'The unique identifier (UUID) of the session to update with the interview plan.',
+              },
+              jdId: JD_ID_PROPERTY,
+              plan: {
+                description:
+                  'The complete interview plan serialized as a JSON string, conforming to the InterviewPlan schema with a competencies array.',
+              },
+            },
+          },
+        },
+      ],
     });
 
-    // Grant the assessment agent role permission to invoke the Claude Haiku 4.5 model.
-    // The cross-region inference profile and all regional foundation model ARNs are required.
-    assessAgentRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeModel', 'bedrock:ListInferenceProfiles', 'bedrock:GetInferenceProfile'],
-        resources: [
-          `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-1::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-east-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-          `arn:aws:bedrock:us-west-2::foundation-model/${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-        ],
-      }),
-    );
-
-    // Define the read-plan action group.
-    // actionGroupName uses the app name prefix for uniqueness and clarity.
-    // Must match the actionGroup literal in the read-plan-action Lambda schema ('interview-forge-read-plan').
-    const readPlanActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
-      actionGroupName: 'interview-forge-read-plan',
-      actionGroupExecutor: {
-        lambda: this.readPlanActionLambda.functionArn,
-      },
-      functionSchema: {
-        functions: [
-          {
-            name: 'read-plan-action',
+    this.assessHarness = createAgent({
+      key: 'assess',
+      systemPrompt: RECONCILIATION_SYSTEM_PROMPT,
+      tools: [
+        {
+          lambda: this.readPlanActionLambda,
+          definition: {
+            name: 'read-plan',
             description:
               'Reads the approved interview plan from storage by session ID. Returns the full InterviewPlan with competencies and questions.',
-            parameters: {
-              jdId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the parent job description.',
-                required: true,
-              },
-              sessionId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the session to retrieve the plan from.',
-                required: true,
-              },
+            properties: {
+              jdId: JD_ID_PROPERTY,
+              sessionId: { description: 'The unique identifier (UUID) of the session to retrieve the plan from.' },
             },
           },
-        ],
-      },
-    };
-
-    // Define the read-scorecard action group.
-    // actionGroupName uses the app name prefix for uniqueness and clarity.
-    // Must match the actionGroup literal in the read-scorecard-action Lambda schema ('interview-forge-read-scorecard').
-    const readScorecardActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
-      actionGroupName: 'interview-forge-read-scorecard',
-      actionGroupExecutor: {
-        lambda: this.readScorecardActionLambda.functionArn,
-      },
-      functionSchema: {
-        functions: [
-          {
-            name: 'read-scorecard-action',
+        },
+        {
+          lambda: this.readScorecardActionLambda,
+          definition: {
+            name: 'read-scorecard',
             description:
               'Reads the submitted interview scorecard from storage by session ID. Returns the scorecard with Likert ratings and free-text notes per competency.',
-            parameters: {
-              jdId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the parent job description.',
-                required: true,
-              },
+            properties: {
+              jdId: JD_ID_PROPERTY,
               sessionId: {
-                type: 'string',
                 description: 'The unique identifier (UUID) of the session to retrieve the scorecard from.',
-                required: true,
               },
             },
           },
-        ],
-      },
-    };
-
-    // Define the write-assessment action group.
-    // actionGroupName uses the app name prefix for uniqueness and clarity.
-    // Must match the actionGroup literal in the write-assessment-action Lambda schema ('interview-forge-write-assessment').
-    const writeAssessmentActionGroup: bedrock.CfnAgent.AgentActionGroupProperty = {
-      actionGroupName: 'interview-forge-write-assessment',
-      actionGroupExecutor: {
-        lambda: this.writeAssessmentActionLambda.functionArn,
-      },
-      functionSchema: {
-        functions: [
-          {
-            name: 'write-assessment-action',
+        },
+        {
+          lambda: this.writeAssessmentActionLambda,
+          definition: {
+            name: 'write-assessment',
             description:
               'Writes a completed candidate assessment to a session in storage. The assessment must include recommendation, confidence, reasoning, and per-competency assessments with conflicts identified.',
-            parameters: {
+            properties: {
               sessionId: {
-                type: 'string',
                 description: 'The unique identifier (UUID) of the session to update with the assessment.',
-                required: true,
               },
-              jdId: {
-                type: 'string',
-                description: 'The unique identifier (UUID) of the parent job description.',
-                required: true,
-              },
+              jdId: JD_ID_PROPERTY,
               assessment: {
-                type: 'string',
                 description:
                   'The complete assessment serialized as a JSON string, conforming to the Assessment schema with recommendation, confidence, reasoning, and competencyAssessments array.',
-                required: true,
               },
             },
           },
-        ],
-      },
-    };
-
-    // Create the Bedrock Assessment Agent
-    this.assessAgent = new bedrock.CfnAgent(this, 'AssessAgent', {
-      agentName: `${config.CDK_APP_NAME}-assess-agent`,
-      foundationModel: `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.${CLAUDE_HAIKU_4_5_MODEL_ID}`,
-      agentResourceRoleArn: assessAgentRole.roleArn,
-      instruction: RECONCILIATION_SYSTEM_PROMPT,
-      actionGroups: [readPlanActionGroup, readScorecardActionGroup, writeAssessmentActionGroup],
-      // Allow the CDK to skip the in-use check on delete for dev/qa environments
-      skipResourceInUseCheckOnDelete: true,
+        },
+      ],
     });
 
-    // Create the DRAFT alias for development.
-    // Omitting routingConfiguration defaults to the DRAFT version.
-    this.assessAgentAlias = new bedrock.CfnAgentAlias(this, 'AssessAgentAlias', {
-      agentId: this.assessAgent.attrAgentId,
-      agentAliasName: 'dev',
+    // Export the harness ARNs as stack outputs
+    new cdk.CfnOutput(this, 'PlanHarnessArn', {
+      value: this.planHarness.attrArn,
+      description: 'AgentCore Plan Harness ARN',
+      exportName: `${config.CDK_APP_NAME}-PlanHarnessArn-${config.CDK_ENV_NAME}`,
     });
 
-    // Grant the Bedrock service principal permission to invoke the read-plan-action Lambda.
-    new lambda.CfnPermission(this, 'BedrockInvokeReadPlanAction', {
-      functionName: this.readPlanActionLambda.functionArn,
-      principal: 'bedrock.amazonaws.com',
-      action: 'lambda:InvokeFunction',
-      sourceArn: this.assessAgent.attrAgentArn,
-    });
-
-    // Grant the Bedrock service principal permission to invoke the read-scorecard-action Lambda.
-    new lambda.CfnPermission(this, 'BedrockInvokeReadScorecardAction', {
-      functionName: this.readScorecardActionLambda.functionArn,
-      principal: 'bedrock.amazonaws.com',
-      action: 'lambda:InvokeFunction',
-      sourceArn: this.assessAgent.attrAgentArn,
-    });
-
-    // Grant the Bedrock service principal permission to invoke the write-assessment-action Lambda.
-    new lambda.CfnPermission(this, 'BedrockInvokeWriteAssessmentAction', {
-      functionName: this.writeAssessmentActionLambda.functionArn,
-      principal: 'bedrock.amazonaws.com',
-      action: 'lambda:InvokeFunction',
-      sourceArn: this.assessAgent.attrAgentArn,
-    });
-
-    // Export the plan agent ID and alias ID as stack outputs
-    new cdk.CfnOutput(this, 'PlanAgentId', {
-      value: this.planAgent.attrAgentId,
-      description: 'Bedrock Plan Agent ID',
-      exportName: `${config.CDK_APP_NAME}-PlanAgentId-${config.CDK_ENV_NAME}`,
-    });
-
-    new cdk.CfnOutput(this, 'PlanAgentAliasId', {
-      value: this.planAgentAlias.attrAgentAliasId,
-      description: 'Bedrock Plan Agent Alias ID (dev)',
-      exportName: `${config.CDK_APP_NAME}-PlanAgentAliasId-${config.CDK_ENV_NAME}`,
-    });
-
-    // Export the assessment agent ID and alias ID as stack outputs
-    new cdk.CfnOutput(this, 'AssessAgentId', {
-      value: this.assessAgent.attrAgentId,
-      description: 'Bedrock Assessment Agent ID',
-      exportName: `${config.CDK_APP_NAME}-AssessAgentId-${config.CDK_ENV_NAME}`,
-    });
-
-    new cdk.CfnOutput(this, 'AssessAgentAliasId', {
-      value: this.assessAgentAlias.attrAgentAliasId,
-      description: 'Bedrock Assessment Agent Alias ID (dev)',
-      exportName: `${config.CDK_APP_NAME}-AssessAgentAliasId-${config.CDK_ENV_NAME}`,
+    new cdk.CfnOutput(this, 'AssessHarnessArn', {
+      value: this.assessHarness.attrArn,
+      description: 'AgentCore Assessment Harness ARN',
+      exportName: `${config.CDK_APP_NAME}-AssessHarnessArn-${config.CDK_ENV_NAME}`,
     });
   }
 }

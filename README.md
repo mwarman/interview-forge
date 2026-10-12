@@ -6,7 +6,7 @@ A production-grade, human-in-the-loop AI agent platform demonstrating how to aug
 
 **interview-forge** transforms job descriptions into structured interview plans using AI agents, captures candidate responses via scorecards, and reconciles quantitative ratings with qualitative notes to produce final hiring assessments. The system enforces two explicit human approval gates — plan review before the interview, and assessment review after — ensuring AI accelerates decision-making without removing human judgment.
 
-Built on **AWS Bedrock Agents**, **React**, and a **TypeScript monorepo**, this project demonstrates:
+Built on **Amazon Bedrock AgentCore**, **React**, and a **TypeScript monorepo**, this project demonstrates:
 
 - AWS-native managed agent architecture with tool orchestration and session management
 - Human-in-the-loop AI patterns suitable for regulated hiring workflows
@@ -68,7 +68,7 @@ flowchart TD
         L3["Orchestrators"]
     end
 
-    subgraph Agents["Bedrock Agents"]
+    subgraph Agents["Bedrock AgentCore Harnesses"]
         AG1["Plan Generation\nAgent"]
         AG2["Reconciliation\nAgent"]
     end
@@ -122,7 +122,7 @@ packages/
   - Reuse JD across multiple candidate sessions
 
 - **AI-Driven Interview Planning**
-  - Bedrock Agent generates competency areas and interview questions
+  - AgentCore harness generates competency areas and interview questions
   - Recruiter reviews and edits plan before interviews proceed
   - Approval checkpoint locks plan in DynamoDB
 
@@ -132,7 +132,7 @@ packages/
   - Flexible scorecard entry UI
 
 - **Intelligent Assessment Reconciliation**
-  - Bedrock Agent reconciles ratings and notes to identify agreement/conflict
+  - AgentCore harness reconciles ratings and notes to identify agreement/conflict
   - Generates final hire/no-hire recommendation with reasoning
   - Approval checkpoint before persistence
 
@@ -147,18 +147,18 @@ packages/
 
 ## Technology Stack
 
-| Layer            | Technology                      | Purpose                                 |
-| ---------------- | ------------------------------- | --------------------------------------- |
-| Frontend         | React 19, Vite, TailwindCSS     | Modern component-driven UI              |
-| Backend API      | AWS Lambda (Node.js ES modules) | Serverless compute                      |
-| AI Orchestration | AWS Bedrock Agents              | Managed agent, tool orchestration, HITL |
-| LLM              | Claude Sonnet 4.6 via Bedrock   | Plan generation and reconciliation      |
-| Data Persistence | DynamoDB (single-table)         | Serverless, pay-per-request             |
-| File Staging     | S3                              | JD upload storage with 24hr lifecycle   |
-| PDF Parsing      | `unpdf` (Lambda bundled)        | Extract text from PDFs                  |
-| Infrastructure   | AWS CDK (TypeScript)            | Infrastructure-as-Code                  |
-| Validation       | Zod                             | Cross-boundary type safety              |
-| Testing          | Vitest                          | Unit testing across all workspaces      |
+| Layer            | Technology                      | Purpose                               |
+| ---------------- | ------------------------------- | ------------------------------------- |
+| Frontend         | React 19, Vite, TailwindCSS     | Modern component-driven UI            |
+| Backend API      | AWS Lambda (Node.js ES modules) | Serverless compute                    |
+| AI Orchestration | Amazon Bedrock AgentCore        | Managed harness, gateway tools, HITL  |
+| LLM              | Claude Haiku 4.5 via Bedrock    | Plan generation and reconciliation    |
+| Data Persistence | DynamoDB (single-table)         | Serverless, pay-per-request           |
+| File Staging     | S3                              | JD upload storage with 24hr lifecycle |
+| PDF Parsing      | `unpdf` (Lambda bundled)        | Extract text from PDFs                |
+| Infrastructure   | AWS CDK (TypeScript)            | Infrastructure-as-Code                |
+| Validation       | Zod                             | Cross-boundary type safety            |
+| Testing          | Vitest                          | Unit testing across all workspaces    |
 
 ## Development Workflow
 
@@ -261,7 +261,7 @@ npm run cdk:synth -w apps/infra # Synthesize CDK template
 
 See [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) for detailed discussion of key architectural decisions including:
 
-- Bedrock Agents vs. custom ReAct loops
+- Bedrock AgentCore harnesses vs. custom ReAct loops
 - `unpdf` for PDF parsing vs. AWS Textract
 - Shared JD records enabling multi-candidate sessions
 

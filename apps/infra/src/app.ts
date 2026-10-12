@@ -30,7 +30,7 @@ const dataStack = new DataStack(app, 'DataStack', {
   tags,
 });
 
-// Instantiate the agent stack (Bedrock Agent, action groups, IAM role)
+// Instantiate the agent stack (AgentCore gateways, harnesses, tool Lambdas, IAM roles)
 const agentStack = new AgentStack(app, 'AgentStack', {
   stackName: `${config.CDK_APP_NAME}-agent-stack-${config.CDK_ENV_NAME}`,
   description: `Agent layer for ${config.CDK_APP_NAME} (${config.CDK_ENV_NAME})`,
@@ -42,7 +42,7 @@ const agentStack = new AgentStack(app, 'AgentStack', {
 });
 
 // Set stack dependencies (agent depends on data)
-agentStack.addDependency(dataStack);
+agentStack.addStackDependency(dataStack);
 
 // Instantiate the backend stack (API Gateway, Lambda, etc.)
 const backendStack = new BackendStack(app, 'BackendStack', {
@@ -53,17 +53,13 @@ const backendStack = new BackendStack(app, 'BackendStack', {
   tags,
   table: dataStack.table,
   bucket: dataStack.bucket,
-  planAgentAlias: agentStack.planAgentAlias,
-  planAgentId: agentStack.planAgent.attrAgentId,
-  planAgentAliasId: agentStack.planAgentAlias.attrAgentAliasId,
-  assessAgentAlias: agentStack.assessAgentAlias,
-  assessAgentId: agentStack.assessAgent.attrAgentId,
-  assessAgentAliasId: agentStack.assessAgentAlias.attrAgentAliasId,
+  planHarnessArn: agentStack.planHarness.attrArn,
+  assessHarnessArn: agentStack.assessHarness.attrArn,
 });
 
 // Set stack dependencies (backend depends on data and agent)
-backendStack.addDependency(dataStack);
-backendStack.addDependency(agentStack);
+backendStack.addStackDependency(dataStack);
+backendStack.addStackDependency(agentStack);
 
 // Instantiate the frontend stack (CloudFront, S3 for React frontend)
 const frontendStack = new FrontendStack(app, 'FrontendStack', {
@@ -77,7 +73,7 @@ const frontendStack = new FrontendStack(app, 'FrontendStack', {
 });
 
 // Set stack dependencies (frontend depends on backend for stack ordering)
-frontendStack.addDependency(backendStack);
+frontendStack.addStackDependency(backendStack);
 
 // Synthesize the CloudFormation templates
 app.synth();

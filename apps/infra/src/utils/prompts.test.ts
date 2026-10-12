@@ -8,24 +8,14 @@ describe('planGenerationSystemPrompt', () => {
     expect(PLAN_GENERATION_SYSTEM_PROMPT.length).toBeGreaterThan(0);
   });
 
-  it('should reference the read-jd-action function name', () => {
+  it('should reference the read-jd tool name', () => {
     // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('read-jd-action');
+    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('**read-jd** tool');
   });
 
-  it('should reference the write-plan-action function name', () => {
+  it('should reference the write-plan tool name', () => {
     // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('write-plan-action');
-  });
-
-  it('should reference the interview-forge-read-jd action group name', () => {
-    // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('interview-forge-read-jd');
-  });
-
-  it('should reference the interview-forge-write-plan action group name', () => {
-    // Arrange / Act / Assert
-    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('interview-forge-write-plan');
+    expect(PLAN_GENERATION_SYSTEM_PROMPT).toContain('**write-plan** tool');
   });
 
   it('should instruct the agent to identify 1-4 competency areas', () => {
@@ -81,34 +71,19 @@ describe('reconciliationSystemPrompt', () => {
     expect(RECONCILIATION_SYSTEM_PROMPT.length).toBeGreaterThan(0);
   });
 
-  it('should reference the read-plan-action function name', () => {
+  it('should reference the read-plan tool name', () => {
     // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('read-plan-action');
+    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('**read-plan** tool');
   });
 
-  it('should reference the read-scorecard-action function name', () => {
+  it('should reference the read-scorecard tool name', () => {
     // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('read-scorecard-action');
+    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('**read-scorecard** tool');
   });
 
-  it('should reference the write-assessment-action function name', () => {
+  it('should reference the write-assessment tool name', () => {
     // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('write-assessment-action');
-  });
-
-  it('should reference the interview-forge-read-plan action group name', () => {
-    // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('interview-forge-read-plan');
-  });
-
-  it('should reference the interview-forge-read-scorecard action group name', () => {
-    // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('interview-forge-read-scorecard');
-  });
-
-  it('should reference the interview-forge-write-assessment action group name', () => {
-    // Arrange / Act / Assert
-    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('interview-forge-write-assessment');
+    expect(RECONCILIATION_SYSTEM_PROMPT).toContain('**write-assessment** tool');
   });
 
   it('should include explicit conflict detection rules', () => {

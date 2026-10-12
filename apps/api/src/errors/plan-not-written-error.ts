@@ -1,6 +1,6 @@
 /**
  * PlanNotWrittenError
- * Thrown when a Bedrock Agent completes without writing a plan to the session.
+ * Thrown when a AgentCore harness completes without writing a plan to the session.
  * This indicates the agent ran but did not successfully persist the plan.
  */
 export class PlanNotWrittenError extends Error {

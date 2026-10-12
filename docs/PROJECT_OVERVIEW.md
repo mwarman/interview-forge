@@ -1,7 +1,7 @@
 # Project Overview: interview-forge
 
-**Version:** 1.2  
-**Date:** 2026-06-03  
+**Version:** 1.3  
+**Date:** 2026-10-12  
 **Project Type:** Portfolio  
 **Status:** Approved for Planning
 
@@ -15,7 +15,7 @@
 
 ## Goals
 
-- **Primary Goal:** Demonstrate production-grade human-in-the-loop agent architecture using AWS Bedrock Agents, including explicit approval checkpoints, tool use, and structured output generation.
+- **Primary Goal:** Demonstrate production-grade human-in-the-loop agent architecture using Amazon Bedrock AgentCore, including explicit approval checkpoints, tool use, and structured output generation.
 - **Secondary Goals:**
   - Show continuity with prior portfolio projects (`resume-lens`, `career-compass`, `talent-finder`) within the career/talent domain
   - Demonstrate multi-modal input ingestion (paste text + PDF/TXT upload via `unpdf`)
@@ -60,35 +60,35 @@
 | Audience                                     | Signal Being Demonstrated                                                                                       |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | Enterprise HR / talent platform clients      | Ability to design agentic AI workflows within legally defensible human-in-the-loop guardrails                   |
-| Technical recruiters evaluating AI engineers | Mastery of Bedrock Agents tool use, approval flows, and structured output generation                            |
-| AWS-focused engineering teams                | AWS-native agent architecture: Bedrock Agents, Lambda, DynamoDB, CDK, API Gateway                               |
+| Technical recruiters evaluating AI engineers | Mastery of AgentCore tool use, approval flows, and structured output generation                                 |
+| AWS-focused engineering teams                | AWS-native agent architecture: Bedrock AgentCore, Lambda, DynamoDB, CDK, API Gateway                            |
 | Solution design / pre-sales context          | Translating a complex multi-step business process (structured interviewing) into a feasible AI-augmented system |
 
 ---
 
 ## Technology Stack
 
-| Layer               | Technology / Service                             | Rationale                                                                                                     |
-| ------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Frontend            | React 19, Vite, TailwindCSS, shadcn/ui           | Consistent with monorepo portfolio standard; supports drag-and-drop upload and multi-step workflow UI         |
-| PDF Export          | `pdfmake` (client-side, React)                   | Bundles cleanly in the browser; no Lambda involvement; zero cold-start overhead                               |
-| API                 | AWS Lambda (Node.js, ES Modules)                 | Serverless; consistent with portfolio pattern; cost-optimized at near-zero idle traffic                       |
-| PDF Parsing         | `unpdf` (npm) bundled in Lambda                  | Synchronous; bundles and executes cleanly in Lambda ES module environment; confirmed working in `resume-lens` |
-| Agent Orchestration | AWS Bedrock Agents                               | Native HITL support; built-in tool use and ReAct loop; session management; AWS-recommended managed agent tier |
-| LLM                 | Claude Sonnet 4.6 via Bedrock                    | Best quality/cost balance for plan generation and reconciliation; $3.00/$15.00 per 1M tokens in/out           |
-| Data                | DynamoDB (single-table design, on-demand)        | Serverless, zero idle cost; one-to-many JD → session access patterns via GSI; 72-hour TTL auto-expiry         |
-| Storage             | S3                                               | JD file upload staging (PDF/TXT); 72-hour lifecycle policy aligned to DynamoDB TTL                            |
-| Infrastructure      | AWS CDK (TypeScript)                             | IaC consistent with portfolio standard                                                                        |
-| Monorepo            | npm workspaces (`web`, `api`, `shared`, `infra`) | Consistent with `technology-guidelines.md`                                                                    |
-| Validation          | Zod (shared schemas)                             | Cross-boundary type safety; consistent with portfolio standard                                                |
-| Testing             | Vitest (all workspaces)                          | Consistent with portfolio standard                                                                            |
-| CI/CD               | GitHub Actions (3 workflows)                     | CI, Deploy (manual), Teardown (manual)                                                                        |
+| Layer               | Technology / Service                             | Rationale                                                                                                                              |
+| ------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend            | React 19, Vite, TailwindCSS, shadcn/ui           | Consistent with monorepo portfolio standard; supports drag-and-drop upload and multi-step workflow UI                                  |
+| PDF Export          | `pdfmake` (client-side, React)                   | Bundles cleanly in the browser; no Lambda involvement; zero cold-start overhead                                                        |
+| API                 | AWS Lambda (Node.js, ES Modules)                 | Serverless; consistent with portfolio pattern; cost-optimized at near-zero idle traffic                                                |
+| PDF Parsing         | `unpdf` (npm) bundled in Lambda                  | Synchronous; bundles and executes cleanly in Lambda ES module environment; confirmed working in `resume-lens`                          |
+| Agent Orchestration | Amazon Bedrock AgentCore                         | Native HITL support; managed harness runs the ReAct loop; gateway-hosted tools; session management; AWS-recommended managed agent tier |
+| LLM                 | Claude Haiku 4.5 via Bedrock                     | Low cost and fast responses for plan generation and reconciliation; $1.00/$5.00 per 1M tokens in/out                                   |
+| Data                | DynamoDB (single-table design, on-demand)        | Serverless, zero idle cost; one-to-many JD → session access patterns via GSI; 72-hour TTL auto-expiry                                  |
+| Storage             | S3                                               | JD file upload staging (PDF/TXT); 72-hour lifecycle policy aligned to DynamoDB TTL                                                     |
+| Infrastructure      | AWS CDK (TypeScript)                             | IaC consistent with portfolio standard                                                                                                 |
+| Monorepo            | npm workspaces (`web`, `api`, `shared`, `infra`) | Consistent with `technology-guidelines.md`                                                                                             |
+| Validation          | Zod (shared schemas)                             | Cross-boundary type safety; consistent with portfolio standard                                                                         |
+| Testing             | Vitest (all workspaces)                          | Consistent with portfolio standard                                                                                                     |
+| CI/CD               | GitHub Actions (3 workflows)                     | CI, Deploy (manual), Teardown (manual)                                                                                                 |
 
 ---
 
 ## Architecture Overview
 
-The system is organized around two human approval checkpoints that explicitly gate agent progression. Between checkpoints, the Bedrock Agent autonomously executes tool calls to read context from DynamoDB, generate structured content, and write results back. All state — JD text, interview plan, scorecard, and final assessment — is persisted in DynamoDB throughout the session lifecycle.
+The system is organized around two human approval checkpoints that explicitly gate agent progression. Between checkpoints, the AgentCore harness autonomously executes tool calls to read context from DynamoDB, generate structured content, and write results back. All state — JD text, interview plan, scorecard, and final assessment — is persisted in DynamoDB throughout the session lifecycle.
 
 **Workflow:**
 
@@ -128,7 +128,7 @@ flowchart TD
         L7[session-handler\nCRUD for JDs + Sessions]
     end
 
-    subgraph Agent["AWS Bedrock Agents"]
+    subgraph Agent["Amazon Bedrock AgentCore"]
         AG1[Plan Generation Agent\nReAct Tool Loop]
         AG2[Reconciliation Agent\nReAct Tool Loop]
     end
@@ -169,15 +169,15 @@ flowchart TD
 
 ## Key Design Decisions
 
-### Decision: Bedrock Agents vs. Custom ReAct Loop
+### Decision: Bedrock AgentCore vs. Bedrock Agents (Classic) vs. Custom ReAct Loop
 
-| Option                       | Pros                                                                                                                                            | Cons                                                                                                                                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Bedrock Agents**           | Native HITL support; built-in session management and tool orchestration; AWS-managed ReAct loop; strong portfolio signal for managed agent tier | Less fine-grained loop control; per-token cost amplification across multiple internal calls; some opacity in internal orchestration               |
-| **Custom Lambda ReAct Loop** | Full control over prompt, loop, and state; cheaper at low token volumes; re-uses pattern already implicit in `talent-finder`                    | Requires custom session state management for HITL approval; re-implements what Bedrock Agents provides natively; weaker portfolio differentiation |
+| Option                       | Pros                                                                                                                                            | Cons                                                                                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bedrock AgentCore**        | Native HITL support; built-in session management and tool orchestration; AWS-managed ReAct loop; strong portfolio signal for managed agent tier | Less fine-grained loop control; per-token cost amplification across multiple internal calls; some opacity in internal orchestration                  |
+| **Custom Lambda ReAct Loop** | Full control over prompt, loop, and state; cheaper at low token volumes; re-uses pattern already implicit in `talent-finder`                    | Requires custom session state management for HITL approval; re-implements what Bedrock AgentCore provides natively; weaker portfolio differentiation |
 
-**Decision:** Bedrock Agents  
-**Rationale:** The primary portfolio signal is the human-in-the-loop agent pattern. Bedrock Agents provides this natively and is the AWS-recommended managed tier. A custom loop was already demonstrated implicitly in `talent-finder`; this project advances to the managed agent abstraction. Cost amplification is acceptable at portfolio demo volumes (~$1–2/month).
+**Decision:** Bedrock AgentCore (harness + gateway)  
+**Rationale:** The primary portfolio signal is the human-in-the-loop agent pattern. Bedrock AgentCore provides this natively and is the AWS-recommended managed tier. The project originally used Bedrock Agents (Classic), which is now in maintenance mode; it was migrated to one AgentCore harness per agent, each with its own AgentCore gateway whose Lambda targets expose that agent's tools (preserving per-agent tool isolation). A custom loop was already demonstrated implicitly in `talent-finder`; this project advances to the managed agent abstraction. Cost amplification is acceptable at portfolio demo volumes (~$0.50–1/month).
 
 ---
 
@@ -334,7 +334,7 @@ API Gateway
 │  • Encapsulate all business logic for one domain    │
 │  • Orchestrate cross-entity operations              │
 │  • Call Repositories for persistence; call AWS      │
-│    SDK clients for Bedrock / S3 directly            │
+│    SDK clients for Bedrock AgentCore / S3 directly            │
 │  • No knowledge of HTTP or API Gateway shapes       │
 └─────────────────────────────────────────────────────┘
     │
@@ -365,7 +365,7 @@ Cross-cutting concerns that are not domain-specific live in `src/utils/`:
 - `logger.ts` — structured JSON logger factory (`createLogger(lambdaName)`)
 - `error-handler.ts` — `withErrorHandler` HOF wrapping handlers in standardized try/catch; `AppError` subclass hierarchy (400 / 404 / 422 / 500)
 - `response.ts` — API Gateway response builder (success and error shapes)
-- `aws-clients.ts` — singleton AWS SDK v3 client instances (DynamoDB, S3, BedrockAgentRuntime)
+- `aws-clients.ts` — singleton AWS SDK v3 client instances (DynamoDB, S3, BedrockAgentCore)
 
 ---
 
@@ -394,7 +394,7 @@ All routes are exposed through a single API Gateway REST API. Lambda integration
 
 | Method | Route                                           | Handler                                      | Purpose                                                                                                                                                                                                                |
 | ------ | ----------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/jds/{jdId}/sessions/{sessionId}/plan`         | `src/handlers/plan/generate-plan-handler.ts` | Invokes the Bedrock Plan Generation Agent for the given session. The agent reads the JD, generates a structured interview plan, and writes it to the session record in DynamoDB. Returns the completed plan.           |
+| `POST` | `/jds/{jdId}/sessions/{sessionId}/plan`         | `src/handlers/plan/generate-plan-handler.ts` | Invokes the AgentCore Plan Generation harness for the given session. The agent reads the JD, generates a structured interview plan, and writes it to the session record in DynamoDB. Returns the completed plan.       |
 | `PUT`  | `/jds/{jdId}/sessions/{sessionId}/plan/approve` | `src/handlers/plan/approve-plan-handler.ts`  | Accepts an optional recruiter-modified plan payload. Validates against `InterviewPlanSchema`, writes the final plan to DynamoDB, and transitions session `status` to `PLAN_APPROVED`. Returns 409 if already approved. |
 
 #### Scorecard Routes
@@ -405,14 +405,14 @@ All routes are exposed through a single API Gateway REST API. Lambda integration
 
 #### Assessment Routes
 
-| Method | Route                                                 | Handler                                                  | Purpose                                                                                                                                                                                                                                                                   |
-| ------ | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/jds/{jdId}/sessions/{sessionId}/assessment`         | `src/handlers/assessment/generate-assessment-handler.ts` | Invokes the Bedrock Reconciliation Agent for the given session. The agent reads the plan and scorecard, reconciles structured ratings with free-text notes, and writes a final assessment with hire/no-hire recommendation to DynamoDB. Returns the completed assessment. |
-| `PUT`  | `/jds/{jdId}/sessions/{sessionId}/assessment/approve` | `src/handlers/assessment/approve-assessment-handler.ts`  | Accepts recruiter approval of the final assessment, with an optional override flag and required override reason. Transitions session `status` to `COMPLETE`. Returns 409 if already complete.                                                                             |
+| Method | Route                                                 | Handler                                                  | Purpose                                                                                                                                                                                                                                                                       |
+| ------ | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/jds/{jdId}/sessions/{sessionId}/assessment`         | `src/handlers/assessment/generate-assessment-handler.ts` | Invokes the AgentCore Reconciliation harness for the given session. The agent reads the plan and scorecard, reconciles structured ratings with free-text notes, and writes a final assessment with hire/no-hire recommendation to DynamoDB. Returns the completed assessment. |
+| `PUT`  | `/jds/{jdId}/sessions/{sessionId}/assessment/approve` | `src/handlers/assessment/approve-assessment-handler.ts`  | Accepts recruiter approval of the final assessment, with an optional override flag and required override reason. Transitions session `status` to `COMPLETE`. Returns 409 if already complete.                                                                                 |
 
-#### Bedrock Agent Action Group Routes
+#### AgentCore Gateway Tool Routes
 
-These Lambda functions are invoked directly by Bedrock Agents — not via API Gateway. They conform to the Bedrock Agents action group Lambda invocation contract and are not publicly accessible.
+These Lambda functions are invoked by AgentCore gateways (one gateway per agent) as Lambda targets — not via API Gateway. They receive the tool arguments as a flat event object, return plain JSON (or `{ error, message }` on failure), and are not publicly accessible.
 
 | Invoker               | Handler                                                         | Purpose                                                                                                      |
 | --------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -426,60 +426,80 @@ These Lambda functions are invoked directly by Bedrock Agents — not via API Ga
 
 ## Estimated Costs
 
-> All estimates assume **portfolio demo usage**: 10–20 full workflow executions per month (end-to-end: JD ingestion → plan generation → scorecard → assessment). Rates are US East (N. Virginia), on-demand pricing as of June 2026.
+> All estimates assume **portfolio demo usage**: 10–20 full workflow executions per month (end-to-end: JD ingestion → plan generation → scorecard → assessment). Rates are US East (N. Virginia), on-demand pricing as of October 2026. Items marked _(assumption)_ could not be confirmed against a published price and should be re-checked on the [AWS AgentCore pricing](https://aws.amazon.com/bedrock/agentcore/pricing/) and [Amazon Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) pages.
 
 ### Token Cost Model
 
-A single full workflow execution through Bedrock Agents involves multiple internal model calls across the ReAct loop. A realistic estimate per execution:
+A single full workflow execution runs two AgentCore harness invocations (plan, then assessment). Each harness runs a ReAct loop with multiple internal model calls and passes the full context on every call. A realistic estimate per execution:
 
-| Phase                                       | Est. Input Tokens | Est. Output Tokens | Notes                                                                                       |
-| ------------------------------------------- | ----------------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| Plan Generation (agent loop, ~3 tool calls) | ~6,000            | ~2,000             | JD text + system prompt + tool schemas + tool results as context; structured plan as output |
-| Reconciliation (agent loop, ~3 tool calls)  | ~8,000            | ~1,500             | Plan + scorecard + notes as context; assessment + recommendation as output                  |
-| **Per execution total**                     | **~14,000**       | **~3,500**         |                                                                                             |
+| Phase                                       | Est. Input Tokens | Est. Output Tokens | Notes                                                                                               |
+| ------------------------------------------- | ----------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
+| Plan Generation (agent loop, ~3 tool calls) | ~6,000            | ~2,000             | JD text + system prompt + gateway tool schemas + tool results as context; structured plan as output |
+| Reconciliation (agent loop, ~3 tool calls)  | ~8,000            | ~1,500             | Plan + scorecard + notes as context; assessment + recommendation as output                          |
+| **Per execution total**                     | **~14,000**       | **~3,500**         |                                                                                                     |
 
-At Claude Sonnet 4.6 rates ($3.00 per 1M input tokens, $15.00 per 1M output tokens):
+Both harnesses use **Claude Haiku 4.5** through the `us.` cross-region inference profile. Anthropic's first-party rate is $1.00 / $5.00 per 1M input/output tokens; Bedrock geo cross-region profiles carry a ~10% premium over global routing, so this document budgets **$1.10 / $5.50** _(assumption — derived from the premium pattern on other Claude models, not a confirmed Haiku 4.5 figure)_:
 
 | Volume              | Input Cost | Output Cost | Total            |
 | ------------------- | ---------- | ----------- | ---------------- |
-| 1 execution         | $0.042     | $0.053      | **~$0.095**      |
-| 10 executions/month | $0.42      | $0.53       | **~$0.95/month** |
-| 20 executions/month | $0.84      | $1.05       | **~$1.89/month** |
+| 1 execution         | $0.015     | $0.019      | **~$0.035**      |
+| 10 executions/month | $0.15      | $0.19       | **~$0.35/month** |
+| 20 executions/month | $0.31      | $0.39       | **~$0.69/month** |
 
-> **Important:** Bedrock Agents act as cost multipliers — each user-initiated action may trigger multiple internal model calls, and every call is billed. The estimates above account for approximately 3 tool calls per agent invocation with full context passed on each. Real costs may run 20–30% higher depending on system prompt verbosity and plan length. Bedrock Agents do not charge a per-invocation fee; token amplification is the sole cost driver.
+> **Important:** AgentCore harnesses act as cost multipliers — each user-initiated action may trigger multiple internal model calls, and every call is billed. The estimates above assume approximately 3 tool calls per harness invocation with full context passed on each. Real costs may run 20–30% higher depending on system prompt verbosity and plan length. Token usage is the dominant cost driver; AgentCore's own charges are small (below).
+
+### AgentCore Charges
+
+| Component                     | Billing basis                                                                                                                                                                                                                                                | Estimated cost                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| **Gateway**                   | $0.005 per 1,000 API calls (`ListTools`, `InvokeTool`, `Ping`); no free tier. ~5 tool calls per execution                                                                                                                                                    | < $0.01/month                                      |
+| **Gateway search / indexing** | $0.025 per 1,000 searches; $0.02 per 100 tools indexed per month — not used (semantic search is off)                                                                                                                                                         | $0.00                                              |
+| **Harness compute**           | The AWS pricing page lists no separate Harness charge; the harness is assumed to bill as Runtime compute ($0.0895 per vCPU-hour + $0.00945 per GB-hour, per second of actual consumption) _(assumption)_. Upper bound: 1 vCPU + 2 GB for 60 s per invocation | ≤ ~$0.004 per execution (≤ $0.08 at 20 executions) |
+| **Memory**                    | Disabled on both harnesses (the agents are stateless; results are persisted by the write tools)                                                                                                                                                              | $0.00                                              |
+| **Identity**                  | No charge when used through a Gateway                                                                                                                                                                                                                        | $0.00                                              |
+| **Observability**             | Spans and logs at CloudWatch rates (~$0.35/GB spans, ~$0.50/GB logs); no free tier                                                                                                                                                                           | < $0.05/month at demo volume _(allowance)_         |
 
 ### Supporting AWS Services
 
-| Service                  | Usage                                                                                       | Estimated Monthly Cost |
-| ------------------------ | ------------------------------------------------------------------------------------------- | ---------------------- |
-| **DynamoDB** (on-demand) | ~20 writes + ~60 reads per execution × 20 executions                                        | < $0.01                |
-| **S3**                   | ~20 JD file uploads × ~50KB avg; 72hr lifecycle auto-delete                                 | < $0.01                |
-| **Lambda**               | ~10 invocations per execution × 20 executions = 200/month; well within free tier (1M/month) | $0.00                  |
-| **API Gateway**          | ~200 requests/month; well within free tier (1M/month, first 12 months)                      | $0.00                  |
-| **CloudWatch Logs**      | Low-volume demo logging                                                                     | < $0.01                |
+| Service                  | Usage                                                                                                                              | Estimated Monthly Cost |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **DynamoDB** (on-demand) | ~20 writes + ~60 reads per execution × 20 executions                                                                               | < $0.01                |
+| **S3**                   | ~20 JD file uploads × ~50KB avg; 72hr lifecycle auto-delete                                                                        | < $0.01                |
+| **Lambda**               | ~10 invocations per execution (API, worker and gateway tool Lambdas) × 20 executions = 200/month; well within free tier (1M/month) | $0.00                  |
+| **API Gateway**          | ~200 requests/month; well within free tier (1M/month, first 12 months)                                                             | $0.00                  |
+| **CloudWatch Logs**      | Low-volume demo logging (Lambda and AgentCore log groups; Lambda groups retain 1 week)                                             | < $0.01                |
 
 ### Total Estimated Monthly Cost
 
-| Scenario                     | Bedrock (LLM) | AWS Infrastructure | **Total**        |
-| ---------------------------- | ------------- | ------------------ | ---------------- |
-| Light use (10 executions)    | ~$0.95        | ~$0.02             | **~$1.00/month** |
-| Active demo (20 executions)  | ~$1.89        | ~$0.02             | **~$2.00/month** |
-| Stress test (100 executions) | ~$9.50        | ~$0.10             | **~$9.60/month** |
+| Scenario                     | Bedrock (LLM) | AgentCore (Gateway + harness + observability) | Other AWS | **Total**        |
+| ---------------------------- | ------------- | --------------------------------------------- | --------- | ---------------- |
+| Light use (10 executions)    | ~$0.35        | ~$0.08                                        | ~$0.02    | **~$0.45/month** |
+| Active demo (20 executions)  | ~$0.69        | ~$0.14                                        | ~$0.02    | **~$0.85/month** |
+| Stress test (100 executions) | ~$3.47        | ~$0.60                                        | ~$0.10    | **~$4.20/month** |
 
-**Bottom line:** At portfolio demo volumes this project runs for approximately **$1–2/month**. The dominant cost is LLM token usage via Bedrock Agents. All other AWS services are effectively free at this scale.
+**Bottom line:** At portfolio demo volumes this project runs for roughly **$0.50–1/month**. The dominant cost is still LLM token usage via Bedrock; AgentCore adds a small, usage-based overhead. Nothing in the stack is provisioned, so there is no idle cost between demos, and tearing the stacks down removes the Gateways and Harnesses entirely.
+
+### Cost Guardrails
+
+- **Bounded agent loops:** each harness is configured with `maxIterations: 10`, `maxTokens: 8192` per iteration and `timeoutSeconds: 240`, which caps the worst-case spend of a runaway loop. The 240 s timeout sits below the 300 s worker Lambda timeout so the harness fails first and the worker records the error.
+- **No retries on workers:** the worker Lambdas run with `retryAttempts: 0`, so a failed generation is never silently re-billed; the recruiter retries explicitly.
+- **Token monitoring:** `harness-client` logs the token usage reported by each harness invocation, so real spend can be compared against the estimates above.
+- **Memory off:** enabling AgentCore Memory would add per-event and storage charges with no benefit here.
+- **Watch the tool schemas:** Gateway tool schemas are sent to the model as context on every call; keep tool descriptions concise.
 
 > **Cost optimization levers available if needed:**
 >
-> - Switch plan generation to Claude Haiku 4.5 ($1.00/$5.00 per 1M tokens) — reduces LLM cost by ~67% at the expense of output quality
-> - Enable prompt caching on the system prompt (5-minute TTL) — up to 90% reduction on cached input tokens for repeated executions within the cache window
-> - Batch API (50% discount) — not applicable here since executions are interactive and synchronous
+> - Both agents already run on the cheapest generally suitable model in the Claude 4.x line (Haiku 4.5). Newer Haiku generations (e.g. Claude Haiku 5.5) are listed at lower per-token rates, but the migration is intentionally out of scope for this project's AgentCore move.
+> - Use the global (rather than `us.` geo) inference profile to drop the ~10% geo premium, if data-residency constraints allow
+> - Prompt caching on the system prompt and tool schemas — only if the harness exposes it _(not verified)_
+> - Batch inference (50% discount) — not applicable here since executions are interactive and synchronous
 
 ---
 
 ## Constraints
 
 - **Time:** 3–4 weeks solo effort
-- **Budget:** ~$1–2/month at demo volumes; acceptable for portfolio use
+- **Budget:** under ~$1/month at demo volumes; acceptable for portfolio use
 - **Team:** Solo
 - **Existing Systems:** Monorepo structure per `technology-guidelines.md`; no auth system (session-based, consistent with prior portfolio projects); 72-hour TTL on all session data; no TTL extension mechanism
 
@@ -489,7 +509,7 @@ At Claude Sonnet 4.6 rates ($3.00 per 1M input tokens, $15.00 per 1M output toke
 
 | Risk                                                                                                                                   | Likelihood | Impact | Mitigation                                                                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bedrock Agents HITL state management adds unexpected implementation complexity                                                         | Medium     | Medium | Timebox agent integration to M1; if Bedrock Agents proves too opaque for HITL checkpoint state, fall back to custom Lambda ReAct loop with explicit state machine |
+| AgentCore HITL state management adds unexpected implementation complexity                                                              | Medium     | Medium | Timebox agent integration to M1; if Bedrock Agents proves too opaque for HITL checkpoint state, fall back to custom Lambda ReAct loop with explicit state machine |
 | Reconciliation inference quality is poor (agent fails to meaningfully distinguish agreements from conflicts between ratings and notes) | Medium     | High   | Design system prompt with explicit conflict-detection instructions and few-shot examples; allocate a dedicated prompt iteration task in M2                        |
 | Token amplification drives costs higher than estimated during active development and testing                                           | Low        | Low    | Add CloudWatch token usage logging from day one; cap `maxTokens` per agent invocation                                                                             |
 | `unpdf` fails on edge-case JD PDFs (scanned, encrypted, or image-only)                                                                 | Low        | Low    | Validate during M1; document as a known limitation; advise paste fallback in UI error messaging                                                                   |
@@ -512,3 +532,4 @@ None. All blocking questions resolved.
 | 1.0     | 2026-06-02 | Finalized for planning; increased TTL from 24 to 72 hours; uniform TTL strategy formalized with trade-off table; TTL extension explicitly out of scope; JD list shows all available records with no status display; all open questions resolved                                                                     |
 | 1.1     | 2026-06-03 | Added API Design section: Handler → Service → Repository layered architecture with SRP/DRY principles; full API endpoint table across all domains (JD, Session, Plan, Scorecard, Assessment); Bedrock Agent action group handlers documented separately as internal-only invocations                                |
 | 1.2     | 2026-06-03 | Fixed upload-url endpoint: corrected sequencing flaw (jdId does not exist at upload time); route changed from `GET /jds/{jdId}/upload-url` to `POST /jds/upload-url`; handler renamed to `create-upload-url-handler.ts`; jdId is now pre-assigned by the upload-url handler and passed by the client to `POST /jds` |
+| 1.3     | 2026-10-12 | Migrated from Bedrock Agents (Classic) to Bedrock AgentCore: one harness and one gateway per agent; tool Lambdas now use the gateway Lambda target contract; model reference corrected to Claude Haiku 4.5                                                                                                          |

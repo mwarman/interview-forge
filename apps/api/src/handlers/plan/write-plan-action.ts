@@ -1,123 +1,79 @@
-import {
-  BedrockActionEvent,
-  BedrockActionResponse,
-  InterviewPlanSchema,
-  type InterviewPlan,
-} from '@interview-forge/shared';
+import { InterviewPlanSchema, type InterviewPlan } from '@interview-forge/shared';
 import { ZodError } from 'zod';
 
 import { logger } from '@/utils/logger';
-import { WritePlanActionEvent, writePlanActionEventSchema } from '@/schemas/write-plan-schema';
-import { agentResponse } from '@/utils/agent-response';
-import { extractRequiredParameter } from '@/utils/agent-request';
+import { toolArgsError, toolError, type ToolErrorResult } from '@/utils/tool-result';
+import { writePlanArgsSchema } from '@/schemas/write-plan-schema';
 import { sessionService } from '@/services/session-service';
 
 /**
- * Write Plan Action - Bedrock Agents action group Lambda handler
+ * Successful result of the write-plan tool
+ */
+interface WritePlanResult {
+  sessionId: string;
+  status: string;
+  message: string;
+}
+
+/**
+ * WritePlan Action - AgentCore gateway tool Lambda handler
  *
- * Invoked by Bedrock Agents to write an interview plan to a session.
+ * Invoked by an AgentCore gateway to write an interview plan to a session.
  * Validates the plan against InterviewPlanSchema and updates the session with the plan and status=PLAN_GENERATED.
  *
- * Event contract: { actionGroup, function, parameters }
- * Response contract: { actionGroup, function, functionResponse: { responseBody: { TEXT: { body: JSON string } } } }
- *
- * Parameters:
- * - sessionId: The ID of the session to update
- * - jdId: The ID of the parent job description
- * - plan: Serialized JSON string of the interview plan
+ * Event contract: flat tool arguments { sessionId, jdId, plan } where plan is a serialized JSON string
+ * Response contract: JSON result, or { error, message } when the tool fails
  *
  * Responsibilities:
- * - Validate Bedrock action group event structure using schema
- * - Extract and validate required parameters using schemas
+ * - Validate the tool arguments using schema
  * - Parse plan JSON string
  * - Validate plan against InterviewPlanSchema
  * - Update session with plan and status=PLAN_GENERATED
- * - Return structured Bedrock response with success or validation error
+ * - Return success result or validation error result
  */
-export const handle = async (event: unknown): Promise<BedrockActionResponse> => {
+export const handle = async (event: unknown): Promise<WritePlanResult | ToolErrorResult> => {
   logger.info('[WritePlanAction] > handle');
   logger.debug({ event }, '[WritePlanAction] - Received event');
 
   try {
-    // Validate Bedrock event structure against schema
-    logger.debug('[WritePlanAction] - Validating Bedrock action event');
-    const eventValidation = writePlanActionEventSchema.safeParse(event);
+    const validation = writePlanArgsSchema.safeParse(event);
 
-    if (!eventValidation.success) {
-      // Request invalid - return error response with details
-      logger.warn('[WritePlanAction] - Invalid Bedrock event structure');
-      return agentResponse.error(
-        event as BedrockActionEvent,
-        'Invalid event structure',
-        'Event must have actionGroup, function, and parameters',
-      );
+    if (!validation.success) {
+      logger.warn('[WritePlanAction] - Invalid tool arguments');
+      return toolArgsError(validation.error);
     }
 
-    // Request valid - extract parameters
-    const bedrockEvent: WritePlanActionEvent = eventValidation.data;
-    logger.debug('[WritePlanAction] - Event structure validated');
+    const { jdId, sessionId, plan: planJsonString } = validation.data;
 
-    // Extract parameters
-    logger.debug('[WritePlanAction] - Extracting parameters');
-    const jdId = extractRequiredParameter(bedrockEvent.parameters, 'jdId');
-    const sessionId = extractRequiredParameter(bedrockEvent.parameters, 'sessionId');
-    const planJsonString = extractRequiredParameter(bedrockEvent.parameters, 'plan');
-
-    logger.debug({ sessionId, jdId }, '[WritePlanAction] - Parameters validated');
-
-    // Parse and validate plan JSON string
     logger.debug('[WritePlanAction] - Parsing plan JSON string and validating against schema');
     let plan: InterviewPlan;
     try {
-      const parsedPlan = JSON.parse(planJsonString!);
-      logger.debug('[WritePlanAction] - Plan JSON parsed successfully');
-
-      // Validate plan against InterviewPlanSchema
-      plan = InterviewPlanSchema.parse(parsedPlan);
-      logger.debug('[WritePlanAction] - Validated plan against schema');
+      plan = InterviewPlanSchema.parse(JSON.parse(planJsonString));
     } catch (error) {
       if (error instanceof ZodError) {
         const validationMessage = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
         logger.warn({ errorMessage: validationMessage }, '[WritePlanAction] - Plan JSON failed schema validation');
-        return agentResponse.error(
-          bedrockEvent,
-          'Invalid plan format',
-          `Plan JSON validation failed: ${validationMessage}`,
-        );
+        return toolError('Invalid plan format', `Plan JSON validation failed: ${validationMessage}`);
       }
       logger.warn({ error }, '[WritePlanAction] - Failed to parse plan JSON string');
       const errorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
-      return agentResponse.error(
-        bedrockEvent,
-        'Invalid plan format',
-        `plan parameter must be a valid JSON string: ${errorMessage}`,
-      );
+      return toolError('Invalid plan format', `plan parameter must be a valid JSON string: ${errorMessage}`);
     }
 
-    // Plan is valid - Update session with plan and status
     logger.debug({ sessionId, jdId }, '[WritePlanAction] - Updating session with plan');
     const updatedSession = await sessionService.updateSession(jdId, sessionId, {
       plan,
       status: 'PLAN_GENERATED',
     });
 
-    logger.info({ sessionId, jdId }, '[WritePlanAction] - Session updated successfully');
-
-    // Build response payload
-    const responsePayload = {
+    logger.info({ sessionId, jdId }, '[WritePlanAction] < handle - Session updated successfully');
+    return {
       sessionId: updatedSession.sessionId,
       status: updatedSession.status,
       message: 'Plan written successfully',
     };
-
-    logger.debug({ sessionId, jdId }, '[WritePlanAction] < handle');
-    return agentResponse.ok(bedrockEvent, responsePayload);
   } catch (error) {
     logger.error({ error }, '[WritePlanAction] - Unhandled error');
-    return agentResponse.error(
-      event as BedrockActionEvent,
-      'Internal Server Error',
-      'An unexpected error occurred while writing the plan',
-    );
+    return toolError('Internal Server Error', 'An unexpected error occurred while writing the plan');
   }
 };

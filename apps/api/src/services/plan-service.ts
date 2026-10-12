@@ -1,9 +1,3 @@
-import {
-  BedrockAgentRuntimeClient,
-  InvokeAgentCommand,
-  InvokeAgentCommandInput,
-} from '@aws-sdk/client-bedrock-agent-runtime';
-
 import { Session } from '@interview-forge/shared';
 
 import { logger } from '@/utils/logger';
@@ -12,23 +6,18 @@ import { sessionRepository } from '@/repositories/session-repository';
 import { PlanNotWrittenError } from '@/errors/plan-not-written-error';
 import { AgentInvocationError } from '@/errors/agent-invocation-error';
 import { invokeLambdaAsync } from '@/utils/lambda-client';
+import { invokeHarness } from '@/utils/harness-client';
 import { NotFoundError, ConflictError } from '@/errors/api-error';
 
 /**
  * Service for Interview Plan business logic
- * Encapsulates Bedrock Agent orchestration and plan generation
+ * Encapsulates AgentCore harness orchestration and plan generation
  */
 export class PlanService {
-  private bedrockClient: BedrockAgentRuntimeClient;
-
-  constructor() {
-    this.bedrockClient = new BedrockAgentRuntimeClient({ region: process.env.AWS_REGION || 'us-east-1' });
-  }
-
   /**
-   * Generate an interview plan by invoking the Bedrock Plan Agent
+   * Generate an interview plan by invoking the AgentCore plan harness
    * Invokes the agent with jdId and sessionId as the initial user message
-   * Streams the agent response until completion event
+   * Drains the harness response stream until completion
    * Reads the updated session from DynamoDB to retrieve the written plan
    * @param jdId - The unique identifier of the parent job description
    * @param sessionId - The unique identifier of the session
@@ -45,44 +34,14 @@ export class PlanService {
       // Construct the user message for the agent
       const userMessage = `Generate an interview plan for job description ${jdId} and session ${sessionId}`;
 
-      logger.debug({ jdId, sessionId, userMessage }, '[PlanService.generatePlan] - Preparing agent invocation');
+      logger.debug({ jdId, sessionId, userMessage }, '[PlanService.generatePlan] - Invoking AgentCore harness');
 
-      // Prepare the InvokeAgentCommand
-      const input: InvokeAgentCommandInput = {
-        agentId: config.PLAN_AGENT_ID,
-        agentAliasId: config.PLAN_AGENT_ALIAS_ID,
-        sessionId: sessionId, // Pass sessionId as Bedrock session ID for continuity
-        inputText: userMessage,
-        enableTrace: true, // Enable tracing for better observability in CloudWatch
-      };
-
-      logger.debug('[PlanService.generatePlan] - Invoking Bedrock Agent');
-
-      // Invoke the agent and get the streaming response
-      const response = await this.bedrockClient.send(new InvokeAgentCommand(input));
-
-      logger.debug({ response }, '[PlanService.generatePlan] - Streaming agent response');
-
-      // Iterate through the response stream to ensure the agent completes
-      // The stream's completion (when it exhausts) marks the end of the agent's work
-      if (!response.completion) {
-        throw new AgentInvocationError(
-          jdId,
-          sessionId,
-          new Error('No completion stream returned from agent'),
-          'Agent did not return a completion stream',
-        );
-      }
-
-      let agentResponse = '';
-      for await (const event of response.completion) {
-        logger.debug('[PlanService.generatePlan] - Received agent event');
-        if (event.chunk) {
-          // Decode the binary bytes of the response (optional, for logging purposes)
-          const decodedChunk = new TextDecoder('utf-8').decode(event.chunk.bytes);
-          agentResponse += decodedChunk;
-        }
-      }
+      // Invoke the harness and drain its stream; the stream's exhaustion marks the end of the agent's work
+      const agentResponse = await invokeHarness({
+        harnessArn: config.PLAN_HARNESS_ARN,
+        sessionId, // Pass sessionId as the runtime session ID for continuity
+        prompt: userMessage,
+      });
 
       logger.debug({ agentResponse }, '[PlanService.generatePlan] - Agent stream completed');
 
@@ -170,7 +129,7 @@ export class PlanService {
       const updatedSession = await sessionRepository.updateById(jdId, sessionId, { status: 'PLAN_GENERATING' });
 
       // Invoke the plan-worker Lambda asynchronously (fire and forget)
-      // The worker will handle Bedrock Agent invocation and error handling
+      // The worker will handle AgentCore harness invocation and error handling
       logger.debug(
         { jdId, sessionId },
         '[PlanService.kickoffPlanGeneration] - Invoking plan-worker Lambda asynchronously',

@@ -198,13 +198,13 @@ describe('plan-worker-handler', () => {
   });
 
   describe('error handling', () => {
-    it('should catch Bedrock Agent invocation errors and write PLAN_ERROR status', async () => {
+    it('should catch AgentCore harness invocation errors and write PLAN_ERROR status', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const validEvent = createValidEvent(jdId, sessionId);
 
-      const agentError = new Error('Bedrock Agent service unavailable');
+      const agentError = new Error('AgentCore harness service unavailable');
       vi.mocked(planService.generatePlan).mockRejectedValue(agentError);
 
       vi.mocked(sessionRepository.updateById).mockResolvedValue({
@@ -212,7 +212,7 @@ describe('plan-worker-handler', () => {
         jdId,
         candidateName: 'Test Candidate',
         status: 'PLAN_ERROR',
-        planErrorMessage: 'Bedrock Agent service unavailable',
+        planErrorMessage: 'AgentCore harness service unavailable',
         createdAt: '2026-06-07T00:00:00Z',
         TTL: 1234567890,
       });
@@ -224,7 +224,7 @@ describe('plan-worker-handler', () => {
       expect(planService.generatePlan).toHaveBeenCalledWith(jdId, sessionId);
       expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, {
         status: 'PLAN_ERROR',
-        planErrorMessage: 'Bedrock Agent service unavailable',
+        planErrorMessage: 'AgentCore harness service unavailable',
       });
     });
 

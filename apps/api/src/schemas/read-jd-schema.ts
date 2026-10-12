@@ -1,46 +1,20 @@
 /**
- * Zod schemas for the Bedrock Action Agent to read a job description.
- * Validates the structure of the Bedrock event and the jdId parameter.
+ * Zod schema for the arguments of the read-jd tool (AgentCore gateway target).
  *
- * Event schema expects:
- * {
- *   actionGroup: 'interview-forge-read-jd',
- *   function: 'read-jd-action',
- *   parameters: [
- *     { name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440000' }
- *   ]
- * }
- *
- * The jdId parameter is validated to ensure it is a non-empty string and a valid UUID.
+ * The gateway passes the tool input as a flat event object:
+ * { jdId: '550e8400-e29b-41d4-a716-446655440000' }
  */
 
 import { z } from 'zod';
 
-import { BedrockActionEventSchema, BedrockParameterSchema } from '@interview-forge/shared';
-
 /**
- * Schema for validating ReadJdAction handler event parameters
- * Expects parameters array to contain an object with name 'jdId' and a non-empty string value
- * that is also a valid UUID.
+ * Schema for validating the read-jd tool arguments
  */
-const readJdActionEventParametersSchema = z.union([
-  BedrockParameterSchema.extend({
-    name: z.literal('jdId'),
-    value: z.string().min(1, 'jdId parameter cannot be empty'),
-  }),
-]);
-
-/**
- * Schema for validating ReadJdAction handler event
- * Expects: { actionGroup, function, parameters: [{ name: 'jdId', value: '...' }] }
- */
-export const readJdActionEventSchema = BedrockActionEventSchema.extend({
-  actionGroup: z.literal('interview-forge-read-jd'),
-  function: z.literal('read-jd-action'),
-  parameters: z.array(readJdActionEventParametersSchema),
+export const readJdArgsSchema = z.object({
+  jdId: z.string().min(1, 'jdId cannot be empty'),
 });
 
 /**
- * Lambda event type for ReadJdAction handler, inferred from the Zod schema.
+ * Tool arguments type for the read-jd tool, inferred from the Zod schema.
  */
-export type ReadJdActionEvent = z.infer<typeof readJdActionEventSchema>;
+export type ReadJdArgs = z.infer<typeof readJdArgsSchema>;

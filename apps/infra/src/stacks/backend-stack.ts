@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as bedrock from 'aws-cdk-lib/aws-bedrock';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -21,12 +20,8 @@ interface BackendStackProps extends cdk.StackProps {
   config: Config;
   table: dynamodb.Table;
   bucket: s3.Bucket;
-  planAgentAlias: bedrock.CfnAgentAlias;
-  planAgentId: string;
-  planAgentAliasId: string;
-  assessAgentAlias: bedrock.CfnAgentAlias;
-  assessAgentId: string;
-  assessAgentAliasId: string;
+  planHarnessArn: string;
+  assessHarnessArn: string;
 }
 
 /**
@@ -39,17 +34,7 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BackendStackProps) {
     super(scope, id, props);
 
-    const {
-      config,
-      table,
-      bucket,
-      planAgentAlias,
-      planAgentId,
-      planAgentAliasId,
-      assessAgentAlias,
-      assessAgentId,
-      assessAgentAliasId,
-    } = props;
+    const { config, table, bucket, planHarnessArn, assessHarnessArn } = props;
 
     // Create shared Lambda environment variables
     const lambdaEnvironment = {
@@ -58,11 +43,9 @@ export class BackendStack extends cdk.Stack {
       LOG_ENABLED: config.CDK_LOG_ENABLED,
       JD_TABLE_NAME: table.tableName,
       JD_BUCKET_NAME: bucket.bucketName,
-      PLAN_AGENT_ID: planAgentId,
-      PLAN_AGENT_ALIAS_ID: planAgentAliasId,
+      PLAN_HARNESS_ARN: planHarnessArn,
       PLAN_WORKER_FUNCTION_NAME: 'placeholder', // will be overridden in PlanKickoffLambda environment to avoid circular dependency
-      ASSESS_AGENT_ID: assessAgentId,
-      ASSESS_AGENT_ALIAS_ID: assessAgentAliasId,
+      ASSESS_HARNESS_ARN: assessHarnessArn,
       ASSESS_WORKER_FUNCTION_NAME: 'placeholder', // will be overridden in AssessKickoffLambda environment to avoid circular dependency
     };
 
@@ -300,7 +283,7 @@ export class BackendStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Plan Worker Lambda Function (asynchronously generates interview plan using Bedrock Agent)
+    // Plan Worker Lambda Function (asynchronously generates interview plan using AgentCore harness)
     // Invoked only by plan-kickoff-handler, never directly by API Gateway
     const planWorkerLambda = new NodejsFunction(this, 'PlanWorkerFunction', {
       functionName: `${config.CDK_APP_NAME}-plan-worker-${config.CDK_ENV_NAME}`,
@@ -335,12 +318,12 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to PlanWorkerLambda
     table.grantReadWriteData(planWorkerLambda);
 
-    // Grant bedrock:InvokeAgent permission to PlanWorkerLambda on the plan agent
+    // Grant bedrock-agentcore harness invocation permissions to PlanWorkerLambda on the plan harness
     planWorkerLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeAgent'],
-        resources: [planAgentAlias.attrAgentAliasArn],
+        actions: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
+        resources: [planHarnessArn, `${planHarnessArn}/*`],
       }),
     );
 
@@ -439,7 +422,7 @@ export class BackendStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Assess Worker Lambda Function (asynchronously generates assessment using Bedrock Agent)
+    // Assess Worker Lambda Function (asynchronously generates assessment using AgentCore harness)
     // Invoked only by assess-kickoff-handler, never directly by API Gateway
     const assessWorkerLambda = new NodejsFunction(this, 'AssessWorkerFunction', {
       functionName: `${config.CDK_APP_NAME}-assess-worker-${config.CDK_ENV_NAME}`,
@@ -474,12 +457,12 @@ export class BackendStack extends cdk.Stack {
     // Grant permissions to AssessWorkerLambda
     table.grantReadWriteData(assessWorkerLambda);
 
-    // Grant bedrock:InvokeAgent permission to AssessWorkerLambda on the assessment agent
+    // Grant bedrock-agentcore harness invocation permissions to AssessWorkerLambda on the assessment harness
     assessWorkerLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['bedrock:InvokeAgent'],
-        resources: [assessAgentAlias.attrAgentAliasArn],
+        actions: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
+        resources: [assessHarnessArn, `${assessHarnessArn}/*`],
       }),
     );
 

@@ -198,13 +198,13 @@ describe('assess-worker-handler', () => {
   });
 
   describe('error handling', () => {
-    it('should catch Bedrock Agent invocation errors and write ASSESS_ERROR status', async () => {
+    it('should catch AgentCore harness invocation errors and write ASSESS_ERROR status', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const validEvent = createValidEvent(jdId, sessionId);
 
-      const agentError = new Error('Bedrock Agent service unavailable');
+      const agentError = new Error('AgentCore harness service unavailable');
       vi.mocked(assessService.generateAssessment).mockRejectedValue(agentError);
 
       vi.mocked(sessionRepository.updateById).mockResolvedValue({
@@ -212,7 +212,7 @@ describe('assess-worker-handler', () => {
         jdId,
         candidateName: 'Test Candidate',
         status: 'ASSESS_ERROR',
-        assessErrorMessage: 'Bedrock Agent service unavailable',
+        assessErrorMessage: 'AgentCore harness service unavailable',
         createdAt: '2026-06-07T00:00:00Z',
         TTL: 1234567890,
       });
@@ -224,7 +224,7 @@ describe('assess-worker-handler', () => {
       expect(assessService.generateAssessment).toHaveBeenCalledWith(jdId, sessionId);
       expect(sessionRepository.updateById).toHaveBeenCalledWith(jdId, sessionId, {
         status: 'ASSESS_ERROR',
-        assessErrorMessage: 'Bedrock Agent service unavailable',
+        assessErrorMessage: 'AgentCore harness service unavailable',
       });
     });
 

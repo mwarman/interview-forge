@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BedrockAgentRuntimeClient } from '@aws-sdk/client-bedrock-agent-runtime';
 
 // Mock dependencies BEFORE importing the service
 vi.mock('@/utils/logger', () => ({
@@ -20,12 +19,14 @@ vi.mock('@/repositories/session-repository', () => ({
 
 vi.mock('@/utils/config', () => ({
   config: {
-    ASSESS_AGENT_ALIAS_ID: 'test-agent-alias-id',
+    ASSESS_HARNESS_ARN: 'test-harness-arn',
     ASSESS_WORKER_FUNCTION_NAME: 'test-assess-worker-function',
   },
 }));
 
-vi.mock('@aws-sdk/client-bedrock-agent-runtime');
+vi.mock('@/utils/harness-client', () => ({
+  invokeHarness: vi.fn(),
+}));
 
 vi.mock('@/utils/lambda-client', () => ({
   invokeLambdaAsync: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('@/utils/lambda-client', () => ({
 import { AssessService } from './assess-service';
 import { sessionRepository } from '@/repositories/session-repository';
 import { invokeLambdaAsync } from '@/utils/lambda-client';
+import { invokeHarness } from '@/utils/harness-client';
 import { AssessmentNotWrittenError } from '@/errors/assessment-not-written-error';
 import { AgentInvocationError } from '@/errors/agent-invocation-error';
 import { NotFoundError, ConflictError } from '@/errors/api-error';
@@ -90,24 +92,7 @@ describe('AssessService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithAssessment = createMockSessionWithAssessment(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream with chunk data
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Assessment processing...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Assessment generated'),
-          },
-        };
-        // Stream ends when generator completes (no explicit completion event needed)
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithAssessment);
 
@@ -117,6 +102,11 @@ describe('AssessService', () => {
       // Assert
       expect(result).toEqual(mockSessionWithAssessment);
       expect(sessionRepository.getById).toHaveBeenCalledWith(jdId, sessionId);
+      expect(invokeHarness).toHaveBeenCalledWith({
+        harnessArn: 'test-harness-arn',
+        sessionId,
+        prompt: `Generate an assessment for job description ${jdId} and session ${sessionId}`,
+      });
       expect(result.assessment).toBeDefined();
     });
 
@@ -126,19 +116,7 @@ describe('AssessService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithoutAssessment = createMockSessionWithoutAssessment(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream that completes without writing assessment
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Processing...'),
-          },
-        };
-        // Stream ends without agent writing assessment to DynamoDB
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithoutAssessment);
 
@@ -146,13 +124,13 @@ describe('AssessService', () => {
       await expect(assessService.generateAssessment(jdId, sessionId)).rejects.toThrow(AssessmentNotWrittenError);
     });
 
-    it('should throw AgentInvocationError when Bedrock Agent invocation fails', async () => {
+    it('should throw AgentInvocationError when AgentCore harness invocation fails', async () => {
       // Arrange
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
       const mockError = new Error('Network timeout');
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockRejectedValue(mockError);
+      vi.mocked(invokeHarness).mockRejectedValue(mockError);
 
       // Act & Assert
       await expect(assessService.generateAssessment(jdId, sessionId)).rejects.toThrow(AgentInvocationError);
@@ -163,18 +141,7 @@ describe('AssessService', () => {
       const jdId = '550e8400-e29b-41d4-a716-446655440000';
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
 
-      // Mock the Bedrock Agent response stream
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Processing...'),
-          },
-        };
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(null);
 
@@ -188,29 +155,7 @@ describe('AssessService', () => {
       const sessionId = '660e8400-e29b-41d4-a716-446655440001';
       const mockSessionWithAssessment = createMockSessionWithAssessment(jdId, sessionId);
 
-      // Mock the Bedrock Agent response stream with multiple chunk events
-      const mockOutputStream = (async function* () {
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Starting analysis...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Evaluating responses...'),
-          },
-        };
-        yield {
-          chunk: {
-            bytes: new TextEncoder().encode('Assessment complete'),
-          },
-        };
-        // Stream ends when generator completes
-      })();
-
-      vi.mocked(BedrockAgentRuntimeClient.prototype.send).mockResolvedValue({
-        completion: mockOutputStream,
-      });
+      vi.mocked(invokeHarness).mockResolvedValue('Agent response');
 
       vi.mocked(sessionRepository.getById).mockResolvedValue(mockSessionWithAssessment);
 

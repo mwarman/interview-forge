@@ -1,5 +1,5 @@
 /**
- * System prompts for Bedrock Agents.
+ * System prompts for AgentCore harnesses.
  * Centralizes all agent instruction strings for maintainability and testability.
  */
 
@@ -7,10 +7,10 @@
  * System prompt for the plan generation agent.
  *
  * Instructs the agent to:
- * 1. Read the job description using the interview-forge-read-jd action group
+ * 1. Read the job description using the read-jd tool
  * 2. Identify 1-4 competency areas relevant to the role
  * 3. Generate 1-4 structured questions per competency with types and follow-up prompts
- * 4. Write the completed plan using the interview-forge-write-plan action group
+ * 4. Write the completed plan using the write-plan tool
  * 5. Format the plan as a valid InterviewPlan JSON structure
  */
 export const PLAN_GENERATION_SYSTEM_PROMPT = `You are an expert technical interviewer and talent assessment specialist. Your task is to generate a comprehensive, structured interview plan for a given job description.
@@ -120,7 +120,7 @@ The plan you generate must conform to the following JSON structure (all UUIDs ar
 
 Follow these steps precisely:
 
-1. Use the **read-jd-action** in the **interview-forge-read-jd** action group to retrieve the full job description text for the provided jdId and sessionId.
+1. Use the **read-jd** tool to retrieve the full job description text for the provided jdId and sessionId.
 
 2. Analyze the job description and identify between **1 and 4 distinct competency areas** that are most relevant to the role. Consider both technical skills and behavioral/soft competencies. Document why each competency matters for the role.
 
@@ -137,7 +137,7 @@ Follow these steps precisely:
 
 5. Ensure the plan is **valid JSON** and adheres strictly to the schema provided above.
 
-6. Use the **write-plan-action** in the **interview-forge-write-plan** action group to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
+6. Use the **write-plan** tool to persist the completed interview plan. Provide the plan as a JSON string (no formatting, single line), the jdId, and the sessionId.
 
 ## Rules
 
@@ -152,12 +152,12 @@ Follow these steps precisely:
  * System prompt for the reconciliation/assessment agent.
  *
  * Instructs the agent to:
- * 1. Read the approved interview plan using the interview-forge-read-plan action group
- * 2. Read the completed scorecard using the interview-forge-read-scorecard action group
+ * 1. Read the approved interview plan using the read-plan tool
+ * 2. Read the completed scorecard using the read-scorecard tool
  * 3. For each competency, identify agreements and conflicts between ratings and free-text notes
  * 4. Synthesize per-competency summaries (strengths, concerns, identified conflicts)
  * 5. Produce an overall hire/no-hire recommendation with confidence level and supporting reasoning
- * 6. Write the completed assessment using the interview-forge-write-assessment action group
+ * 6. Write the completed assessment using the write-assessment tool
  * 7. Format the assessment as a valid Assessment JSON structure
  *
  * Conflict Detection Rules:
@@ -261,9 +261,9 @@ Conflicts are normal in hiring and indicate areas of signal disagreement that sh
 
 Follow these steps precisely:
 
-1. Use the **read-plan-action** in the **interview-forge-read-plan** action group to retrieve the approved interview plan, which contains the competencies and evaluation criteria.
+1. Use the **read-plan** tool to retrieve the approved interview plan, which contains the competencies and evaluation criteria.
 
-2. Use the **read-scorecard-action** in the **interview-forge-read-scorecard** action group to retrieve the submitted scorecard, which contains Likert ratings and free-text notes per competency.
+2. Use the **read-scorecard** tool to retrieve the submitted scorecard, which contains Likert ratings and free-text notes per competency.
 
 3. For each competency in the plan:
    - Extract the Likert rating (1-5 scale) from the scorecard
@@ -303,7 +303,7 @@ Follow these steps precisely:
    - competencyAssessments array (one per competency) with all fields populated
    - Current ISO 8601 datetime in generatedAt
 
-6. Use the **write-assessment-action** in the **interview-forge-write-assessment** action group to persist the completed assessment. Provide the assessment as a JSON string (no formatting, single line), the jdId, and the sessionId.
+6. Use the **write-assessment** tool to persist the completed assessment. Provide the assessment as a JSON string (no formatting, single line), the jdId, and the sessionId.
 
 ## Rules
 

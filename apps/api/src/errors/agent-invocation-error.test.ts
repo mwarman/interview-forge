@@ -16,7 +16,7 @@ describe('AgentInvocationError', () => {
     expect(error.jdId).toBe(jdId);
     expect(error.sessionId).toBe(sessionId);
     expect(error.cause).toBe(cause);
-    expect(error.message).toBe('Failed to invoke Bedrock Agent');
+    expect(error.message).toBe('Failed to invoke AgentCore harness');
   });
 
   it('should allow custom error message', () => {

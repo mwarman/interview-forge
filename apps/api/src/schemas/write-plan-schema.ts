@@ -1,57 +1,27 @@
 /**
- * Zod schemas for validating WritePlanAction events and parameters
- * in the Bedrock Action Agent.
+ * Zod schema for the arguments of the write-plan tool (AgentCore gateway target).
  *
- * Event schema expects:
+ * The gateway passes the tool input as a flat event object:
  * {
- *   actionGroup: 'interview-forge-write-plan',
- *   function: 'write-plan-action',
- *   parameters: [
- *     { name: 'sessionId', value: '550e8400-e29b-41d4-a716-446655440000' },
- *     { name: 'jdId', value: '550e8400-e29b-41d4-a716-446655440000' },
- *     { name: 'plan', value: '{"interviewRounds":[...]}'
- *   ]
+ *   sessionId: '550e8400-e29b-41d4-a716-446655440000',
+ *   jdId: '550e8400-e29b-41d4-a716-446655440001',
+ *   plan: '{"...": "..."}'
  * }
  *
- * The sessionId and jdId parameters are validated to ensure they are valid UUIDs.
- * The plan parameter is validated to ensure it is a non-empty string (JSON string of the interview plan).
+ * The plan argument is a non-empty JSON string, parsed and validated against the shared schema by the handler.
  */
 import { z } from 'zod';
 
-import { BedrockActionEventSchema, BedrockParameterSchema } from '@interview-forge/shared';
-
 /**
- * Schema for validating WritePlanAction handler event parameters
- * Expects parameters array to contain objects with names 'sessionId', 'jdId', and 'plan'
- * with non-empty string values. sessionId and jdId must be valid UUIDs.
- * plan must be a non-empty string (expected to be a JSON string of the interview plan).
+ * Schema for validating the write-plan tool arguments
  */
-const writePlanActionEventParametersSchema = z.union([
-  BedrockParameterSchema.extend({
-    name: z.literal('sessionId'),
-    value: z.string().min(1, 'sessionId parameter cannot be empty'),
-  }),
-  BedrockParameterSchema.extend({
-    name: z.literal('jdId'),
-    value: z.string().min(1, 'jdId parameter cannot be empty'),
-  }),
-  BedrockParameterSchema.extend({
-    name: z.literal('plan'),
-    value: z.string().min(1, 'plan parameter cannot be empty'),
-  }),
-]);
-
-/**
- * Schema for validating WritePlanAction handler event
- * Expects: { actionGroup, function, parameters: [sessionId, jdId, plan] }
- */
-export const writePlanActionEventSchema = BedrockActionEventSchema.extend({
-  actionGroup: z.literal('interview-forge-write-plan'),
-  function: z.literal('write-plan-action'),
-  parameters: z.array(writePlanActionEventParametersSchema),
+export const writePlanArgsSchema = z.object({
+  sessionId: z.string().min(1, 'sessionId cannot be empty'),
+  jdId: z.string().min(1, 'jdId cannot be empty'),
+  plan: z.string().min(1, 'plan cannot be empty'),
 });
 
 /**
- * Lambda event type for WritePlanAction handler, inferred from the Zod schema.
+ * Tool arguments type for the write-plan tool, inferred from the Zod schema.
  */
-export type WritePlanActionEvent = z.infer<typeof writePlanActionEventSchema>;
+export type WritePlanArgs = z.infer<typeof writePlanArgsSchema>;

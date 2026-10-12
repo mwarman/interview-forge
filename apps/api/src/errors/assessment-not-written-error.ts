@@ -1,6 +1,6 @@
 /**
  * AssessmentNotWrittenError
- * Thrown when a Bedrock Agent completes without writing an assessment to the session.
+ * Thrown when a AgentCore harness completes without writing an assessment to the session.
  * This indicates the agent ran but did not successfully persist the assessment.
  */
 export class AssessmentNotWrittenError extends Error {

@@ -4,14 +4,14 @@ import { sessionRepository } from '@/repositories/session-repository';
 import { planWorkerEventSchema, PlanWorkerEvent } from '@/schemas/plan-worker-event-schema';
 
 /**
- * Plan Worker Handler - asynchronously generates interview plan using Bedrock Agent
+ * Plan Worker Handler - asynchronously generates interview plan using AgentCore harness
  * Invoked asynchronously by plan-kickoff-handler, never directly by API Gateway
  *
  * Event payload: { jdId: string, sessionId: string }
  *
  * Responsibilities:
  * - Validate and parse the event payload
- * - Invoke Bedrock Agent via planService.generatePlan
+ * - Invoke AgentCore harness via planService.generatePlan
  * - Log agent invocation duration at info level for cost monitoring
  * - On any unhandled exception, update session status to PLAN_ERROR with error message
  * - Persist error status even if DynamoDB write fails (nested try/catch)
@@ -39,7 +39,7 @@ export const handle = async (event: PlanWorkerEvent | unknown): Promise<void> =>
     logger.debug({ jdId, sessionId }, '[PlanWorkerHandler] - Event validated, invoking plan generation service');
 
     // Invoke plan generation service (reuse existing service logic)
-    // This will invoke Bedrock Agent and wait for completion
+    // This will invoke AgentCore harness and wait for completion
     // The write-plan-action Lambda will write the plan to session
     await planService.generatePlan(jdId, sessionId);
 

@@ -20,12 +20,6 @@ export {
   RecommendationSchema,
   ConfidenceSchema,
 } from './schemas/assessment';
-export {
-  BedrockActionEventSchema,
-  BedrockActionResponseSchema,
-  BedrockParameterSchema,
-  BedrockFunctionResponseSchema,
-} from './schemas/bedrock-action';
 
 // Export inferred types
 export type {
@@ -44,9 +38,3 @@ export type {
 export type { InterviewPlan, Competency, Question, QuestionType } from './schemas/interview-plan';
 export type { Scorecard, CompetencyNotes, QuestionRating } from './schemas/scorecard';
 export type { Assessment, CompetencyAssessment, Recommendation, Confidence } from './schemas/assessment';
-export type {
-  BedrockParameter,
-  BedrockActionEvent,
-  BedrockFunctionResponse,
-  BedrockActionResponse,
-} from './schemas/bedrock-action';
