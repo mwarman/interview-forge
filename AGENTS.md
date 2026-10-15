@@ -2,6 +2,8 @@
 
 This document defines the operational boundaries, structural constraints, and execution workflows for Autonomous AI Agents interacting with this TypeScript Monorepo. Read this file completely before planning or executing any tasks across the frontend, backend API, infrastructure, or shared workspaces.
 
+`interview-forge` is a human-in-the-loop AI agent that transforms a job description into a structured, recruiter-reviewed interview plan — and then closes the loop by reconciling post-interview scorecards with free-text recruiter notes to produce a final candidate assessment. The agent handles the heavy lifting (question generation, competency mapping, scoring reconciliation) while the human recruiter retains approval authority at two explicit checkpoints: plan review before the interview, and assessment review after. The system supports multiple candidates per job description, enabling a recruiter to maintain a durable JD and run independent interview sessions for each candidate against a consistent evaluation framework. This project demonstrates the commercially dominant agentic pattern — AI that accelerates and augments human decision-making without removing human accountability from high-stakes hiring decisions.
+
 ---
 
 ## 1. Agent Persona & Core Capabilities
@@ -35,7 +37,7 @@ Definition of Done)       coverage floors)         or unified scripts)
 ```
 
 1. **Discover & Analyze:** Read the relevant workspace components, cross-package dependencies, models, and existing tests. Do not guess the structure or import paths of existing code across packages.
-2. **Plan & Confirm:** Formulate your implementation strategy. Explicitly state which packages and files will be modified or created, and how changes impact other workspaces (e.g., how a modification in `packages/shared` affects `packages/web` and `packages/api`). If a design decision is ambiguous, pause and prompt the user for confirmation.
+2. **Plan & Confirm:** Formulate your implementation strategy. Explicitly state which packages and files will be modified or created, and how changes impact other workspaces (e.g., how a modification in `packages/shared` affects `apps/web` and `apps/api`). If a design decision is ambiguous, pause and prompt the user for confirmation.
 3. **Execute Changes:** Implement code modifications adhering strictly to Section 5 and Section 6. Ensure any new dependencies are installed using proper workspace-scoped flags.
 4. **Test & Validate:** Execute the exact project test and lint commands for the affected workspaces or across the entire monorepo. If tests fail or lint issues arise, self-correct immediately.
 5. **Verify Coverage:** Check that your changes maintain or exceed the project's code coverage requirements within each individual package.
@@ -48,7 +50,7 @@ Definition of Done)       coverage floors)         or unified scripts)
 ### Directory Map
 
 ```text
-├── packages/                       # Parent directory for workspace modules
+├── apps/                           # Parent directory for deployable applications
 │   ├── api/                        # Backend API (AWS Lambda Serverless Functions)
 │   │   ├── src/
 │   │   │   ├── handlers/           # Lambda handler entrypoints
@@ -91,6 +93,14 @@ Definition of Done)       coverage floors)         or unified scripts)
 │       │   └── main.tsx            # Web application entrypoint
 │       ├── package.json
 │       └── tsconfig.json
+├── packages/                       # Parent directory for shared, common modules
+│   └── shared/                     # Shared utilities, types, and validation schemas
+│       ├── src/
+│       │   ├── models/             # Unified Type & Interface definitions (e.g., Task.ts)
+│       │   ├── schemas/            # Zod verification schemas shared between API and Web
+│       │   └── utils/              # Universal helper functions
+│       ├── package.json
+│       └── tsconfig.json
 ├── package.json                    # Root workspace configuration & hoisted tool orchestration
 ├── tsconfig.base.json              # Base TypeScript compiler configuration file
 └── eslint.config.js                # Shared monorepo lint configuration
@@ -99,7 +109,7 @@ Definition of Done)       coverage floors)         or unified scripts)
 
 ### Critical Architecture Rules
 
-- **No Relative Cross-Workspace Imports:** Never use relative paths to cross workspace boundaries (e.g., do not use `import ... from "../../../shared/src"` inside `packages/web`). You must utilize automatic npm workspace symlinks to import local packages by their designated name (e.g., `import { TaskSchema } from "@monorepo/shared"`).
+- **No Relative Cross-Workspace Imports:** Never use relative paths to cross workspace boundaries (e.g., do not use `import ... from "../../../shared/src"` inside `apps/web`). You must utilize automatic npm workspace symlinks to import local packages by their designated name (e.g., `import { TaskSchema } from "@monorepo/shared"`).
 - **No Barrel Files:** Never create or maintain `index.ts` files for re-exporting within feature folders or lambda submodules. Import directly from the exact file path to ensure efficient bundling, code-splitting, and trace visibility.
 - **Co-location Principle:** Always place unit tests (`*.test.ts`, `*.test.tsx`) in the exact same directory as the module, function, handler, or component they are testing.
 - **Centralized Base Configs:** Shared configurations (e.g., `tsconfig.base.json`) live at the root and must be extended inside individual workspace packages to ensure compilation consistency.
@@ -111,19 +121,19 @@ Definition of Done)       coverage floors)         or unified scripts)
 
 You are authorized to execute the following shell commands to validate your work. Do not use unlisted tools, invent flags, or circumvent the root workspace manager.
 
-| Task                     | Command                                                               | Scope                                       |
-| ------------------------ | --------------------------------------------------------------------- | ------------------------------------------- |
-| **Install Dependencies** | `npm install`                                                         | Root Project (Updates lockfile)             |
-| **Scoped Installation**  | `npm install <package> -w <workspace-name>`                           | Installs dependency into specific package   |
-| **Run All Unit Tests**   | `npm test --workspaces`                                               | Comprehensive Repo Testing (Vitest)         |
-| **Run Frontend Tests**   | `npm run test -w packages/web` or `npm run test -w @monorepo/web`     | Frontend Component/Hook Validation          |
-| **Run API Lambda Tests** | `npm run test -w packages/api` or `npm run test -w @monorepo/api`     | Lambda Handler Validation                   |
-| **Run Infra Tests**      | `npm run test -w packages/infra` or `npm run test -w @monorepo/infra` | Infrastructure Stack Validation             |
-| **Check Code Coverage**  | `npm run test:coverage --workspaces`                                  | Global Multi-Package Coverage Review        |
-| **Lint Entire Codebase** | `npm run lint`                                                        | Full Monorepo Linting & Formatting Analysis |
-| **Format Code**          | `npx run format`                                                      | Global Prettier/Formatter execution         |
-| **Add shadcn Component** | `npx shadcn@latest add [component]`                                   | Executed inside `packages/web` directory    |
-| **CDK Synthesize**       | `npm run cdk synth -w packages/infra`                                 | AWS CDK Infrastructure Validation           |
+| Task                     | Command                                                           | Scope                                       |
+| ------------------------ | ----------------------------------------------------------------- | ------------------------------------------- |
+| **Install Dependencies** | `npm install`                                                     | Root Project (Updates lockfile)             |
+| **Scoped Installation**  | `npm install <package> -w <workspace-name>`                       | Installs dependency into specific package   |
+| **Run All Unit Tests**   | `npm test --workspaces`                                           | Comprehensive Repo Testing (Vitest)         |
+| **Run Frontend Tests**   | `npm run test -w apps/web` or `npm run test -w @monorepo/web`     | Frontend Component/Hook Validation          |
+| **Run API Lambda Tests** | `npm run test -w apps/api` or `npm run test -w @monorepo/api`     | Lambda Handler Validation                   |
+| **Run Infra Tests**      | `npm run test -w apps/infra` or `npm run test -w @monorepo/infra` | Infrastructure Stack Validation             |
+| **Check Code Coverage**  | `npm run test:coverage --workspaces`                              | Global Multi-Package Coverage Review        |
+| **Lint Entire Codebase** | `npm run lint`                                                    | Full Monorepo Linting & Formatting Analysis |
+| **Format Code**          | `npx run format`                                                  | Global Prettier/Formatter execution         |
+| **Add shadcn Component** | `npx shadcn@latest add [component]`                               | Executed inside `apps/web` directory        |
+| **CDK Synthesize**       | `npm run cdk synth -w apps/infra`                                 | AWS CDK Infrastructure Validation           |
 
 ---
 
@@ -144,16 +154,16 @@ You are authorized to execute the following shell commands to validate your work
 - **PascalCase for React Components:** React component files must use `PascalCase`. Example: `TaskCard.tsx`, `SearchForm.tsx`, `Modal.tsx`.
 - **Test File Colocation:** Test files follow the same naming convention as their source file, with `.test` suffix. Example: `document.test.ts`, `useGetTasks.test.ts`, `TaskCard.test.tsx`.
 
-### Frontend React Component Layout (`packages/web`)
+### Frontend React Component Layout (`apps/web`)
 
 - Write components as **Arrow Functions** using explicit functional component patterns (`const MyComponent: React.FC<Props> = ...`).
 - Always use **Default Exports** for page components and standard UI components.
 - Enforce code splitting by leveraging route-level `lazy()` and `Suspense` operations in routing definitions.
 - **Component Testing Hooks:** Always inject a `data-testid` attribute or accept a `testId` prop on components to ensure reliable test selection. The `testId` prop must default to the component's name written in `kebab-case`.
-- **Styling & UI Systems (shadcn/ui & Tailwind):** Use **Tailwind CSS** classes natively. Apply thematic alterations through CSS variables via `packages/web/src/index.css`. Use `class-variance-authority` when creating multi-variant components. Use `cn` when combining and consolidating Tailwind classes programmatically.
-- **shadcn Rule:** Never modify underlying code files inside `packages/web/src/common/components/shadcn/` by hand. If behavior adjustments are required, write a wrapper component around them. Scaffold new ones using the authorized CLI command.
+- **Styling & UI Systems (shadcn/ui & Tailwind):** Use **Tailwind CSS** classes natively. Apply thematic alterations through CSS variables via `apps/web/src/index.css`. Use `class-variance-authority` when creating multi-variant components. Use `cn` when combining and consolidating Tailwind classes programmatically.
+- **shadcn Rule:** Never modify underlying code files inside `apps/web/src/common/components/shadcn/` by hand. If behavior adjustments are required, write a wrapper component around them. Scaffold new ones using the authorized CLI command.
 
-### Backend API & AWS Lambda Standards (`packages/api`)
+### Backend API & AWS Lambda Standards (`apps/api`)
 
 - **Node.js Lambda Architecture:** Implement lightweight handlers utilizing ES Modules. Do not attempt to introduce heavy frameworks like NestJS.
 - **Handler Structure:** Wrap handlers in consistent, standardized async try/catch blocks or unified middleware wrappers to ensure clean error interception and uniform API Gateway response formatting (`statusCode`, `body`, `headers`).
@@ -162,12 +172,12 @@ You are authorized to execute the following shell commands to validate your work
 
 ### Shared Workspace Standards (`packages/shared`)
 
-- **Single Source of Truth:** Place common structural interfaces, data models, and Zod validation schemas inside this package so they can be consumed symmetrically by both `packages/web` (frontend forms/state) and `packages/api` (backend input parsing).
+- **Single Source of Truth:** Place common structural interfaces, data models, and Zod validation schemas inside this package so they can be consumed symmetrically by both `apps/web` (frontend forms/state) and `apps/api` (backend input parsing).
 - **Environment Agnosticism:** Code within `packages/shared` must be pure and free of browser-specific (`window`, `document`) or Node.js runtime-specific (`process.env`) assumptions unless strictly isolated into explicit type contexts.
 
-### Infrastructure (`packages/infra`)
+### Infrastructure (`apps/infra`)
 
-- **AWS CDK Isolation:** Keep the `packages/infra/` directory entirely decoupled from front-end runtime mechanics and backend business logic. It reads built lambda artifacts or source file paths but does not execute backend logic.
+- **AWS CDK Isolation:** Keep the `apps/infra/` directory entirely decoupled from front-end runtime mechanics and backend business logic. It reads built lambda artifacts or source file paths but does not execute backend logic.
 - **Configuration Security:** Use **dotenv** in conjunction with **Zod** to rigorously validate infrastructure environment configurations and parameters prefixed with `CDK_`.
 - **Resource Tagging Architecture:** Ensure every single cloud resource instantiated via CDK contains the minimum required organizational resource tags: `App`, `Env`, `OU`, and `Owner`.
 

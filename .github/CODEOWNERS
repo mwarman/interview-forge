@@ -12,13 +12,13 @@
 /docs/ @mwarman
 
 # Infrastructure as Code
-/packages/infra/ @mwarman
+/apps/infra/ @mwarman
 
 # Shared Package
 /packages/shared/ @mwarman
 
 # Backend Package
-/packages/api/ @mwarman
+/apps/api/ @mwarman
 
 # Frontend Package
-/packages/web/ @mwarman
+/app/web/ @mwarman

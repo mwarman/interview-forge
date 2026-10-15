@@ -5,7 +5,7 @@
   "keywords": [
     "ai-agent",
     "aws",
-    "bedrock",
+    "bedrock-agentcore",
     "lambda",
     "react",
     "typescript"
@@ -23,9 +23,9 @@
   },
   "workspaces": [
     "packages/shared",
-    "packages/api",
-    "packages/web",
-    "packages/infra"
+    "apps/api",
+    "apps/web",
+    "apps/infra"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

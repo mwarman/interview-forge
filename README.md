@@ -6,7 +6,7 @@ A production-grade, human-in-the-loop AI agent platform demonstrating how to aug
 
 **interview-forge** transforms job descriptions into structured interview plans using AI agents, captures candidate responses via scorecards, and reconciles quantitative ratings with qualitative notes to produce final hiring assessments. The system enforces two explicit human approval gates — plan review before the interview, and assessment review after — ensuring AI accelerates decision-making without removing human judgment.
 
-Built on **AWS Bedrock Agents**, **React**, and a **TypeScript monorepo**, this project demonstrates:
+Built on **Amazon Bedrock AgentCore**, **React**, and a **TypeScript monorepo**, this project demonstrates:
 
 - AWS-native managed agent architecture with tool orchestration and session management
 - Human-in-the-loop AI patterns suitable for regulated hiring workflows
@@ -41,13 +41,13 @@ npm run build
 
 ```bash
 # Start the React development server
-npm run dev -w packages/web
+npm run dev -w apps/web
 
 # Run tests in watch mode (single workspace)
-npm run test -w packages/web
+npm run test -w apps/web
 
 # Deploy infrastructure (requires AWS credentials)
-npm run cdk:deploy -w packages/infra
+npm run cdk:deploy -w apps/infra
 ```
 
 ## Architecture
@@ -68,7 +68,7 @@ flowchart TD
         L3["Orchestrators"]
     end
 
-    subgraph Agents["Bedrock Agents"]
+    subgraph Agents["Bedrock AgentCore Harnesses"]
         AG1["Plan Generation\nAgent"]
         AG2["Reconciliation\nAgent"]
     end
@@ -122,7 +122,7 @@ packages/
   - Reuse JD across multiple candidate sessions
 
 - **AI-Driven Interview Planning**
-  - Bedrock Agent generates competency areas and interview questions
+  - AgentCore harness generates competency areas and interview questions
   - Recruiter reviews and edits plan before interviews proceed
   - Approval checkpoint locks plan in DynamoDB
 
@@ -132,7 +132,7 @@ packages/
   - Flexible scorecard entry UI
 
 - **Intelligent Assessment Reconciliation**
-  - Bedrock Agent reconciles ratings and notes to identify agreement/conflict
+  - AgentCore harness reconciles ratings and notes to identify agreement/conflict
   - Generates final hire/no-hire recommendation with reasoning
   - Approval checkpoint before persistence
 
@@ -147,18 +147,18 @@ packages/
 
 ## Technology Stack
 
-| Layer            | Technology                      | Purpose                                 |
-| ---------------- | ------------------------------- | --------------------------------------- |
-| Frontend         | React 19, Vite, TailwindCSS     | Modern component-driven UI              |
-| Backend API      | AWS Lambda (Node.js ES modules) | Serverless compute                      |
-| AI Orchestration | AWS Bedrock Agents              | Managed agent, tool orchestration, HITL |
-| LLM              | Claude Sonnet 4.6 via Bedrock   | Plan generation and reconciliation      |
-| Data Persistence | DynamoDB (single-table)         | Serverless, pay-per-request             |
-| File Staging     | S3                              | JD upload storage with 24hr lifecycle   |
-| PDF Parsing      | `unpdf` (Lambda bundled)        | Extract text from PDFs                  |
-| Infrastructure   | AWS CDK (TypeScript)            | Infrastructure-as-Code                  |
-| Validation       | Zod                             | Cross-boundary type safety              |
-| Testing          | Vitest                          | Unit testing across all workspaces      |
+| Layer            | Technology                      | Purpose                               |
+| ---------------- | ------------------------------- | ------------------------------------- |
+| Frontend         | React 19, Vite, TailwindCSS     | Modern component-driven UI            |
+| Backend API      | AWS Lambda (Node.js ES modules) | Serverless compute                    |
+| AI Orchestration | Amazon Bedrock AgentCore        | Managed harness, gateway tools, HITL  |
+| LLM              | Claude Haiku 4.5 via Bedrock    | Plan generation and reconciliation    |
+| Data Persistence | DynamoDB (single-table)         | Serverless, pay-per-request           |
+| File Staging     | S3                              | JD upload storage with 24hr lifecycle |
+| PDF Parsing      | `unpdf` (Lambda bundled)        | Extract text from PDFs                |
+| Infrastructure   | AWS CDK (TypeScript)            | Infrastructure-as-Code                |
+| Validation       | Zod                             | Cross-boundary type safety            |
+| Testing          | Vitest                          | Unit testing across all workspaces    |
 
 ## Development Workflow
 
@@ -182,7 +182,7 @@ npm test --workspaces
 npm run test:coverage --workspaces
 
 # Run tests in specific workspace
-npm run test -w packages/web
+npm run test -w apps/web
 ```
 
 ### Linting & Formatting
@@ -205,7 +205,7 @@ npm run format
 npm run build
 
 # Build specific workspace
-npm run build -w packages/api
+npm run build -w apps/api
 ```
 
 ## Deployment
@@ -213,20 +213,20 @@ npm run build -w packages/api
 ### Prerequisites
 
 1. AWS Account with appropriate permissions
-2. Environment variables configured (see `packages/infra/src/utils/config.ts`)
+2. Environment variables configured (see `apps/infra/src/utils/config.ts`)
 3. AWS credentials in `~/.aws/credentials` or via environment
 
 ### Deploy
 
 ```bash
 # From repository root
-npm run cdk:deploy -w packages/infra
+npm run cdk:deploy -w apps/infra
 ```
 
 ### Destroy
 
 ```bash
-npm run cdk:destroy -w packages/infra
+npm run cdk:destroy -w apps/infra
 ```
 
 ### CI/CD
@@ -251,17 +251,17 @@ npm run format                      # Format entire monorepo
 ### Workspace-Scoped Commands
 
 ```bash
-npm install <pkg> -w packages/web  # Add dependency to specific workspace
-npm run dev -w packages/web        # Start web dev server
-npm run test -w packages/api       # Test API workspace
-npm run cdk:synth -w packages/infra # Synthesize CDK template
+npm install <pkg> -w apps/web  # Add dependency to specific workspace
+npm run dev -w apps/web        # Start web dev server
+npm run test -w apps/api       # Test API workspace
+npm run cdk:synth -w apps/infra # Synthesize CDK template
 ```
 
 ## Design Decisions
 
 See [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) for detailed discussion of key architectural decisions including:
 
-- Bedrock Agents vs. custom ReAct loops
+- Bedrock AgentCore harnesses vs. custom ReAct loops
 - `unpdf` for PDF parsing vs. AWS Textract
 - Shared JD records enabling multi-candidate sessions
 
